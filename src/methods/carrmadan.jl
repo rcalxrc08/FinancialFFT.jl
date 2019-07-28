@@ -135,7 +135,7 @@ function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,S
 end
 
 
-function pricer(method::CarrMadanMethod,mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotAbstractData,abstractPayoffs::Array{FinancialMonteCarlo.EuropeanOption})
+function pricer(method::CarrMadanMethod,mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotAbstractData,abstractPayoffs::Array{FinancialMonteCarlo.EuropeanOption{U,V}})  where {U,V <: Number}
 
 	S0=spotData.S0;
 	r=spotData.r;
