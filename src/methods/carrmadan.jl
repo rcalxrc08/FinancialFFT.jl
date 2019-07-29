@@ -4,7 +4,7 @@ include("charexp.jl")
 include("fft.jl")
 
 
-import FinancialMonteCarlo.pricer;
+import FinancialMonteCarlo.pricer, FinancialMonteCarlo.AbstractMethod;
 
 """
 Struct for Carr Madan Method
@@ -14,7 +14,7 @@ Struct for Carr Madan Method
 Where:\n
 		σ	=	volatility of the process.
 """
-mutable struct CarrMadanMethod{num<:Number}#<:ItoProcess
+mutable struct CarrMadanMethod{num<:Number}<:FinancialMonteCarlo.AbstractMethod
 	A::num
 	Npow::Integer
 	function CarrMadanMethod(A::num,Npow::Integer) where {num <: Number}
@@ -108,5 +108,5 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMo
 	A=method.A
 	Npow=method.Npow
 
-	return CarrMadanPricer(mcProcess,S0,[abstractPayoff.K],r,abstractPayoff.T,Npow,A,d);
+	return CarrMadanPricer(mcProcess,S0,[abstractPayoff.K],r,abstractPayoff.T,Npow,A,d)[1];
 end
