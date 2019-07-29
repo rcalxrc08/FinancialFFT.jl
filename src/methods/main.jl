@@ -1,4 +1,4 @@
-using FinancialMonteCarlo,FinancialToolbox
+using FinancialToolbox
 include("carrmadan.jl")
 
 
@@ -17,14 +17,14 @@ mu1=0.03;
 sigma1=0.02;
 spotData1=equitySpotData(S0,r,d);
 
-Model=MertonProcess(sigma,lam,mu1,sigma1);
-#Model=BlackScholesProcess(sigma);
+#Model=MertonProcess(sigma,lam,mu1,sigma1);
+Model=BlackScholesProcess(sigma);
 
 EUData=EuropeanOption(T,K)
 Nsim=10000;
 Nstep=30;
 mc=MonteCarloConfiguration(Nsim,Nstep);
 
-@show pricer(method,Model,spotData1,EUData);
+@show pricer(Model,spotData1,method,EUData);
 @show pricer(Model,spotData1,mc,EUData);
 typeof(Model)<:BlackScholesProcess ? @show(blsprice(S0,K,r,T,sigma,d)) : nothing ;

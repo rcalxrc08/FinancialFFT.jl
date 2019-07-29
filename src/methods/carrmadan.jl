@@ -68,14 +68,13 @@ function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,S
     index=idx1:idx2;
 	priceInterpolator = interpolate((K[index],), exp(-d*T).*C[index], Gridded(Linear()))
 	
-    #VectorOfPrice=priceInterpolator[StrikeVec];
     VectorOfPrice=priceInterpolator(StrikeVec);
 	
 	return VectorOfPrice;
 end
 
 
-function pricer(method::CarrMadanMethod,mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotAbstractData,abstractPayoffs::Array{FinancialMonteCarlo.EuropeanOption{U,V}})  where {U,V <: Number}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotData,method::CarrMadanMethod,abstractPayoffs::Array{FinancialMonteCarlo.EuropeanOption{U,V}})  where {U,V <: Number}
 
 	S0=spotData.S0;
 	r=spotData.r;
@@ -100,15 +99,13 @@ end
 
 
 
-function pricer(method::CarrMadanMethod,mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotAbstractData,abstractPayoff::FinancialMonteCarlo.EuropeanOption)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotData,method::CarrMadanMethod,abstractPayoff::FinancialMonteCarlo.EuropeanOption)
 
 	S0=spotData.S0;
 	r=spotData.r;
 	d=spotData.d;
 	A=method.A
 	Npow=method.Npow
-	
-
 	
 	return CarrMadanPricer(mcProcess,S0,[abstractPayoff.K],r,abstractPayoff.T,Npow,A,d);
 end
