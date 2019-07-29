@@ -1,4 +1,4 @@
-using FinancialToolbox
+using FinancialToolbox,DualNumbers
 include("carrmadan.jl")
 
 
@@ -6,7 +6,7 @@ A=400.0;
 N=12;
 
 method=CarrMadanMethod(A,N);
-S0=100.0;
+S0=dual(100.0,1.0);
 K=100.0;
 r=0.02;
 T=1.0;

@@ -1,6 +1,8 @@
 using FinancialMonteCarlo
 
 include("charexp.jl")
+include("fft.jl")
+
 
 import FinancialMonteCarlo.pricer;
 
@@ -8,7 +10,7 @@ import FinancialMonteCarlo.pricer;
 Struct for Carr Madan Method
 
 		bsProcess=CarrMadanMethod(σ::num1) where {num1 <: Number}
-	
+
 Where:\n
 		σ	=	volatility of the process.
 """
@@ -67,9 +69,8 @@ function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,S
     idx2=findlast(x-> x<3.0*S0,K);
     index=idx1:idx2;
 	priceInterpolator = interpolate((K[index],), exp(-d*T).*C[index], Gridded(Linear()))
-	
-    VectorOfPrice=priceInterpolator(StrikeVec);
-	
+    VectorOfPrice=priceInterpolator.(StrikeVec);
+
 	return VectorOfPrice;
 end
 
@@ -81,19 +82,19 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMo
 	d=spotData.d;
 	A=method.A
 	Npow=method.Npow
-	
+
 	tmp1=sort(abstractPayoffs,lt=(x,y)->x.T<y.T)
 	TT=[opt.T for opt in tmp1];
 	TT=unique(TT);
 	prices=zeros(length(tmp1));
-	
+
 	for T in TT
 		idx1=findall(op->op.T==T,tmp1);
 		payoffs=tmp1[idx1];
 		strikes=[opt.K for opt in payoffs];
 		prices[idx1]=CarrMadanPricer(mcProcess,S0,strikes,r,T,Npow,A,d);
 	end
-	
+
 	return prices;
 end
 
@@ -106,7 +107,6 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMo
 	d=spotData.d;
 	A=method.A
 	Npow=method.Npow
-	
+
 	return CarrMadanPricer(mcProcess,S0,[abstractPayoff.K],r,abstractPayoff.T,Npow,A,d);
 end
-	
