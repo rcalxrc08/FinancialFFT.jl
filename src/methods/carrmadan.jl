@@ -1,9 +1,3 @@
-using FinancialMonteCarlo
-
-include("charexp.jl")
-include("fft.jl")
-
-
 import FinancialMonteCarlo.pricer, FinancialMonteCarlo.AbstractMethod;
 
 """

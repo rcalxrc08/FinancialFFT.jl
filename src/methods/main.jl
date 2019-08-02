@@ -1,5 +1,4 @@
-using FinancialToolbox,DualNumbers
-include("carrmadan.jl")
+using FinancialToolbox,DualNumbers,FinancialFFT,FinancialMonteCarlo
 
 
 A=400.0;
@@ -27,4 +26,4 @@ mc=MonteCarloConfiguration(Nsim,Nstep);
 
 @time @show pricer(Model,spotData1,method,EUData);
 @time @show pricer(Model,spotData1,mc,EUData);
-@time typeof(Model)<:BlackScholesProcess ? @show(blsprice(S0,K,r,T,sigma,d)) : nothing ;
+typeof(Model)<:BlackScholesProcess ? @time(@show(blsprice(S0,K,r,T,sigma,d))) : nothing ;

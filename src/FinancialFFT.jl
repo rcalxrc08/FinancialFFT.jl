@@ -1,5 +1,10 @@
 module FinancialFFT
+
+using FinancialMonteCarlo
+include("methods/charexp.jl")
+include("methods/fft.jl")
 include("methods/carrmadan.jl")
-greet() = print("Hello World2!")
+
+export CarrMadanMethod,pricer
 
 end # module
