@@ -1,4 +1,4 @@
-using DualNumbers
+using DualNumbers,FFTW
 import FFTW.fft;
 function fft(x::Array{DualComplex256})
 	N1=length(x);
