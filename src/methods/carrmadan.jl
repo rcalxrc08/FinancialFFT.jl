@@ -8,16 +8,16 @@ Struct for Carr Madan Method
 Where:\n
 		σ	=	volatility of the process.
 """
-mutable struct CarrMadanMethod{num<:Number}<:FinancialMonteCarlo.AbstractMethod
+mutable struct CarrMadanMethod{ num <: Number , num_1 <: Integer}<:FinancialMonteCarlo.AbstractMethod
 	A::num
-	Npow::Integer
-	function CarrMadanMethod(A::num,Npow::Integer) where {num <: Number}
+	Npow::num_1
+	function CarrMadanMethod(A::num,Npow::num_1) where {num <: Number, num_1 <: Integer}
         if A <= 0.0
             error("A must be positive")
         elseif Npow <= 2
             error("Npow must be greater than 2")
         else
-            return new{num}(A,Npow)
+            return new{num,num_1}(A,Npow)
         end
     end
 end
@@ -69,7 +69,7 @@ function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,S
 end
 
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotData,method::CarrMadanMethod,abstractPayoffs_::Array{FinancialMonteCarlo.AbstractPayoff})
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotData,method::CarrMadanMethod,abstractPayoffs_::Array{U})where {U <: FinancialMonteCarlo.AbstractPayoff}
 
 	S0=spotData.S0;
 	r=spotData.r;
