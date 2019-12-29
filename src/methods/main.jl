@@ -16,10 +16,10 @@ sigma=0.2;
 lam=15.0;
 mu1=0.03;
 sigma1=0.02;
-spotData1=equitySpotData(S0,r,d);
+spotData1=ZeroRateCurve(r);
 
 #Model=MertonProcess(sigma,lam,mu1,sigma1);
-Model=BlackScholesProcess(sigma);
+Model=BlackScholesProcess(sigma,Underlying(S0,d));
 
 EUData=EuropeanOption(T,K)
 Nsim=10000;

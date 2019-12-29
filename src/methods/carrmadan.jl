@@ -69,11 +69,11 @@ function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,S
 end
 
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotData,method::CarrMadanMethod,abstractPayoffs_::Array{U})where {U <: FinancialMonteCarlo.AbstractPayoff}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.ZeroRateCurve,method::CarrMadanMethod,abstractPayoffs_::Array{U})where {U <: FinancialMonteCarlo.AbstractPayoff}
 
-	S0=spotData.S0;
+	S0=mcProcess.underlying.S0;
 	r=spotData.r;
-	d=spotData.d;
+	d=mcProcess.underlying.mcProcess.underlying.d;
 	A=method.A
 	Npow=method.Npow
 
@@ -95,11 +95,11 @@ end
 
 
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.equitySpotData,method::CarrMadanMethod,abstractPayoff::FinancialMonteCarlo.EuropeanOption)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.ZeroRateCurve,method::CarrMadanMethod,abstractPayoff::FinancialMonteCarlo.EuropeanOption)
 
-	S0=spotData.S0;
+	S0=mcProcess.underlying.S0;
 	r=spotData.r;
-	d=spotData.d;
+	d=mcProcess.underlying.d;
 	A=method.A
 	Npow=method.Npow
 
