@@ -88,7 +88,8 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMo
 		payoffs=abstractPayoffs_[index_same_t];
 		strikes=[opt.K for opt in payoffs];
 		r_tmp=FinancialMonteCarlo.integral(r,T)/T;
-		prices[index_same_t]=CarrMadanPricer(mcProcess,S0,strikes,r_tmp,T,Npow,A,d);
+		d_tmp=FinancialMonteCarlo.integral(d,T)/T;
+		prices[index_same_t]=CarrMadanPricer(mcProcess,S0,strikes,r_tmp,T,Npow,A,d_tmp);
 	end
 
 	length(abstractPayoffs) < length(abstractPayoffs_) ? (return prices) : (return prices*1.0);
