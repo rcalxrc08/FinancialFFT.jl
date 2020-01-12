@@ -69,15 +69,15 @@ function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,S
 end
 
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.ZeroRateCurve,method::CarrMadanMethod,abstractPayoffs_::Array{U})where {U <: FinancialMonteCarlo.AbstractPayoff}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.AbstractZeroRateCurve,method::CarrMadanMethod,abstractPayoffs_::Array{U})where {U <: FinancialMonteCarlo.AbstractPayoff}
 
 	S0=mcProcess.underlying.S0;
 	r=spotData.r;
-	d=mcProcess.underlying.mcProcess.underlying.d;
+	d=mcProcess.underlying.d;
 	A=method.A
 	Npow=method.Npow
 
-	f1(x::T) where T =(T<:EuropeanOption);
+	f1(x::T1) where T1 =(T1<:EuropeanOption);
 	abstractPayoffs=filter(f1,abstractPayoffs_);
 	
 	TT=unique([opt.T for opt in abstractPayoffs]);
@@ -87,7 +87,8 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMo
 		index_same_t=findall(op->(op.T==T && f1(op)),abstractPayoffs_);
 		payoffs=abstractPayoffs_[index_same_t];
 		strikes=[opt.K for opt in payoffs];
-		prices[index_same_t]=CarrMadanPricer(mcProcess,S0,strikes,r,T,Npow,A,d);
+		r_tmp=FinancialMonteCarlo.integral(r,T)/T;
+		prices[index_same_t]=CarrMadanPricer(mcProcess,S0,strikes,r_tmp,T,Npow,A,d);
 	end
 
 	length(abstractPayoffs) < length(abstractPayoffs_) ? (return prices) : (return prices*1.0);
@@ -95,13 +96,14 @@ end
 
 
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.ZeroRateCurve,method::CarrMadanMethod,abstractPayoff::FinancialMonteCarlo.EuropeanOption)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMonteCarlo.AbstractZeroRateCurve,method::CarrMadanMethod,abstractPayoff::FinancialMonteCarlo.EuropeanOption)
 
 	S0=mcProcess.underlying.S0;
 	r=spotData.r;
+	r_tmp=FinancialMonteCarlo.integral(r,T)/T;
 	d=mcProcess.underlying.d;
 	A=method.A
 	Npow=method.Npow
 
-	return CarrMadanPricer(mcProcess,S0,[abstractPayoff.K],r,abstractPayoff.T,Npow,A,d)[1];
+	return CarrMadanPricer(mcProcess,S0,[abstractPayoff.K],r_tmp,abstractPayoff.T,Npow,A,d)[1];
 end

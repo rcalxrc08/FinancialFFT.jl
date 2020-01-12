@@ -16,7 +16,7 @@ sigma=0.2;
 lam=15.0;
 mu1=0.03;
 sigma1=0.02;
-spotData1=ZeroRateCurve(r);
+spotData1=ZeroRate(r);
 
 #Model=MertonProcess(sigma,lam,mu1,sigma1);
 Model=BlackScholesProcess(sigma,Underlying(S0,d));

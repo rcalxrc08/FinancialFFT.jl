@@ -14,10 +14,10 @@ sigma=dual(0.2,1.0);
 lam=15.0;
 mu1=0.03;
 sigma1=0.02;
-spotData1=equitySpotData(S0,r,d);
+spotData1=ZeroRate(r);
 
 #Model=MertonProcess(sigma,lam,mu1,sigma1);
-Model=BlackScholesProcess(sigma);
+Model=BlackScholesProcess(sigma,Underlying(S0,d));
 EUData=Array{FinancialMonteCarlo.AbstractPayoff}(undef,10)
 EUData[1:3]=[EuropeanOption(T,K) for i in 1:3];
 EUData[8:10]=[EuropeanOption(T,K) for i in 1:3];
