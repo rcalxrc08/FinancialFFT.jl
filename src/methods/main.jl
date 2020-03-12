@@ -18,7 +18,7 @@ mu1=0.03;
 sigma1=0.02;
 spotData1=ZeroRate(r);
 
-#Model=MertonProcess(sigma,lam,mu1,sigma1);
+#Model=MertonProcess(sigma,lam,mu1,sigma1,Underlying(S0,d));
 Model=BlackScholesProcess(sigma,Underlying(S0,d));
 
 EUData=EuropeanOption(T,K)
