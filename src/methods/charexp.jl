@@ -1,61 +1,61 @@
 
-function CharactheristicExponent(mcProcess::FinancialMonteCarlo.BlackScholesProcess)
+function CharactheristicExponent(v::num_,mcProcess::FinancialMonteCarlo.BlackScholesProcess) where { num_ <: Number }
 
 	σ=mcProcess.σ;
 
-	CharExp(v::Number)::Number=0.5*v*σ.*σ*(1im-v);
+	val_=0.5*v*σ^2*(1im-v);
 
-	return CharExp;
+	return val_;
 
 end
 
-function CharactheristicExponent(mcProcess::FinancialMonteCarlo.MertonProcess)
+function CharactheristicExponent(v::num_,mcProcess::FinancialMonteCarlo.MertonProcess) where { num_ <: Number }
 
 	σ=mcProcess.σ;
 	sigma1=mcProcess.σJ
 	mu1=mcProcess.μJ
 	lam=mcProcess.λ
 
-	CharExp(u::Number)::Number=-σ*σ*u*u*0.5+lam*(exp(-sigma1*sigma1*u*u*0.5+1im*mu1*u)-1);
+	val_=-σ^2*v^2*0.5+lam*(exp(-sigma1^2*v^2/2+1im*mu1*v)-1);
 
-	return CharExp;
+	return val_;
 
 end
 
-function CharactheristicExponent(mcProcess::FinancialMonteCarlo.KouProcess)
+function CharactheristicExponent(v::num_,mcProcess::FinancialMonteCarlo.KouProcess) where { num_ <: Number }
 
 	σ=mcProcess.σ;
 	lamp=mcProcess.λp
 	lamm=mcProcess.λm
 	p=mcProcess.p
-	lam=mcProcess.λ
+	λ=mcProcess.λ
 
-	CharExp(u::Number)::Number=-σ*σ*u*u/2.0+1im*u*p*(lam/(lamp-1im*u)-(1-lam)/(lamm+1im*u));
+	val_=-σ^2*v^2/2+1im*v*p*(λ/(lamp-1im*v)-(1-λ)/(lamm+1im*v));
 
-	return CharExp;
-
-end
-
-function CharactheristicExponent(mcProcess::FinancialMonteCarlo.VarianceGammaProcess)
-
-	σ=mcProcess.σ;
-	theta1=mcProcess.θ
-	k1=mcProcess.κ
-
-	CharExp(u::Number)::Number=-1/k1*log(1+u*u*σ*σ*k1/2.0-1im*theta1*k1*u);
-
-	return CharExp;
+	return val_;
 
 end
 
-function CharactheristicExponent(mcProcess::FinancialMonteCarlo.NormalInverseGaussianProcess)
+function CharactheristicExponent(v::num_,mcProcess::FinancialMonteCarlo.VarianceGammaProcess) where { num_ <: Number }
 
 	σ=mcProcess.σ;
-	theta1=mcProcess.θ
-	k1=mcProcess.κ
+	θ=mcProcess.θ
+	κ=mcProcess.κ
 
-	CharExp(v::Number)=(1-1*sqrt(1.0 + ((v^2)*(σ*σ)-2*1im*theta1*v)*k1))/k1;
+	val_=-1/κ*log(1+v^2*σ^2*κ/2-1im*θ*κ*v);
 
-	return CharExp;
+	return val_;
+
+end
+
+function CharactheristicExponent(v::num_,mcProcess::FinancialMonteCarlo.NormalInverseGaussianProcess) where { num_ <: Number }
+
+	σ=mcProcess.σ;
+	θ=mcProcess.θ
+	κ=mcProcess.κ
+
+	val_=(1-sqrt(1 + (v^2*σ^2-2*1im*θ*v)*κ))/κ;
+
+	return val_;
 
 end

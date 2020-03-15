@@ -39,31 +39,34 @@ Where:\n
 
 		VectorOfPrice= Price of the European Options with Strike equals to StrikeVec, tenor T and the market prices a risk free rate of r.
 """
-function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,StrikeVec::Array{U},r::Number,T::Number,Npow::Integer,A::Real,d::Number=0.0) where {U <: Number}
+function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,StrikeVec::Array{U,1},r::Number,T::Number,Npow::Integer,A::Real,d::Number=0.0) where {U <: Number}
     N=2^Npow;
-	CharExp=CharactheristicExponent(mcProcess);
-    EspChar(v::Number)::Number= CharExp(v)-v.*1im*CharExp(-1im);
+	S0=mcProcess.underlying.S0;
+	CharExp(v)=CharactheristicExponent(v,mcProcess);
+	zero_typed=FinancialMonteCarlo.predict_output_type_zero(mcProcess,r,T);
+    EspChar(v)= CharExp(v)-v.*1im*CharExp(-1im);
     #v-> compute integral as a summation
     eta1=A/N;
     v=collect(0:eta1:A*(N-1)/N);
     v[1]=1e-22;
     # lambda-> compute summation via FFT
     lambda=2*pi/(N*eta1);
-    k=-lambda*N/2.0.+lambda.*(0:N-1);
-    CharFunc(v::Number)::Number= exp(T*EspChar(v));
-    Z_k=exp.(1im*(r-d)*v*T).*(CharFunc.(v.-1im).-1.0)./(1im*v.-v.^2)
+    CharFunc(v)= exp(T*EspChar(v));
+	integrand_(v)=exp(1im*(r-d)*v*T)*(CharFunc(v-1im)-1)/(1im*v-v^2)
+    Z_k=integrand_.(v);
     # Option Price
-    w=ones(N); w[1]=0.5; w[end]=0.5;
-	#Z_k=w.*eta1.*Z_k.*exp.(1im*pi*(0:N-1));
-    Z_k=w.*eta1.*Z_k.*[i%2==1 ? 1 : -1 for i in 1:N];
-    w=real(fft(Z_k))/pi;
-    C=S0.*(w+max.(1.0.-exp.(k.-(r-d)*T),0));
-    K=S0.*exp.(k);
+    #w=ones(N); #w[1]=0.5; w[end]=0.5;
+    Z_k.*=eta1.*(isodd(i) ? 1 : -1 for i in 1:N);
+	@show any(isinf,Z_k)
+	@show any(isinf,fft(Z_k))
+    w_=real(fft(Z_k))/(pi);
+    K=S0.*exp.(-lambda*N/2.0.+lambda.*(0:N-1));
+    C=S0.*w_+max.(S0.-K*exp(-(r-d)*T),0);
     idx1=findfirst(x-> x>0.4*S0,K);
     idx2=findlast(x-> x<3.0*S0,K);
     index=idx1:idx2;
-	priceInterpolator = interpolate((K[index],), C[index], Gridded(Linear()))
-    VectorOfPrice=exp(-d*T).*priceInterpolator.(StrikeVec);
+	@views priceInterpolator = interpolate((K[index],), C[index], Gridded(Linear()))
+    VectorOfPrice::Array{typeof(zero_typed)}=priceInterpolator.(StrikeVec)*exp(-d*T);
 
 	return VectorOfPrice;
 end
@@ -89,7 +92,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMo
 		strikes=[opt.K for opt in payoffs];
 		r_tmp=FinancialMonteCarlo.integral(r,T)/T;
 		d_tmp=FinancialMonteCarlo.integral(d,T)/T;
-		prices[index_same_t]=CarrMadanPricer(mcProcess,S0,strikes,r_tmp,T,Npow,A,d_tmp);
+		prices[index_same_t]=CarrMadanPricer(mcProcess,strikes,r_tmp,T,Npow,A,d_tmp);
 	end
 
 	length(abstractPayoffs) < length(abstractPayoffs_) ? (return prices) : (return prices*1.0);
@@ -101,10 +104,10 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMo
 
 	S0=mcProcess.underlying.S0;
 	r=spotData.r;
-	r_tmp=FinancialMonteCarlo.integral(r,T)/T;
+	r_tmp=FinancialMonteCarlo.integral(r,abstractPayoff.T)/abstractPayoff.T;
 	d=mcProcess.underlying.d;
 	A=method.A
 	Npow=method.Npow
 
-	return CarrMadanPricer(mcProcess,S0,[abstractPayoff.K],r_tmp,abstractPayoff.T,Npow,A,d)[1];
+	return first(CarrMadanPricer(mcProcess,[abstractPayoff.K],r_tmp,abstractPayoff.T,Npow,A,d));
 end
