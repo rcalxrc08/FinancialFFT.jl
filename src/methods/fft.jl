@@ -29,7 +29,7 @@ function fft!(x::AbstractArray{T}) where { T <: Dual{cpx}} where { cpx <: Comple
 	Xder=epsilon.(x);
 	fft!(Xcomplex);
 	fft!(Xder)
-	x=[T(real1,epsilon1) for (real1,epsilon1) in zip(Xcomplex,Xder)];
+	x.=[T(real1,epsilon1) for (real1,epsilon1) in zip(Xcomplex,Xder)];
 	nothing;
 end
 
@@ -39,6 +39,6 @@ function fft!(x::AbstractArray{T}) where { T <: Dual{num}}  where { num <: Numbe
 	Xder=epsilon.(x);
 	x_=fft(Xcomplex);
 	y_=fft(Xder)
-	x=[Dual(real1,epsilon1) for (real1,epsilon1) in zip(x_,y_)];
+	x.=[Dual(real1,epsilon1) for (real1,epsilon1) in zip(x_,y_)];
 	nothing
 end
