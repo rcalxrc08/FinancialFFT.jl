@@ -43,30 +43,28 @@ function CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,StrikeVec::A
     N=2^Npow;
 	S0=mcProcess.underlying.S0;
 	CharExp(v)=CharactheristicExponent(v,mcProcess);
-	zero_typed=FinancialMonteCarlo.predict_output_type_zero(mcProcess,r,T);
     EspChar(v)= CharExp(v)-v.*1im*CharExp(-1im);
     #v-> compute integral as a summation
     eta1=A/N;
     v=collect(0:eta1:A*(N-1)/N);
     v[1]=1e-22;
     # lambda-> compute summation via FFT
-    lambda=2*pi/(N*eta1);
+    lambda=2*pi/A;
     CharFunc(v)= exp(T*EspChar(v));
 	integrand_(v)=exp(1im*(r-d)*v*T)*(CharFunc(v-1im)-1)/(1im*v-v^2)
     Z_k=integrand_.(v);
     # Option Price
-    #w=ones(N); #w[1]=0.5; w[end]=0.5;
-    Z_k.*=eta1.*(isodd(i) ? 1 : -1 for i in 1:N);
-	@show any(isinf,Z_k)
-	@show any(isinf,fft(Z_k))
-    w_=real(fft(Z_k))/(pi);
+    w=ones(N); #w[1]=0.5; w[end]=0.5;
+    Z_k.*=eta1.*(isodd(i) ? 1 : -1 for i in 1:N).*w;
+	fft!(Z_k)
+    w_=real(Z_k)/pi;
     K=S0.*exp.(-lambda*N/2.0.+lambda.*(0:N-1));
     C=S0.*w_+max.(S0.-K*exp(-(r-d)*T),0);
     idx1=findfirst(x-> x>0.4*S0,K);
     idx2=findlast(x-> x<3.0*S0,K);
     index=idx1:idx2;
 	@views priceInterpolator = interpolate((K[index],), C[index], Gridded(Linear()))
-    VectorOfPrice::Array{typeof(zero_typed)}=priceInterpolator.(StrikeVec)*exp(-d*T);
+    VectorOfPrice=priceInterpolator.(StrikeVec)*exp(-d*T);
 
 	return VectorOfPrice;
 end

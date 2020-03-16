@@ -23,21 +23,19 @@ end
 function LewisPricer(mcProcess::FinancialMonteCarlo.BaseProcess,K::Number,r::Number,T::Number,N::Integer,A::Real,d::Number=0.0)
 	S0=mcProcess.underlying.S0;
 	CharExp(v)=FinancialFFT.CharactheristicExponent(v,mcProcess);
-	zero_typed=FinancialMonteCarlo.predict_output_type_zero(mcProcess,r,T);
-    EspChar(v)= CharExp(v)-v.*1im*CharExp(-1im);
+    EspChar(v)= CharExp(v)-v*1im*CharExp(-1im);
     CharFunc(v)= exp(T*EspChar(v));
-	F0=S0*exp((r-d)*T);
-	x__=log(F0/K)
+	x__=log(S0/K)+(r-d)*T
 	func_(z)=exp(-z*1im*x__)*CharFunc(-z-1im*0.5)/(z^2+0.25);
 	int_1=real(integral_1(func_,-A,A,N));
-	c=S0*(1-exp(-x__/2.0)*int_1/(2*pi))*exp(-d*T)
-	return c;
+	price=S0*(1-exp(-x__/2)*int_1/(2*pi))*exp(-d*T)
+	return price;
 end
 
 function integral_1(f,xmin,xmax,N)
 	x=range(xmin,length=N,stop=xmax);
 	dx=x[2]-x[1];
-	sum_=0.0;
+	sum_=f(x[1])*dx*0.0;
 	for x_ in x
 		sum_+=f(x_)*dx;
 	end
@@ -66,7 +64,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::FinancialMo
 		strikes=[opt.K for opt in payoffs];
 		r_tmp=FinancialMonteCarlo.integral(r,T)/T;
 		d_tmp=FinancialMonteCarlo.integral(d,T)/T;
-		prices[index_same_t]=LewisPricer.(mcProcess,strikes,r_tmp,T,N,A,d_tmp);
+		prices[index_same_t].=LewisPricer.(mcProcess,strikes,r_tmp,T,N,A,d_tmp);
 	end
 
 	length(abstractPayoffs) < length(abstractPayoffs_) ? (return prices) : (return prices*1.0);
