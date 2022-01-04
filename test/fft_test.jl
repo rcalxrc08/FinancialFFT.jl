@@ -1,5 +1,4 @@
-using DualNumbers, Random
-include("fft.jl")
+using DualNumbers, Random, FFTW
 a = dual(0.2, 1.0);
 function trial_(a)
     Random.seed!(0)
