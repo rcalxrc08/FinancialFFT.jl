@@ -1,8 +1,19 @@
 name = "FinancialFFT"
-uuid = "6de85a45-28ab-5b3b-a7e0-1fd870b59ba7"
-license = "MIT"
-author = ["rcalxrc08"]
+uuid = "ccc4acef-1676-4a84-946d-4093fe376f06"
+authors = ["Nicola <nicola.scaramuzzino@yandex.com> and contributors"]
+version = "0.1.0"
 
 [deps]
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+
+[compat]
+FFTW = "1"
+Interpolations = "0.10.1, 0.11, 0.12, 0.13"
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
