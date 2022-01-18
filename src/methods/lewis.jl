@@ -1,10 +1,11 @@
 """
 Struct for Lewis Integration Method
 
-		bsProcess=LewisMethod(σ::num1) where {num1 <: Number}
+		bsProcess=LewisMethod(A,N)
 
 Where:\n
-		σ	=	volatility of the process.
+		A	=	volatility of the process.
+		N	=	volatility of the process.
 """
 mutable struct LewisMethod{num <: Number, num_1 <: Integer} <: FinancialMonteCarlo.AbstractMethod
     A::num
@@ -20,15 +21,22 @@ mutable struct LewisMethod{num <: Number, num_1 <: Integer} <: FinancialMonteCar
     end
 end
 
+function real_mod(x::Hyper{ComplexF64})
+    return hyper(real(x.value), real(x.epsilon1), real(x.epsilon2), real(x.epsilon12))
+end
+
 export LewisMethod;
 
-function LewisPricer(mcProcess::FinancialMonteCarlo.BaseProcess, K::Number, r::Number, T::Number, N::Integer, A::Real, d::Number = 0.0)
+function LewisPricer(mcProcess::FinancialMonteCarlo.BaseProcess, K::Number, r::Number, T::Number, method)
+    A = method.A
+    N = method.N
     S0 = mcProcess.underlying.S0
+    d = FinancialMonteCarlo.dividend(mcProcess)
     CharExp(v) = FinancialFFT.CharactheristicExponent(v, mcProcess)
     EspChar(v) = CharExp(v) - v * 1im * CharExp(-1im)
     CharFunc(v) = exp(T * EspChar(v))
     x__ = log(S0 / K) + (r - d) * T
-    func_(z) = real(exp(-z * 1im * x__) * CharFunc(-z - 1im * 0.5) / (z^2 + 0.25))
+    func_(z) = real_mod(exp(-z * 1im * x__) * CharFunc(-z - 1im * 0.5) / (z^2 + 0.25))
     int_1 = integral_1(func_, -A, A, N)
     price = S0 * (1 - exp(-x__ / 2) * int_1 / (2 * pi)) * exp(-d * T)
     return price
@@ -47,8 +55,6 @@ end
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, spotData::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoffs_::Array{U}) where {U <: FinancialMonteCarlo.AbstractPayoff}
     r = spotData.r
     d = mcProcess.underlying.d
-    A = method.A
-    N = method.N
 
     f1(::T1) where {T1} = (T1 <: EuropeanOption)
     abstractPayoffs = filter(f1, abstractPayoffs_)
@@ -62,7 +68,9 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, spotData::FinancialM
         strikes = [opt.K for opt in payoffs]
         r_tmp = FinancialMonteCarlo.integral(r, T) / T
         d_tmp = FinancialMonteCarlo.integral(d, T) / T
-        prices[index_same_t] .= LewisPricer.(mcProcess, strikes, r_tmp, T, N, A, d_tmp)
+        model2 = deepcopy(mcProcess)
+        model2.underlying = Underlying(mcProcess.underlying.S0, d_tmp)
+        prices[index_same_t] .= LewisPricer.(model2, strikes, r_tmp, T, method)
     end
 
     length(abstractPayoffs) < length(abstractPayoffs_) ? (return prices) : (return prices * 1.0)
@@ -71,9 +79,5 @@ end
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, spotData::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption)
     r = spotData.r
     r_tmp = FinancialMonteCarlo.integral(r, abstractPayoff.T) / abstractPayoff.T
-    d = mcProcess.underlying.d
-    A = method.A
-    N = method.N
-
-    return LewisPricer(mcProcess, abstractPayoff.K, r_tmp, abstractPayoff.T, N, A, d)
+    return LewisPricer(mcProcess, abstractPayoff.K, r_tmp, abstractPayoff.T, method)
 end

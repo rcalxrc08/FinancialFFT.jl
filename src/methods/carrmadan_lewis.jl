@@ -8,7 +8,7 @@ Where:\n
 """
 mutable struct CarrMadanLewisMethod{num <: Number, num_1 <: Integer} <: FinancialMonteCarlo.AbstractMethod
     A::num
-    N::num_1
+    Npow::num_1
     function CarrMadanLewisMethod(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
         if A <= 0.0
             error("A must be positive")
@@ -22,23 +22,38 @@ end
 
 export CarrMadanLewisMethod;
 
-function CarrMadanLewisPricer(mcProcess::FinancialMonteCarlo.BaseProcess, K::Number, r::Number, T::Number, N::Integer, A::Real, d::Number = 0.0)
+function CarrMadanLewisPricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, r::Number, T::Number, method) where {U <: Number}
+    Npow = method.Npow
+    N = 2^Npow
     S0 = mcProcess.underlying.S0
-    CharExp(v) = FinancialFFT.CharactheristicExponent(v, mcProcess)
-    EspChar(v) = CharExp(v) - v * 1im * CharExp(-1im)
+    d = FinancialMonteCarlo.dividend(mcProcess)
+    A = method.A
+
+    CharExp(v) = CharactheristicExponent(v, mcProcess)
+    EspChar(v) = CharExp(v) + (r - d - CharExp(-1im)) * v * 1im
     CharFunc(v) = exp(T * EspChar(v))
-    k = log(K / S0)
-    func_(z) = real(exp(z * 1im * (r * T - k)) * (CharFunc(z - 1im) - 1) / (1im * z - z^2))
-    zt_k = integral_1(func_, -A, A, N) / (2 * pi)
-    price = zt_k + max(1 - exp(k - r * T), 0)
-    return price * S0
+    dx = A / N
+    x = collect(0:(N-1)) * dx            # the final value A is excluded
+    x[1] = 1e-22
+    weights_ = @. 3 + (-1)^((0:(N-1)) + 1)
+    @views weights_[1] = 1
+    @views weights_[N] = 1
+
+    dk = 2 * pi / A
+    b = N * dk / 2
+    ks = -b .+ dk * (0:(N-1))
+    integrand = @. exp(-1im * b * x) * CharFunc(x - 0.5 * 1im) / (x^2 + 0.25) * weights_ * dx / 3
+    fft!(integrand)
+    integral_value = @. real_mod(integrand) / pi
+
+    spline_cub = CubicSplineInterpolation(ks, integral_value)
+    prices = @. S0 - sqrt(S0 * StrikeVec) * exp(-(r - d) * T) * spline_cub(log(StrikeVec / S0))
+    return prices * exp(-d * T)
 end
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, spotData::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, abstractPayoffs_::Array{U}) where {U <: FinancialMonteCarlo.AbstractPayoff}
     r = spotData.r
     d = mcProcess.underlying.d
-    A = method.A
-    N = method.N
 
     f1(::T1) where {T1} = (T1 <: EuropeanOption)
     abstractPayoffs = filter(f1, abstractPayoffs_)
@@ -52,7 +67,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, spotData::FinancialM
         strikes = [opt.K for opt in payoffs]
         r_tmp = FinancialMonteCarlo.integral(r, T) / T
         d_tmp = FinancialMonteCarlo.integral(d, T) / T
-        prices[index_same_t] .= CarrMadanLewisPricer.(mcProcess, strikes, r_tmp, T, N, A, d_tmp)
+        prices[index_same_t] .= CarrMadanLewisPricer(mcProcess, strikes, r_tmp, T, method)
     end
 
     length(abstractPayoffs) < length(abstractPayoffs_) ? (return prices) : (return prices * 1.0)
@@ -61,9 +76,6 @@ end
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, spotData::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption)
     r = spotData.r
     r_tmp = FinancialMonteCarlo.integral(r, abstractPayoff.T) / abstractPayoff.T
-    d = mcProcess.underlying.d
-    A = method.A
-    N = method.N
 
-    return CarrMadanLewisPricer(mcProcess, abstractPayoff.K, r_tmp, abstractPayoff.T, N, A, d)
+    return first(CarrMadanLewisPricer(mcProcess, [abstractPayoff.K], r_tmp, abstractPayoff.T, method))
 end

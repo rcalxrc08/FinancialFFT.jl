@@ -51,11 +51,5 @@ function CharactheristicExponent(v::num_, mcProcess::FinancialMonteCarlo.NormalI
 end
 
 function CharactheristicExponent(v::num_, mcProcess::FinancialMonteCarlo.HestonProcess) where {num_ <: Number}
-    σ = mcProcess.σ
-    θ = mcProcess.θ
-    κ = mcProcess.κ
-
-    val_ = (1 - sqrt(1 + (v^2 * σ^2 - 2 * 1im * θ * v) * κ)) / κ
-
-    return val_
+    #Not implemented
 end
