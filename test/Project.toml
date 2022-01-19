@@ -1,4 +1,6 @@
 [deps]
 DualNumbers = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+FinancialMonteCarlo = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
 FinancialToolbox = "2edd74a5-e968-5e45-af77-76d29aa6a478"
+HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
