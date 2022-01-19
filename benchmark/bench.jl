@@ -5,7 +5,7 @@ N = 14;
 
 method_cm = CarrMadanMethod(A, N);
 method_lewis = LewisMethod(A, 2^N);
-method_cm_lewis = CarrMadanLewisMethod(A, 2^N);
+method_cm_lewis = CarrMadanLewisMethod(A, N);
 S0 = 100.0;
 K = 101.0;
 r = dual(0.02, 1.0);
