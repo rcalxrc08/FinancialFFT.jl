@@ -1,4 +1,4 @@
-using FinancialToolbox, DualNumbers, FinancialFFT, FinancialMonteCarlo, BenchmarkTools
+using DualNumbers, FinancialFFT, FinancialMonteCarlo, BenchmarkTools
 
 A = 400.0;
 N = 14;
