@@ -2,9 +2,9 @@ using DualNumbers, HyperDualNumbers, FFTW
 import FFTW.fft!;
 
 function fft!(x::AbstractArray{T}) where {T <: Dual{cpx}} where {cpx <: Complex{num}} where {num <: Number}
-    Xcomplex_ = DualNumbers.value.(x)
+    Xcomplex = DualNumbers.value.(x)
     Xder = epsilon.(x)
-    fft!(Xcomplex_)
+    fft!(Xcomplex)
     fft!(Xder)
     @. x = dual(Xcomplex, Xder)
     nothing
