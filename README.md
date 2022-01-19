@@ -1,7 +1,7 @@
 # FinancialFFT.jl <img src="etc/logo.png" width="40">  
 
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rcalxrc08.gitlab.io/FinancialFFT.jl/)
-[![Build Status](https://travis-ci.com/rcalxrc08/FinancialFFT.jl.svg?branch=master)](https://travis-ci.com/rcalxrc08/FinancialFFT.jl)[![pipeline status](https://gitlab.com/rcalxrc08/FinancialFFT.jl/badges/master/pipeline.svg)](https://gitlab.com/rcalxrc08/FinancialFFT.jl/commits/master) [![coverage report](https://gitlab.com/rcalxrc08/FinancialFFT.jl/badges/master/coverage.svg)](https://gitlab.com/rcalxrc08/FinancialFFT.jl/commits/master)
+[![pipeline status](https://gitlab.com/rcalxrc08/FinancialFFT.jl/badges/master/pipeline.svg)](https://gitlab.com/rcalxrc08/FinancialFFT.jl/commits/master) [![coverage report](https://gitlab.com/rcalxrc08/FinancialFFT.jl/badges/master/coverage.svg)](https://gitlab.com/rcalxrc08/FinancialFFT.jl/commits/master)
 ##### This is a Julia package containing some useful Financial function for Pricing and Risk Management for Equity products.
 
 It currently contains the following capabilities:
