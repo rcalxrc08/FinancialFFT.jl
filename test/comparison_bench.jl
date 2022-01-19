@@ -1,4 +1,4 @@
-using FinancialToolbox, DualNumbers, HyperDualNumbers, FinancialFFT, FinancialMonteCarlo
+using FinancialToolbox, DualNumbers, HyperDualNumbers, FinancialFFT, FinancialMonteCarlo, BenchmarkTools
 
 A = 600.0;
 N = 18;
@@ -16,8 +16,8 @@ T = 1.0;
 # d = hyper(0.0, 0.0, 1.0, 0.0);
 d = 0.01
 # d = 0.0;
-sigma = dual(0.2, 1.0);
-# sigma = hyper(0.2, 1.0, 1.0, 0.0);
+# sigma = dual(0.2, 1.0);
+sigma = hyper(0.2, 1.0, 1.0, 0.0);
 # sigma = 0.2;
 lam = 15.0;
 mu1 = 0.03;
@@ -28,14 +28,16 @@ zero_rate = ZeroRate(r);
 Model = BlackScholesProcess(sigma, Underlying(S0, d));
 
 EUData = EuropeanOption(T, K)
-Nsim = 100000;
+Nsim = 100_000;
 Nstep = 30;
 mc = MonteCarloConfiguration(Nsim, Nstep, FinancialMonteCarlo.AntitheticMC());
 
-@time @show pricer(Model, zero_rate, method_cm, EUData);
+@btime pricer(Model, zero_rate, method_cm, EUData);
 method_lewis = LewisMethod(700.0, 200000);
-@time @show pricer(Model, zero_rate, method_lewis, EUData);
-@time @show pricer(Model, zero_rate, mc, EUData);
+@btime pricer(Model, zero_rate, method_lewis, EUData);
+# @btime pricer(Model, zero_rate, mc, EUData);
 typeof(Model) <: BlackScholesProcess ? @time(@show(blsprice(S0, K, r, T, sigma, d))) : nothing;
 method_cm_lewis = CarrMadanLewisMethod(A, N);
-@time @show pricer(Model, zero_rate, method_cm_lewis, EUData);
+@btime pricer(Model, zero_rate, method_cm_lewis, EUData);
+
+nothing

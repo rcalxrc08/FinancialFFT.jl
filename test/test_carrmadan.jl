@@ -18,7 +18,7 @@ p = 0.3;
 lam = 5.0;
 lamp = 30.0;
 lamm = 20.0;
-spotData1 = ZeroRate(r);
+zero_rate = ZeroRate(r);
 
 #Model = MertonProcess(sigma, lam, mu1, sigma1, Underlying(S0, d));
 #Model = KouProcess(sigma, lam, p, lamp, lamm, Underlying(S0, d));
@@ -31,6 +31,6 @@ Nsim = 10_000;
 Nstep = 30;
 mc = MonteCarloConfiguration(Nsim, Nstep);
 
-@time @show pricer(Model, spotData1, method, EUData);
-@time @show pricer(Model, spotData1, mc, EUData);
+@time @show pricer(Model, zero_rate, method, EUData);
+@time @show pricer(Model, zero_rate, mc, EUData);
 #typeof(Model) <: BlackScholesProcess ? @time(@show(blsprice(S0, K, r, T, sigma, d))) : nothing;

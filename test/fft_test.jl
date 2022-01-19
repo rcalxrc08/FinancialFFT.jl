@@ -1,8 +1,8 @@
-using DualNumbers, Random, FFTW
+using DualNumbers, FFTW
 a = dual(0.2, 1.0);
 function trial_(a)
-    Random.seed!(0)
-    x = (randn(10) .+ 1im * randn(10)) .* (exp(a) + a * a + a - sin(a))
+    randn_10 = [-0.3618096567138957, -0.7167177871860657, 0.03844005000023961, -0.8609259020676777, -0.28110162757311624, -1.5892599268454561, 0.9836487963933636, 0.5966606833556847, -1.0913154822651219, -2.72400685262509]
+    x = (randn_10 .+ 1im * randn_10) .* (exp(a) + a * a + a - sin(a))
     return x
 end
 
