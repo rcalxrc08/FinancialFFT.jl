@@ -1,6 +1,6 @@
-# FinancialMonteCarlo.jl
+# FinancialFFT.jl
 
-FinancialMonteCarlo.jl contains the following capabilities:
+FinancialFFT.jl contains the following capabilities:
 
 - Support for the following Single Name Models:
     - Black Scholes

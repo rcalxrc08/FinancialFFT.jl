@@ -17,10 +17,6 @@ mutable struct LewisMethod{num <: Number, num_1 <: Integer} <: AbstractIntegralM
     end
 end
 
-function real_mod(x::Hyper{ComplexF64})
-    return hyper(real(x.value), real(x.epsilon1), real(x.epsilon2), real(x.epsilon12))
-end
-
 export LewisMethod;
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, K::Number, r::Number, T::Number, method::LewisMethod)
