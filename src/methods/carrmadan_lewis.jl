@@ -10,13 +10,10 @@ mutable struct CarrMadanLewisMethod{num <: Number, num_1 <: Integer} <: Abstract
     A::num
     Npow::num_1
     function CarrMadanLewisMethod(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
-        if A <= 0.0
-            error("A must be positive")
-        elseif N <= 2
-            error("N must be greater than 2")
-        else
-            return new{num, num_1}(A, N)
-        end
+        @assert(A > 0.0, "A must be positive")
+        @assert(N > 2, "N must be greater than 2")
+        @assert(N < 24, "N will cause overflow")
+        return new{num, num_1}(A, N)
     end
 end
 

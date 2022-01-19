@@ -11,13 +11,9 @@ mutable struct LewisMethod{num <: Number, num_1 <: Integer} <: AbstractIntegralM
     A::num
     N::num_1
     function LewisMethod(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
-        if A <= 0.0
-            error("A must be positive")
-        elseif N <= 2
-            error("N must be greater than 2")
-        else
-            return new{num, num_1}(A, N)
-        end
+        @assert(A > 0.0, "A must be positive")
+        @assert(N > 2, "N must be greater than 2")
+        return new{num, num_1}(A, N)
     end
 end
 

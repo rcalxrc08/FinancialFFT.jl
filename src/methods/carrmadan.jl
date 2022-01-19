@@ -10,15 +10,11 @@ Where:\n
 mutable struct CarrMadanMethod{num <: Number, num_1 <: Integer} <: AbstractFFTMethod
     A::num
     Npow::num_1
-    alpha::Float64
-    function CarrMadanMethod(A::num, Npow::num_1, alfa = 0.0) where {num <: Number, num_1 <: Integer}
-        if A <= 0.0
-            error("A must be positive")
-        elseif Npow <= 2
-            error("Npow must be greater than 2")
-        else
-            return new{num, num_1}(A, Npow, alfa)
-        end
+    function CarrMadanMethod(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
+        @assert(A > 0.0, "A must be positive")
+        @assert(N > 2, "N must be greater than 2")
+        @assert(N < 24, "N will cause overflow")
+        return new{num, num_1}(A, N)
     end
 end
 export CarrMadanMethod;
