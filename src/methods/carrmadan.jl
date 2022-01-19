@@ -61,7 +61,6 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     dk = 2 * pi / A
     b = N * dk / 2
     complex_vec_z_k = @. integrand_f(v) * dx * weights_ / 3 * exp(1im * b * v) #* exp(1im * pi * real_vec)
-    # integrand = @. exp(-1im * b * x) * CharFunc(x - 0.5 * 1im) / (x^2 + 0.25) * weights_ * dx / 3
     fft!(complex_vec_z_k)
     z_T = @. real_mod(complex_vec_z_k) / pi
 
@@ -69,7 +68,6 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     spline_cub = CubicSplineInterpolation(ks, z_T)
     k_interp = @. log(StrikeVec / S0)
     C = @. S0 * spline_cub(k_interp) + max(S0 - StrikeVec * exp(-(r - d) * T), 0)
-    # P = S * real( fft(h)/pi + max(1-exp(k-r*T),0)); # prices
     return C * exp(-d * T)
 end
 
