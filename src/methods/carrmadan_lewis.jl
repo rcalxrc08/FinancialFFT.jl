@@ -19,12 +19,13 @@ end
 
 export CarrMadanLewisMethod;
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, r::Number, T::Number, method::CarrMadanLewisMethod) where {U <: Number}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanLewisMethod) where {U <: Number}
     Npow = method.Npow
     N = 2^Npow
     S0 = mcProcess.underlying.S0
-    d = FinancialMonteCarlo.dividend(mcProcess)
     A = method.A
+    d = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T) / T
+    r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
 
     CharExp(v) = CharactheristicExponent(v, mcProcess)
     EspChar(v) = CharExp(v) + (r - d - CharExp(-1im)) * v * 1im

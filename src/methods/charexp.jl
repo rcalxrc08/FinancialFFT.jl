@@ -49,7 +49,3 @@ function CharactheristicExponent(v::num_, mcProcess::FinancialMonteCarlo.NormalI
 
     return val_
 end
-
-function CharactheristicExponent(v::num_, mcProcess::FinancialMonteCarlo.HestonProcess) where {num_ <: Number}
-    #Not implemented
-end

@@ -35,11 +35,12 @@ Where:\n
 
 		VectorOfPrice= Price of the European Options with Strike equals to StrikeVec, tenor T and the market prices a risk free rate of r.
 """
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, r::Number, T::Number, method::CarrMadanMethod) where {U <: Number}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanMethod) where {U <: Number}
     Npow = method.Npow
     N = 2^Npow
     S0 = mcProcess.underlying.S0
-    d = FinancialMonteCarlo.dividend(mcProcess)
+    r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
+    d = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T) / T
     CharExp(v) = CharactheristicExponent(v, mcProcess)
     EspChar(v) = CharExp(v) - v * 1im * CharExp(-1im)
     A = method.A
@@ -67,34 +68,23 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     return C * exp(-d * T)
 end
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractFFTMethod, abstractPayoffs_::Array{U}) where {U <: FinancialMonteCarlo.AbstractPayoff}
-    r = zero_rate.r
-    d = mcProcess.underlying.d
-
-    f1(::T1) where {T1} = (T1 <: EuropeanOption)
-    abstractPayoffs = filter(f1, abstractPayoffs_)
-
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractFFTMethod, abstractPayoffs::Array{U}) where {U <: FinancialMonteCarlo.EuropeanOption}
     TT = unique([opt.T for opt in abstractPayoffs])
-    zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs_)
-    prices = Array{typeof(zero_typed)}(undef, length(abstractPayoffs_))
+    zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs)
+    prices = Array{typeof(zero_typed)}(undef, length(abstractPayoffs))
 
     for T in TT
-        index_same_t = findall(op -> (op.T == T && f1(op)), abstractPayoffs_)
-        payoffs = abstractPayoffs_[index_same_t]
+        index_same_t = findall(op -> (op.T == T), abstractPayoffs)
+        payoffs = abstractPayoffs[index_same_t]
         strikes = [opt.K for opt in payoffs]
-        r_tmp = FinancialMonteCarlo.integral(r, T) / T
-        d_tmp = FinancialMonteCarlo.integral(d, T) / T
-        model2 = deepcopy(mcProcess)
-        model2.underlying = Underlying(mcProcess.underlying.S0, d_tmp)
-        prices[index_same_t] = pricer(model2, strikes, r_tmp, T, method)
+        prices_call = pricer(mcProcess, strikes, zero_rate, T, method)
+        prices_final = [call_to_put(prices_call[i], mcProcess.underlying, zero_rate, payoffs[i]) for i = 1:length(payoffs)]
+        prices[index_same_t] = prices_final
     end
 
-    length(abstractPayoffs) < length(abstractPayoffs_) ? (return prices) : (return prices * 1.0)
+    return prices
 end
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractFFTMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption)
-    r = zero_rate.r
-    r_tmp = FinancialMonteCarlo.integral(r, abstractPayoff.T) / abstractPayoff.T
-
-    return first(pricer(mcProcess, [abstractPayoff.K], r_tmp, abstractPayoff.T, method))
+    return first(pricer(mcProcess, [abstractPayoff.K], zero_rate, abstractPayoff.T, method))
 end
