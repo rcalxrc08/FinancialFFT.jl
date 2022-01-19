@@ -8,7 +8,7 @@
 # ## Basic syntax
 # The basic syntax for FinancialFFT is simple. Here is an example of pricing a European Option with a Black Scholes model:
 
-using FinancialFFT
+using FinancialFFT, FinancialMonteCarlo
 S0 = 100.0;
 K = 100.0;
 r = 0.02;
