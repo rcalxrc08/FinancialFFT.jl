@@ -1,4 +1,4 @@
-using FinancialToolbox, DualNumbers, HyperDualNumbers, FinancialFFT, FinancialMonteCarlo, BenchmarkTools
+using DualNumbers, HyperDualNumbers, FinancialFFT, FinancialMonteCarlo, BenchmarkTools
 
 A = 600.0;
 N = 18;
@@ -36,7 +36,6 @@ mc = MonteCarloConfiguration(Nsim, Nstep, FinancialMonteCarlo.AntitheticMC());
 method_lewis = LewisMethod(700.0, 200000);
 @btime pricer(Model, zero_rate, method_lewis, EUData);
 # @btime pricer(Model, zero_rate, mc, EUData);
-typeof(Model) <: BlackScholesProcess ? @time(@show(blsprice(S0, K, r, T, sigma, d))) : nothing;
 method_cm_lewis = CarrMadanLewisMethod(A, N);
 @btime pricer(Model, zero_rate, method_cm_lewis, EUData);
 

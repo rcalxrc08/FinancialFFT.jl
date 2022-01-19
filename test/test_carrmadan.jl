@@ -1,7 +1,7 @@
 using FinancialToolbox, DualNumbers, FinancialFFT, FinancialMonteCarlo
 
 A = 600.0;
-N = 200000;
+N = 13;
 
 method = CarrMadanLewisMethod(A, N);
 S0 = 100.0;
