@@ -1,0 +1,4 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+FinancialFFT = "ccc4acef-1676-4a84-946d-4093fe376f06"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"

@@ -1,0 +1,104 @@
+#FinancialFFT.jl
+variables:
+  JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia/"
+stages:
+  - build
+  - test
+  - coverage
+  - benchmark
+  - deploy
+before_script:
+    # Install build dependencies
+    - apt-get update && apt-get -y install cmake
+    - apt-get update && apt-get -y install gcc
+    - apt-get update && apt-get -y install g++
+    - apt-get update && apt-get -y install bzip2
+
+# Below is the template to run your tests in Julia
+
+.test_template: &build_definition
+  script:
+    - /usr/local/julia/bin/julia --project=@. -e 'using InteractiveUtils; versioninfo(); import Pkg; Pkg.build(); using FinancialFFT'
+
+.test_template: &test_definition
+  script:
+    - /usr/local/julia/bin/julia --project=@. -e 'using InteractiveUtils; versioninfo(); import Pkg; Pkg.build(); using FinancialFFT'
+    - /usr/local/julia/bin/julia --project=@. -e 'import Pkg; Pkg.test(; coverage = true)'
+  artifacts:
+    when: on_success
+    paths:
+      - .julia/
+      - src/*.cov
+      - src/*/*.cov
+      - src/*/*/*.cov
+    expire_in: '1 hour'
+
+
+.test_template: &cov_definition
+  script:
+    - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
+    - /usr/local/julia/bin/julia --project=@. -e 'using Pkg; Pkg.add("Coverage"); import Pkg; Pkg.build(); using FinancialFFT;
+      using Coverage; cl, tl = get_summary(process_folder());
+      println("(", cl/tl*100, "%) covered");
+      using Pkg; cd(Pkg.dir("FinancialFFT")); Codecov.submit_local(Codecov.process_folder())'
+  artifacts:
+    when: on_success
+    paths:
+      - .julia/
+    expire_in: '1 hour'
+      
+      
+
+.test_template: &bench_definition
+  script:
+    - julia --project=benchmark -e 'using Pkg; Pkg.instantiate(); Pkg.develop(PackageSpec(path=pwd()))'
+    - julia --project=benchmark -e 'using Pkg; Pkg.instantiate(); include("benchmark/benchmarks.jl");'
+
+# Name a test and select an appropriate image.
+build:1.7:
+  stage: build
+  image: julia:1.7
+  <<: *build_definition
+  
+test:1.7:
+  stage: test
+  image: julia:1.7
+  <<: *test_definition
+
+benchmark:1.7:
+  stage: benchmark
+  image: julia:1.7
+  <<: *bench_definition
+  
+coverage:1.7:
+  stage: coverage
+  image: julia:1.7
+  <<: *cov_definition
+
+pages:
+  stage: deploy
+  image: julia:1.7
+  script:
+    - julia --project=docs -e 'using Pkg; Pkg.instantiate(); Pkg.develop(PackageSpec(path=pwd()))'
+    - julia --project=docs --color=yes docs/make.jl
+    - mv docs/build public
+  artifacts:
+    paths:
+      - public
+  only:
+  - master
+
+# REMARK: Do not forget to enable the coverage feature for your project, if you
+# are using code coverage reporting above. This can be done by
+#
+# - Navigating to the `CI/CD Pipelines` settings of your project,
+# - Copying and pasting the default `Simplecov` regex example provided, i.e.,
+#   `\(\d+.\d+\%\) covered` in the `test coverage parsing` textfield.
+#
+# WARNING: This template is using the `julialang/julia` images from [Docker
+# Hub][3]. One can use custom Julia images and/or the official ones found
+# in the same place. However, care must be taken to correctly locate the binary
+# file (`/opt/julia/bin/julia` above), which is usually given on the image's
+# description page.
+#
+# [3]: http://hub.docker.com/
