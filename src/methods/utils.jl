@@ -12,8 +12,8 @@ function call_to_put(C, underlying, zero_rate, opt)
     K = opt.K
     return opt.isCall ? C : (C - S * exp(-d * T) + K * exp(-r * T))
 end
-#Base.hash(x::Dual) = Base.hash(Base.hash("r") - Base.hash(x.value) - Base.hash("i") - Base.hash(x.epsilon))
-function integral_1(f, xmin, xmax, N)
+
+function midpoint_definite_integral(f, xmin, xmax, N)
     x = range(xmin, length = N, stop = xmax)
     dx = (xmax - xmin) / (N - 1)
     sum_ = f(xmin) * dx * 0

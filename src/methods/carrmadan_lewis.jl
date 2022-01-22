@@ -19,6 +19,9 @@ end
 
 export CarrMadanLewisMethod;
 
+"""
+Documentation CarrMadanLewis Method
+"""
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanLewisMethod) where {U <: Number}
     Npow = method.Npow
     N = 2^Npow

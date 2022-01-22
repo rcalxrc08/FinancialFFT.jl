@@ -19,26 +19,10 @@ A single method is implemented for each process, which provide the simulation ou
 
 Each process behave in its own different way but returning the same kind of object after simulation,
 the generic interfaces for simulating are the following:
-```@docs
-simulate(mcProcess::FinancialMonteCarlo.AbstractMonteCarloProcess,spotData::FinancialMonteCarlo.AbstractZeroRateCurve,mcBaseData::FinancialMonteCarlo.AbstractMonteCarloConfiguration, T::Number)
-```
-```@docs
-simulate(mcProcess::FinancialMonteCarlo.AbstractMonteCarloEngine,mcBaseData::FinancialMonteCarlo.AbstractMonteCarloConfiguration, T::Number)
-```
+DELETE HERE.
 The following process are already implemented:
 ```@docs
-BlackScholesProcess
-BrownianMotion
-FinancialMonteCarlo.BrownianMotionVec
-GeometricBrownianMotion
-FinancialMonteCarlo.GeometricBrownianMotionVec
-HestonProcess
-KouProcess
-LogNormalMixture
-MertonProcess
-NormalInverseGaussianProcess
-SubordinatedBrownianMotion
-FinancialMonteCarlo.SubordinatedBrownianMotionVec
-ShiftedLogNormalMixture
-VarianceGammaProcess
+CarrMadanLewisMethod
+LewisMethod
+CarrMadanMethod
 ```

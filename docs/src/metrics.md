@@ -12,10 +12,7 @@ The following type of *Metric* are supported from the package:
 
 Each Metric must implement its own *Metric* method; the general interface is the following:
 ```@docs
-pricer(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::ZeroRate,mcConfig::MonteCarloConfiguration,abstractPayoff::FinancialMonteCarlo.AbstractPayoff)
-variance(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::ZeroRate,mcConfig::MonteCarloConfiguration,abstractPayoff::FinancialMonteCarlo.AbstractPayoff)
-confinter(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::ZeroRate,mcConfig::MonteCarloConfiguration,abstractPayoff::FinancialMonteCarlo.AbstractPayoff,alpha::Real=0.99)
-delta(mcProcess::FinancialMonteCarlo.BaseProcess,spotData::ZeroRate,mcConfig::MonteCarloConfiguration,abstractPayoff::FinancialMonteCarlo.AbstractPayoff,dS0::Real=1e-7)
-rho(mcProcess::FinancialMonteCarlo.BaseProcess, rfCurve::FinancialMonteCarlo.AbstractZeroRateCurve, mcConfig::MonteCarloConfiguration, abstractPayoff::FinancialMonteCarlo.AbstractPayoff, dr::Real = 1e-7)
-FinancialMonteCarlo.distribution(mcProcess::FinancialMonteCarlo.BaseProcess, rfCurve::FinancialMonteCarlo.AbstractZeroRateCurve, mcConfig::MonteCarloConfiguration, T::num_) where {num_ <: Number}
+pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::FinancialFFT.CarrMadanMethod) where {U <: Number}
+pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption)
+pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanLewisMethod) where {U <: Number}
 ```

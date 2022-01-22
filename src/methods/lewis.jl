@@ -19,6 +19,9 @@ end
 
 export LewisMethod;
 
+"""
+Documentation Lewis Method
+"""
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption)
     T = abstractPayoff.T
     K = abstractPayoff.K
@@ -32,7 +35,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     CharFunc(v) = exp(T * EspChar(v))
     x__ = log(S0 / K) + (r - d) * T
     func_(z) = real_mod(exp(-z * 1im * x__) * CharFunc(-z - 1im * 0.5) / (z^2 + 0.25))
-    int_1 = integral_1(func_, -A, A, N)
+    int_1 = midpoint_definite_integral(func_, -A, A, N)
     price = S0 * (1 - exp(-x__ / 2) * int_1 / (2 * pi)) * exp(-d * T)
     return call_to_put(price, mcProcess.underlying, zero_rate, abstractPayoff)
 end
