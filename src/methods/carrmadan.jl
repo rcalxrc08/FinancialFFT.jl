@@ -41,15 +41,15 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     S0 = mcProcess.underlying.S0
     r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
     d = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T) / T
-    CharExp(v) = CharactheristicExponent(v, mcProcess)
-    EspChar(v) = CharExp(v) - v * 1im * CharExp(-1im)
     A = method.A
-    #v-> compute integral as a summation
+    #* v-> compute integral as a summation
     dx = A / N
     real_vec = 0:(N-1)
     v = collect(real_vec) * dx            # the final value A is excluded
     v[1] = 1e-312
-    CharFunc(v) = exp(T * EspChar(v))
+    cf = FinancialFFT.CharactheristicFunction(mcProcess, T)
+    corr = FinancialFFT.CharactheristicExponent(-1im, mcProcess, T)
+    CharFunc(v) = cf(v) * exp(-v * 1im * corr)
     integrand_f(v) = exp(1im * (r - d) * v * T) * (CharFunc(v - 1im) - 1) / (1im * v - v^2)
     # Option Price
     weights_ = @. 3 + (-1)^((0:(N-1)) + 1)# Simpson weights
@@ -57,7 +57,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     @views weights_[end] = 1
     dk = 2 * pi / A
     b = N * dk / 2
-    complex_vec_z_k = @. integrand_f(v) * dx * weights_ / 3 * exp(1im * b * v) #* exp(1im * pi * real_vec)
+    complex_vec_z_k = @. integrand_f(v) * dx * weights_ / 3 * exp(1im * b * v)
     fft!(complex_vec_z_k)
     z_T = @. real_mod(complex_vec_z_k) / pi
 

@@ -1,5 +1,8 @@
 module FinancialFFT
-
+using Requires # for conditional dependencies
+function __init__()
+    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" include("deps/cuda_dependencies.cujl")
+end
 using FinancialMonteCarlo
 import FinancialMonteCarlo.pricer, FinancialMonteCarlo.AbstractMethod
 abstract type AbstractIntegrationMethod <: FinancialMonteCarlo.AbstractMethod end

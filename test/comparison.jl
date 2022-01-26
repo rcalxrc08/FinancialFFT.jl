@@ -34,6 +34,8 @@ result_lewis = pricer(Model, zero_rate, method_lewis, EUData);
 method_cm_lewis = CarrMadanLewisMethod(A, N);
 result_cm_lewis = pricer(Model, zero_rate, method_cm_lewis, EUData);
 toll = 1e-2;
-test_dual(analytic_result, result_cm, toll)
-test_dual(analytic_result, result_lewis, toll)
-test_dual(analytic_result, result_cm_lewis, toll)
+@testset "dual test" begin
+    test_dual(analytic_result, result_cm, toll)
+    test_dual(analytic_result, result_lewis, toll)
+    test_dual(analytic_result, result_cm_lewis, toll)
+end

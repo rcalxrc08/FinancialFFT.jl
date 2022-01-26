@@ -30,9 +30,9 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     S0 = mcProcess.underlying.S0
     r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
     d = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T) / T
-    CharExp(v) = FinancialFFT.CharactheristicExponent(v, mcProcess)
-    EspChar(v) = CharExp(v) - v * 1im * CharExp(-1im)
-    CharFunc(v) = exp(T * EspChar(v))
+    cf = FinancialFFT.CharactheristicFunction(mcProcess, T)
+    corr = FinancialFFT.CharactheristicExponent(-1im, mcProcess, T)
+    CharFunc(v) = cf(v) * exp(-v * 1im * corr)
     x__ = log(S0 / K) + (r - d) * T
     func_(z) = real_mod(exp(-z * 1im * x__) * CharFunc(-z - 1im * 0.5) / (z^2 + 0.25))
     int_1 = midpoint_definite_integral(func_, -A, A, N)

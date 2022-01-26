@@ -29,10 +29,9 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     A = method.A
     d = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T) / T
     r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
-
-    CharExp(v) = CharactheristicExponent(v, mcProcess)
-    EspChar(v) = CharExp(v) + (r - d - CharExp(-1im)) * v * 1im
-    CharFunc(v) = exp(T * EspChar(v))
+    cf = FinancialFFT.CharactheristicFunction(mcProcess, T)
+    correction = (r - d) * T - FinancialFFT.CharactheristicExponent(-1im, mcProcess, T)
+    CharFunc(v) = cf(v) * exp(v * 1im * correction)
     dx = A / N
     x = collect(0:(N-1)) * dx
     x[1] = 1e-312
