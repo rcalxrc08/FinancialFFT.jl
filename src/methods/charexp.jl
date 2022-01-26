@@ -56,10 +56,6 @@ function CharactheristicExponent(v::num_, mcProcess::proc, T::num2) where {num_ 
     return cf
 end
 
-function CharactheristicFunction(v::num_, mcProcess::proc, T::num2) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess, num2 <: Number}
-    return exp(CharactheristicExponent(v, mcProcess, T))
-end
-
 function CharactheristicFunction(mcProcess::proc, T::num2) where {proc <: FinancialMonteCarlo.AbstractMonteCarloProcess, num2 <: Number}
     # ! a function is returned
     ce = CharactheristicExponent(mcProcess)
