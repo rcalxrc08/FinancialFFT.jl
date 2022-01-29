@@ -1,4 +1,4 @@
 comment: false
 ignore:
-  - "src/methods/cuda/*"  # ignore folders and all its contents
-  - "src/deps/cuda_dependencies.jl"       # wildcards accepted
+  - "src/methods/cuda/*"
+  - "src/deps/cuda_dependencies.jl"

@@ -1,15 +1,5 @@
-using DualNumbers, HyperDualNumbers, FFTW
+using .HyperDualNumbers, FFTW
 import FFTW.fft!;
-
-function fft!(x::AbstractArray{T}) where {T <: Dual{cpx}} where {cpx <: Complex{num}} where {num <: Number}
-    Xcomplex = DualNumbers.value.(x)
-    Xder = epsilon.(x)
-    planned_fft = plan_fft!(similar(Xcomplex))
-    Xcomplex .= planned_fft * Xcomplex
-    Xder .= planned_fft * Xder
-    @. x = dual(Xcomplex, Xder)
-    nothing
-end
 
 function fft!(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex{num}} where {num <: Number}
     Xcomplex = HyperDualNumbers.value.(x)
@@ -23,4 +13,8 @@ function fft!(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex
     Xder12 .= planned_fft * Xder12
     @. x = hyper(Xcomplex, Xder1, Xder2, Xder12)
     nothing
+end
+
+function real_mod(x::Hyper)
+    return hyper(real(x.value), real(x.epsilon1), real(x.epsilon2), real(x.epsilon12))
 end

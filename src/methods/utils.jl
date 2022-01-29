@@ -1,8 +1,4 @@
-using DualNumbers, HyperDualNumbers
 
-function real_mod(x::Hyper)
-    return hyper(real(x.value), real(x.epsilon1), real(x.epsilon2), real(x.epsilon12))
-end
 real_mod(x) = real(x)
 function call_to_put(C, underlying, zero_rate, opt)
     S = underlying.S0

@@ -36,4 +36,6 @@ method_cm_lewis = CarrMadanLewisMethod(A, N);
 result_cm_lewis = pricer(Model, zero_rate, method_cm_lewis, EUData);
 toll = 1e-3;
 #test_hyper(analytic_result, result_cm, toll)
-test_hyper(analytic_result, result_cm_lewis, toll)
+@testset "hyper test" begin
+    test_hyper(analytic_result, result_cm_lewis, toll)
+end
