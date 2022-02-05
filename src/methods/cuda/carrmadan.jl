@@ -1,4 +1,4 @@
-function pricer_cu(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanMethod) where {U <: Number}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanMethod, ::FinancialMonteCarlo.CudaMode) where {U <: Number}
     Npow = method.Npow
     N = 2^Npow
     S0 = mcProcess.underlying.S0

@@ -2,10 +2,7 @@ using .HyperDualNumbers, FFTW
 import FFTW.fft!;
 
 function fft!(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex{num}} where {num <: Number}
-    Xcomplex = HyperDualNumbers.value.(x)
-    Xder1 = HyperDualNumbers.epsilon1.(x)
-    Xder2 = HyperDualNumbers.epsilon2.(x)
-    Xder12 = HyperDualNumbers.epsilon12.(x)
+    Xcomplex, Xder1, Xder2, Xder12 = HyperDualNumbers.value.(x), HyperDualNumbers.epsilon1.(x), HyperDualNumbers.epsilon2.(x), HyperDualNumbers.epsilon12.(x)
     planned_fft = plan_fft!(similar(Xcomplex))
     Xcomplex .= planned_fft * Xcomplex
     Xder1 .= planned_fft * Xder1

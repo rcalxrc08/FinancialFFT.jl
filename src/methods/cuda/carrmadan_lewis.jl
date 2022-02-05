@@ -1,5 +1,5 @@
 #TODO: CHANGE NAME
-function pricer_cu(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::num, method::CarrMadanLewisMethod) where {U <: Number, num <: Number}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::num, method::CarrMadanLewisMethod, ::FinancialMonteCarlo.CudaMode) where {U <: Number, num <: Number}
     Npow = method.Npow
     N = 2^Npow
     S0 = mcProcess.underlying.S0

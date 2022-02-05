@@ -22,7 +22,7 @@ export LewisMethod;
 """
 Documentation Lewis Method
 """
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     T = abstractPayoff.T
     K = abstractPayoff.K
     A = method.A
@@ -33,14 +33,14 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     cf = FinancialFFT.CharactheristicFunction(mcProcess, T)
     corr = FinancialFFT.CharactheristicExponent(-1im, mcProcess, T)
     CharFunc(v) = cf(v) * exp(-v * 1im * corr)
-    x__ = log(S0 / K) + (r - d) * T
-    func_(z) = real_mod(exp(-z * 1im * x__) * CharFunc(-z - 1im * 0.5) / (z^2 + 0.25))
+    mod = log(S0 / K) + (r - d) * T
+    func_(z) = real_mod(exp(-z * 1im * mod) * CharFunc(-z - 1im * 0.5) / (z^2 + 0.25))
     int_1 = midpoint_definite_integral(func_, -A, A, N)
-    price = S0 * (1 - exp(-x__ / 2) * int_1 / (2 * pi)) * exp(-d * T)
+    price = S0 * (1 - exp(-mod / 2) * int_1 / (2 * pi)) * exp(-d * T)
     return call_to_put(price, mcProcess.underlying, zero_rate, abstractPayoff)
 end
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoffs::Array{U}) where {U <: FinancialMonteCarlo.EuropeanOption}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoffs::Array{U}, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
     TT = unique([opt.T for opt in abstractPayoffs])
     zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs)
     prices = Array{typeof(zero_typed)}(undef, length(abstractPayoffs))

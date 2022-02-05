@@ -16,4 +16,3 @@ for (current_test, i) in zip(test_list, 1:length(test_list))
         println("")
     end
 end
-@test 0 == 0

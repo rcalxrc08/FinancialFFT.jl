@@ -6,11 +6,8 @@ function __init__()
     @require HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97" include("deps/hyper_dependencies.jl")
     @require ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210" include("deps/forwarddiff_dependencies.jl")
 end
-using FinancialMonteCarlo
-import FinancialMonteCarlo.pricer, FinancialMonteCarlo.AbstractMethod
-abstract type AbstractIntegrationMethod <: FinancialMonteCarlo.AbstractMethod end
-abstract type AbstractFFTMethod <: AbstractIntegrationMethod end
-abstract type AbstractIntegralMethod <: AbstractIntegrationMethod end
+
+include("methods/abstracts.jl")
 include("methods/utils.jl")
 include("methods/charexp.jl")
 include("methods/carrmadan.jl")

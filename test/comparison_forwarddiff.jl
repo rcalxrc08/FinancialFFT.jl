@@ -43,5 +43,3 @@ toll = 1e-2;
     test_forward_diff(analytic_result, result_lewis, toll)
     test_forward_diff(analytic_result, result_cm_lewis, toll)
 end
-# method_ei = BackwardEuler(1000, 1000);
-# @show result_lewis = pricer(Model, zero_rate, method_ei, EUData);
