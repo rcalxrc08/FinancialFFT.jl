@@ -1,12 +1,18 @@
 
 real_mod(x) = real(x)
-function call_to_put(C, underlying, zero_rate, opt)
+function call_to_put(C, underlying, zero_rate, opt::EuropeanOption)
     S = underlying.S0
     T = opt.T
     d = FinancialMonteCarlo.integral(underlying.d, T) / T
     r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
     K = opt.K
     return opt.isCall ? C : (C - S * exp(-d * T) + K * exp(-r * T))
+end
+
+function call_to_put(C, underlying, zero_rate, opt::BinaryEuropeanOption)
+    T = opt.T
+    r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
+    return opt.isCall ? C : (exp(-r * T) - C)
 end
 
 function midpoint_definite_integral(f, xmin, xmax, N)
