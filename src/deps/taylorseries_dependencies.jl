@@ -23,5 +23,5 @@ end
 
 # Needed for interpolation
 import Base.floor;
-floor(x::Taylor1) =@views floor(x[0])
-floor(x::AbstractSeries) =@views floor(x[0][1])
+!hasmethod(floor,(Taylor1,)) ? (floor(x::Taylor1) =@views floor(x[0])) : nothing
+!hasmethod(floor,(AbstractSeries,)) ? (floor(x::AbstractSeries) =@views floor(x[0][1])) : nothing
