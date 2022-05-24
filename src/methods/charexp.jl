@@ -9,8 +9,8 @@ end
 
 function CharactheristicExponent(mcProcess::FinancialMonteCarlo.MertonProcess)
     σ = mcProcess.σ
-    sigma1 = mcProcess.σⱼᵤₘₚ
-    mu1 = mcProcess.μⱼᵤₘₚ
+    sigma1 = mcProcess.σ_jump
+    mu1 = mcProcess.μ_jump
     lam = mcProcess.λ
 
     val_(v) = -σ^2 * v^2 * 0.5 + lam * (exp(-sigma1^2 * v^2 / 2 + 1im * mu1 * v) - 1)
