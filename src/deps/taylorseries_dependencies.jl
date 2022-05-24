@@ -19,3 +19,9 @@ function fft!(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <
 	end
     nothing
 end
+
+
+# Needed for interpolation
+import Base.floor;
+floor(x::Taylor1) =@views floor(x[0])
+floor(x::AbstractSeries) =@views floor(x[0][1])
