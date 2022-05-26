@@ -1,0 +1,5 @@
+["0.1"]
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+FinancialMonteCarlo = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+Requires = "ae029012-a4dd-5104-9daa-d747884805df"

@@ -1,0 +1,4 @@
+name = "FinancialFFT"
+uuid = "ccc4acef-1676-4a84-946d-4093fe376f06"
+authors = ["Nicola <nicola.scaramuzzino@yandex.com> and contributors"]
+repo = "https://github.com/rcalxrc08/FinancialFFT.jl.git"
