@@ -2,8 +2,7 @@ using .TaylorSeries, FFTW
 import FFTW.fft!;
 
 function get_diff(x::AbstractArray,n::Integer)
-	# return TaylorSeries.getcoeff.(differentiate.(x,n),0)
-	return @views x[n]
+	return TaylorSeries.getcoeff.(x,n)
 end
 function fft!(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <: Complex{num}} where {num <: Number}
 	Xcomplex=[el[0] for el in x]
