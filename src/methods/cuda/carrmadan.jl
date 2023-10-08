@@ -10,9 +10,8 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     real_vec = 0:(N-1)
     v = collect(real_vec) * dx            # the final value A is excluded
     v[1] = 1e-312
-    cf = FinancialFFT.CharactheristicFunction(mcProcess, T)
     corr = FinancialFFT.CharactheristicExponent(-1im, mcProcess, T)
-    CharFunc(v) = cf(v) * exp(-v * 1im * corr)
+    CharFunc(v) = exp(CharactheristicExponent(v, mcProcess, T) - v * 1im * corr)
     integrand_f(v) = exp(1im * (r - d) * v * T) * (CharFunc(v - 1im) - 1) / (1im * v - v^2)
     # Option Price
     weights_ = @. 3 + (-1)^((0:(N-1)) + 1)# Simpson weights

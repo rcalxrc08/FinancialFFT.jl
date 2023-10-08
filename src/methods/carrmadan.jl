@@ -39,33 +39,40 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     Npow = method.Npow
     N = 2^Npow
     S0 = mcProcess.underlying.S0
-    r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
-    d = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T) / T
+    rT = FinancialMonteCarlo.integral(zero_rate.r, T)
+    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     A = method.A
     #* v-> compute integral as a summation
     dx = A / N
     real_vec = 0:(N-1)
     v = collect(real_vec) * dx            # the final value A is excluded
-    v[1] = 1e-312
-    cf = FinancialFFT.CharactheristicFunction(mcProcess, T)
-    corr = FinancialFFT.CharactheristicExponent(-1im, mcProcess, T)
-    CharFunc(v) = cf(v) * exp(-v * 1im * corr)
-    integrand_f(v) = exp(1im * (r - d) * v * T) * (CharFunc(v - 1im) - 1) / (1im * v - v^2)
-    # Option Price
-    weights_ = @. 3 + (-1)^((0:(N-1)) + 1)# Simpson weights
-    @views weights_[1] = 1
-    @views weights_[end] = 1
+    ChainRulesCore.@ignore_derivatives v[1] = eps(zero(Float64)) #wrong
+    corr = FinancialFFT.CharactheristicExponent_i(1, mcProcess) * T
+    # v_adj = @. v - im
+    # v_adj = @. -im * (v * im - im * im)
+    # v_adj = @. im * (v_im + 1) * Int8(-1)
+    # res = @. FinancialFFT.CharactheristicExponent(im * (v_im + 1) * Int8(-1), mcProcess) * T
+    weights_ = ChainRulesCore.@ignore_derivatives @. 3 + (-1)^((0:(N-1)) + 1)# Simpson weights
+    ChainRulesCore.@ignore_derivatives @views weights_[1] = 1
+    ChainRulesCore.@ignore_derivatives @views weights_[end] = 1
     dk = 2 * pi / A
     b = N * dk / 2
-    complex_vec_z_k = @. integrand_f(v) * dx * weights_ / 3 * exp(1im * b * v)
-    fft!(complex_vec_z_k)
-    z_T = @. real_mod(complex_vec_z_k) / pi
+    drift_rd = rT - dT
+    # corr_im = im * corr
+    # res_1 = @. exp(v_im * (rT - dT + b))
+    # res_2 = @. (exp(res - (v_im + 1) * corr) - 1)
+    # res_2 = @. (exp(res - (v_im + 1) * corr) - 1)
+    v_im = @. v * im
+    complex_vec_z_k = @. exp(v_im * (drift_rd + b)) * (exp(FinancialFFT.CharactheristicExponent_i(-(v_im + 1), mcProcess) * T - (v_im + 1) * corr) - 1) / (v_im * (v_im + 1)) * (dx * weights_ / 3)
+    y = fft(complex_vec_z_k)
+    z_T = @. real_mod(y) / pi
 
     ks = -b .+ dk * real_vec
-    spline_cub = CubicSplineInterpolation(ks, z_T)
+    spline_cub = ChainRulesCore.@ignore_derivatives CubicSplineInterpolation(ks, z_T) #wrong
     k_interp = @. log(StrikeVec / S0)
-    C = @. S0 * spline_cub(k_interp) + max(S0 - StrikeVec * exp(-(r - d) * T), 0)
-    return C * exp(-d * T)
+    spl_res = ChainRulesCore.@ignore_derivatives spline_cub(k_interp) #wrong
+    C = @. S0 * spl_res + max(S0 - StrikeVec * exp(-drift_rd), 0)
+    return C * exp(-dT)
 end
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractFFTMethod, abstractPayoffs::Array{U}, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
@@ -78,7 +85,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
         payoffs = abstractPayoffs[index_same_t]
         strikes = [opt.K for opt in payoffs]
         prices_call = pricer(mcProcess, strikes, zero_rate, T, method)
-        prices_final = [call_to_put(prices_call[i], mcProcess.underlying, zero_rate, payoffs[i]) for i = 1:length(payoffs)]
+        prices_final = [call_to_put(prices_call[i], mcProcess.underlying, zero_rate, payoffs[i]) for i in eachindex(payoffs)]
         prices[index_same_t] = prices_final
     end
 

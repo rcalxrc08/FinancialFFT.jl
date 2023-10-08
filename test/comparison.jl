@@ -21,18 +21,18 @@ EUData = EuropeanOption(T, K)
 Nsim = 100000;
 Nstep = 30;
 mc = MonteCarloConfiguration(Nsim, Nstep, FinancialMonteCarlo.AntitheticMC());
-analytic_result = blsprice(S0, K, r, T, sigma, d);
+@show analytic_result = blsprice(S0, K, r, T, sigma, d);
 function test_dual(x, y, toll)
     @test abs(x.value - y.value) < toll
     @test abs(x.epsilon - y.epsilon) < toll
     nothing
 end
 
-result_cm = pricer(Model, zero_rate, method_cm, EUData);
+@show result_cm = pricer(Model, zero_rate, method_cm, EUData);
 method_lewis = LewisMethod(700.0, 200000);
-result_lewis = pricer(Model, zero_rate, method_lewis, EUData);
+@show result_lewis = pricer(Model, zero_rate, method_lewis, EUData);
 method_cm_lewis = CarrMadanLewisMethod(A, N);
-result_cm_lewis = pricer(Model, zero_rate, method_cm_lewis, EUData);
+@show result_cm_lewis = pricer(Model, zero_rate, method_cm_lewis, EUData);
 toll = 1e-2;
 @testset "dual test" begin
     test_dual(analytic_result, result_cm, toll)

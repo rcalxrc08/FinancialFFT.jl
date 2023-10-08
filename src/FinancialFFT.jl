@@ -14,6 +14,7 @@ include("methods/charexp.jl")
 include("methods/carrmadan.jl")
 include("methods/carrmadan_lewis.jl")
 include("methods/lewis.jl")
+include("methods/density.jl")
 
 export pricer
 

@@ -27,26 +27,23 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     N = 2^Npow
     S0 = mcProcess.underlying.S0
     A = method.A
-    d = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T) / T
-    r = FinancialMonteCarlo.integral(zero_rate.r, T) / T
-    cf = FinancialFFT.CharactheristicFunction(mcProcess, T)
-    correction = (r - d) * T - FinancialFFT.CharactheristicExponent(-1im, mcProcess, T)
-    CharFunc(v) = cf(v) * exp(v * 1im * correction)
+    dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    rT = FinancialMonteCarlo.integral(zero_rate.r, T)
+    correction = rT + dT - FinancialFFT.CharactheristicExponent(-1im, mcProcess, T)
     dx = A / N
     x = collect(0:(N-1)) * dx
-    x[1] = 1e-312
+    ChainRulesCore.@ignore_derivatives x[1] = eps(zero(Float64)) #wrong
     weights_ = @. 3 + (-1)^((0:(N-1)) + 1)
-    @views weights_[1] = 1
-    @views weights_[N] = 1
-
-    dk = 2 * pi / A
+    ChainRulesCore.@ignore_derivatives @views weights_[1] = 1
+    ChainRulesCore.@ignore_derivatives @views weights_[N] = 1
+    dk = 2 / A * pi
     b = N * dk / 2
-    ks = -b .+ dk * (0:(N-1))
-    integrand = @. exp(-1im * b * x) * CharFunc(x - 0.5 * 1im) / (x^2 + 0.25) * weights_ * dx / 3
+    integrand = @. exp(T * FinancialFFT.CharactheristicExponent(x - im // 2, mcProcess) + x * im * (correction - b) + correction / 2) / (x^2 + 1 // 4) * weights_ * dx / 3
     fft!(integrand)
     integral_value = @. real_mod(integrand) / pi
 
-    spline_cub = CubicSplineInterpolation(ks, integral_value)
-    prices = @. S0 - sqrt(S0 * StrikeVec) * exp(-(r - d) * T) * spline_cub(log(StrikeVec / S0))
-    return prices * exp(-d * T)
+    ks = -b .+ dk * (0:(N-1))
+    spline_cub = ChainRulesCore.@ignore_derivatives CubicSplineInterpolation(ks, integral_value) #wrong
+    prices = @. S0 - sqrt(S0 * StrikeVec) * exp(-(rT + dT)) * spline_cub(log(StrikeVec / S0))
+    return prices * exp(dT)
 end
