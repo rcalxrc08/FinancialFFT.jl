@@ -107,7 +107,7 @@ function CharactheristicExponent(v::num_, mcProcess::proc) where {num_ <: Number
     return CharactheristicExponent_i(im * v, mcProcess)
 end
 function CharactheristicExponent_v(v, mcProcess::proc) where {proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
-    return CharactheristicExponent_vi(im * v, mcProcess)
+    return CharactheristicExponent_vi(im .* v, mcProcess)
 end
 function CharactheristicExponent(v::num_, mcProcess::proc, T::num2) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess, num2 <: Number}
     ce = CharactheristicExponent(v, mcProcess)
