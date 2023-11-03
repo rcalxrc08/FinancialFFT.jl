@@ -14,3 +14,9 @@ function fft!(x::AbstractArray{T1}) where {T1 <: Complex{cpx}} where {cpx <: For
     x .= Xcomplex .+ Xder1 * epss
     nothing
 end
+
+function fft(x::AbstractArray{T1}) where {T1 <: Complex{cpx}} where {cpx <: ForwardDiff.Dual{Tg, T, N}} where {Tg, T <: Real, N}
+    y = copy(x)
+    fft!(y)
+    return y
+end

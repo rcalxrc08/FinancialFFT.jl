@@ -12,6 +12,16 @@ function fft!(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex
     nothing
 end
 
+function fft(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex{num}} where {num <: Number}
+    y = copy(x)
+    fft!(y)
+    return y
+end
+
 function real_mod(x::Hyper)
     return hyper(real(x.value), real(x.epsilon1), real(x.epsilon2), real(x.epsilon12))
+end
+
+function imag_mod(x::Hyper)
+    return hyper(imag_mod(x.value), imag_mod(x.epsilon1), imag_mod(x.epsilon2), imag_mod(x.epsilon12))
 end

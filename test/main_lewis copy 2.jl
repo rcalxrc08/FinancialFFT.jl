@@ -1,4 +1,4 @@
-using FinancialToolbox, HyperDualNumbers, DualNumbers, FinancialFFT, FinancialMonteCarlo, Zygote, BenchmarkTools
+using FinancialToolbox, HyperDualNumbers, DualNumbers, FinancialFFT, FinancialMonteCarlo, Zygote, BenchmarkTools, FiniteDiff
 
 A = 600.0;
 const N_lewis = 20000;

@@ -20,6 +20,12 @@ function fft!(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <
     nothing
 end
 
+function fft(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <: Complex{num}} where {num <: Number}
+    y = copy(x)
+    fft!(y)
+    return y
+end
+
 # Needed for interpolation
 import Base.floor;
 !hasmethod(floor, (Taylor1,)) ? (floor(x::Taylor1) = @views floor(x[0])) : nothing

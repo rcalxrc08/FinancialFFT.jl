@@ -1,10 +1,10 @@
-using FinancialToolbox, FinancialFFT, FinancialMonteCarlo, BenchmarkTools, Zygote
+using FinancialToolbox, FinancialFFT, FinancialMonteCarlo, BenchmarkTools, Zygote, CUDA, Test
 
 A = 600.0;
 N = 14;
 
 S0 = 100.0;
-K = 100.0;
+K = 104.0;
 r = 0.02;
 #r=0.02;
 T = 1.0;
@@ -24,23 +24,21 @@ N = 14
 xmax = 10.0
 # @btime FinancialFFT.density($Model, $T, $r, $N, $xmax, $Model.underlying.S0);
 # @btime FinancialFFT.density_new($Model, $T, $r, $N, $xmax, $Model.underlying.S0);
-p = FinancialFFT.density(Model, T, r, N, xmax, Model.underlying.S0);
-function black_density(sigma, S0, d, r, T)
-    xmax = 10.0
-    N = 14
-    Model = BlackScholesProcess(sigma, Underlying(S0, d))
-    density_pair = FinancialFFT.density_new(Model, T, r, N, xmax, Model.underlying.S0)
-    return sum(density_pair[2])
-end
-function black_density_old(sigma, S0, d, r, T, K)
+# p = FinancialFFT.density(Model, T, r, N, xmax, Model.underlying.S0);
+function black_density_old(S0, K, r, T, sigma, d)
     opt = BinaryEuropeanOption(T, K)
     Model = BlackScholesProcess(sigma, Underlying(S0, d))
-    price = FinancialFFT.pricer_from_density(Model, T, r, opt)
+    method = FinancialFFT.DensityInverter(18)
+    zero_rate = FinancialMonteCarlo.ZeroRate(r)
+    #mode = FinancialMonteCarlo.SerialMode()
+    mode = FinancialMonteCarlo.CudaMode()
+    price = pricer(Model, zero_rate, method, opt, mode)
     return price
 end
-@show black_density_old(sigma, S0, d, r, T, K)
+@show black_density_old(S0, K, r, T, sigma, d)
 @show blsbin(S0, K, r, T, sigma, d)
-@show Zygote.gradient(black_density_old, sigma, S0, d, r, T, K)
+@test abs(blsbin(S0, K, r, T, sigma, d) - black_density_old(S0, K, r, T, sigma, d)) < 1e-3
+@show Zygote.gradient(black_density_old, S0, K, r, T, sigma, d)
 @show Zygote.gradient(blsbin, S0, K, r, T, sigma, d)
-@btime black_density_old($sigma, $S0, $d, $r, $T, $K);
-@btime Zygote.gradient(black_density_old, $sigma, $S0, $d, $r, $T, $K)
+@btime black_density_old($S0, $K, $r, $T, $sigma, $d);
+@btime Zygote.gradient(black_density_old, $S0, $K, $r, $T, $sigma, $d)
