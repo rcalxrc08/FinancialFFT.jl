@@ -30,18 +30,14 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     correction = rT + dT - FinancialFFT.CharactheristicExponent_i(1, mcProcess) * T
-
     idx = 0:(N-1)
-    one_adj = ChainRulesCore.@ignore_derivatives Int8(1)
-    minus_one_adj = ChainRulesCore.@ignore_derivatives Int8(-1)
-    one_minus_one = ChainRulesCore.@ignore_derivatives @. ifelse(iseven(idx), one_adj, minus_one_adj)
-    weights_ = ChainRulesCore.@ignore_derivatives @. (Int8(3) - one_minus_one)
-    ChainRulesCore.@ignore_derivatives @views weights_[1] = one_adj
-    ChainRulesCore.@ignore_derivatives @views weights_[end] = one_adj
+    one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)
+    weights_simpson = ChainRulesCore.@ignore_derivatives AlternatePaddedVector(Int8(1), Int8(4), Int8(2), Int8(1), N)
+    support_array = ChainRulesCore.@ignore_derivatives @. one_minus_one * weights_simpson
     dx = A / N
     x = ChainRulesCore.@ignore_derivatives collect(idx * dx)
     x_im = @. 1 // 2 + x * im
-    integrand = @. (one_minus_one * weights_) * exp(correction * x_im + FinancialFFT.CharactheristicExponent_i(x_im, mcProcess) * T) / abs2(x_im)
+    integrand = @. support_array * exp(correction * x_im + FinancialFFT.CharactheristicExponent_i(x_im, mcProcess) * T) / abs2(x_im)
     Y = fft(integrand)
     integral_value = @. real_mod(Y)
     pi_over_A = pi / A

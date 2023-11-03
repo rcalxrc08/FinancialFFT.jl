@@ -19,20 +19,15 @@ function density_y(mcProcess, T, r, N, A, St, K, mode)
     vec = ChainRulesCore.@ignore_derivatives adapt_array(collect(-div(n, 2) .+ vec_lin), mode)            # Indices
     drift_rd = FinancialMonteCarlo.integral(r.r - mcProcess.underlying.d, T)
     corr = FinancialFFT.CharactheristicExponent_i(1, mcProcess) * T
-    # one_adj = ChainRulesCore.@ignore_derivatives Int8(1)
-    # minus_one_adj = ChainRulesCore.@ignore_derivatives Int8(-1)
-    # one_minus_one = ChainRulesCore.@ignore_derivatives @. ifelse(isodd(vec), one_adj, minus_one_adj)
     one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(-1), Int8(1), n)
     drift_rf = drift_rd + log(St) - log(K) - corr
     dt = pi / A # Step size, frequency space
     dt_im = dt * im
     drift_dt_im = drift_rf * dt_im
     Y_r = fft(@. exp(CharactheristicExponent_i(vec * dt_im, mcProcess) * T + drift_dt_im * vec) * one_minus_one)
-    # Y_r = fft(Y)
     twice_A = 2 * A
     eps_mod = ChainRulesCore.@ignore_derivatives eps(zero(typeof(drift_rf)))
     density_vals_adj = @. max(abs(FinancialFFT.real_mod(Y_r)) / twice_A, eps_mod)
-    #TODO: eps should be typed
     dx = twice_A / n           # Step size, for the density
     almost_one = sum(density_vals_adj) * dx
     ChainRulesCore.@ignore_derivatives @assert !isnan(almost_one) "Returned result is NaN"

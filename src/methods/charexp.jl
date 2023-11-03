@@ -1,17 +1,16 @@
 # All of the current implemented characteristic exponents are implemented as a real function with a complex input.
 #This allows us to compute directly the drift without the use of complex numbers.
 # Namely CharactheristicExponent(v)=CharactheristicExponent_i(v*im)
-function CharactheristicExponent_i(im_v, mcProcess::FinancialMonteCarlo.BlackScholesProcess)
+function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.BlackScholesProcess)
     σ = mcProcess.σ
     adj_σ = σ^2 / 2
-    val_ = im_v^2 * adj_σ
+    val_ = imv^2 * adj_σ
     return val_
 end
-function CharactheristicExponent_vi(im_v, mcProcess::FinancialMonteCarlo.BlackScholesProcess)
+function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.BlackScholesProcess)
     σ = mcProcess.σ
-    # adj_σ*v^2
     adj_σ = σ^2 / 2
-    val_ = @. im_v^2 * adj_σ
+    val_ = @. imv^2 * adj_σ
     return val_
 end
 
@@ -33,8 +32,6 @@ function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.MertonPr
     lam = mcProcess.λ
     adj_σ = σ^2 / 2
     adj_σ₀ = sigma1^2 / 2
-    # @show typeof(adj_σ₀)
-    # @show typeof(imv)
     val = @. adj_σ * imv^2 + lam * (exp(imv * (adj_σ₀ * imv + mu1)) - 1)
     return val
 end
