@@ -51,6 +51,21 @@ function convert_integral_result_to_call_price(sum_, S0_adj, _, mod, ::EuropeanO
     return S0_adj * (1 - exp(mod) / 2 * sum_)
 end
 using ChainRulesCore
+"""
+Pricing European Options through Fast Fourier Transform Method (Carr Madan)
+
+		VectorOfPrice=CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,StrikeVec::Array{U},r::Number,T::Number,Npow::Integer,A::Real,d::Number=0.0) where {U <: Number}
+
+Where:\n
+		S0 = Spot price.
+		StrikeVec = Vector of Strike of the Option to price.
+		r= zero rate with tenor T.
+		T= tenor of the options.
+		Npow= Integer Parameter for the FFT. Represent the log2 of the number of nodes.
+		A= Real Parameter of the FFT. Represent a maximum for the axis.
+
+		VectorOfPrice= Price of the European Options with Strike equals to StrikeVec, tenor T and the market prices a risk free rate of r.
+"""
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     T = abstractPayoff.T
     K = abstractPayoff.K
@@ -76,7 +91,21 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     price = convert_integral_result_to_call_price(dx_adj * sum_ / π, S0_adj, K, -mod, abstractPayoff)
     return FinancialFFT.call_to_put(price, S0_adj, df, abstractPayoff)
 end
+"""
+Pricing European Options through Fast Fourier Transform Method (Carr Madan)
 
+		VectorOfPrice=CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,StrikeVec::Array{U},r::Number,T::Number,Npow::Integer,A::Real,d::Number=0.0) where {U <: Number}
+
+Where:\n
+		S0 = Spot price.
+		StrikeVec = Vector of Strike of the Option to price.
+		r= zero rate with tenor T.
+		T= tenor of the options.
+		Npow= Integer Parameter for the FFT. Represent the log2 of the number of nodes.
+		A= Real Parameter of the FFT. Represent a maximum for the axis.
+
+		VectorOfPrice= Price of the European Options with Strike equals to StrikeVec, tenor T and the market prices a risk free rate of r.
+"""
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoffs::Array{U}, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
     TT = unique([opt.T for opt in abstractPayoffs])
     zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs)
