@@ -13,6 +13,7 @@ before_script:
     - apt-get update && apt-get -y install gcc
     - apt-get update && apt-get -y install g++
     - apt-get update && apt-get -y install bzip2
+    - apt-get update && apt-get -y install git
 
 # Below is the template to run your tests in Julia
 
