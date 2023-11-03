@@ -1,6 +1,7 @@
 
 real_mod(x) = real(x)
 imag_mod(x) = imag(x)
+adapt_array(x, _) = x
 using ChainRulesCore
 function call_to_put(C, S0_adj, df, opt::EuropeanOption)
     iscall = ChainRulesCore.@ignore_derivatives ifelse(opt.isCall, 1, 0)
@@ -10,8 +11,9 @@ function call_to_put(C, S0_adj, df, opt::EuropeanOption)
 end
 
 function call_to_put(C, _, df, opt::BinaryEuropeanOption)
-    #df=exp(-rT)
-    return opt.isCall ? C : (df - C)
+    iscall = ChainRulesCore.@ignore_derivatives ifelse(opt.isCall, 1, 0)
+    res = iscall * C + (1 - iscall) * (df - C)
+    return res
 end
 
 function midpoint_definite_integral(f, xmin, xmax, N)
@@ -26,3 +28,6 @@ function midpoint_definite_integral(f, xmin, xmax, N)
     end
     return sum_
 end
+
+include("AlternateVectors.jl")
+include("alternate_padded.jl")
