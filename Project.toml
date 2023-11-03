@@ -13,6 +13,7 @@ MuladdMacro = "46d2c3a1-f734-5fdb-9937-b9b9aeba4221"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 
 [compat]
+DataInterpolations = "4"
 FFTW = "1"
 FinancialMonteCarlo = "0.3"
 Interpolations = "0.10.1, 0.11, 0.12, 0.13, 0.14"
