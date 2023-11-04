@@ -1,20 +1,20 @@
 # All of the current implemented characteristic exponents are implemented as a real function with a complex input.
 #This allows us to compute directly the drift without the use of complex numbers.
-# Namely CharactheristicExponent(v)=CharactheristicExponent_i(v*im)
-function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.BlackScholesProcess)
+# Namely characteristic_exponent(v)=characteristic_exponent_i(v*im)
+function characteristic_exponent_i(imv, mcProcess::FinancialMonteCarlo.BlackScholesProcess)
     σ = mcProcess.σ
     adj_σ = σ^2 / 2
     val_ = imv^2 * adj_σ
     return val_
 end
-function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.BlackScholesProcess)
+function characteristic_exponent_vi(imv, mcProcess::FinancialMonteCarlo.BlackScholesProcess)
     σ = mcProcess.σ
     adj_σ = σ^2 / 2
     val_ = @. imv^2 * adj_σ
     return val_
 end
 
-function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.MertonProcess)
+function characteristic_exponent_i(imv, mcProcess::FinancialMonteCarlo.MertonProcess)
     σ = mcProcess.σ
     sigma1 = mcProcess.σ_jump
     mu1 = mcProcess.μ_jump
@@ -25,7 +25,7 @@ function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.MertonPro
     return val
 end
 
-function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.MertonProcess)
+function characteristic_exponent_vi(imv, mcProcess::FinancialMonteCarlo.MertonProcess)
     σ = mcProcess.σ
     sigma1 = mcProcess.σ_jump
     mu1 = mcProcess.μ_jump
@@ -36,7 +36,7 @@ function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.MertonPr
     return val
 end
 
-function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.KouProcess)
+function characteristic_exponent_i(imv, mcProcess::FinancialMonteCarlo.KouProcess)
     σ = mcProcess.σ
     lamp = mcProcess.λ₊
     lamm = mcProcess.λ₋
@@ -49,7 +49,7 @@ function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.KouProces
     return val_
 end
 
-function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.KouProcess)
+function characteristic_exponent_vi(imv, mcProcess::FinancialMonteCarlo.KouProcess)
     σ = mcProcess.σ
     lamp = mcProcess.λ₊
     lamm = mcProcess.λ₋
@@ -62,7 +62,7 @@ function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.KouProce
     return val_
 end
 
-function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.VarianceGammaProcess)
+function characteristic_exponent_i(imv, mcProcess::FinancialMonteCarlo.VarianceGammaProcess)
     σ = mcProcess.σ
     θ = mcProcess.θ
     κ = mcProcess.κ
@@ -72,7 +72,7 @@ function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.VarianceG
 
     return val_
 end
-function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.VarianceGammaProcess)
+function characteristic_exponent_vi(imv, mcProcess::FinancialMonteCarlo.VarianceGammaProcess)
     σ = mcProcess.σ
     θ = mcProcess.θ
     κ = mcProcess.κ
@@ -83,7 +83,7 @@ function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.Variance
     return val_
 end
 
-function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.NormalInverseGaussianProcess)
+function characteristic_exponent_i(imv, mcProcess::FinancialMonteCarlo.NormalInverseGaussianProcess)
     σ = mcProcess.σ
     θ = mcProcess.θ
     κ = mcProcess.κ
@@ -93,7 +93,7 @@ function CharactheristicExponent_i(imv, mcProcess::FinancialMonteCarlo.NormalInv
 
     return val_
 end
-function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.NormalInverseGaussianProcess)
+function characteristic_exponent_vi(imv, mcProcess::FinancialMonteCarlo.NormalInverseGaussianProcess)
     σ = mcProcess.σ
     θ = mcProcess.θ
     κ = mcProcess.κ
@@ -104,48 +104,44 @@ function CharactheristicExponent_vi(imv, mcProcess::FinancialMonteCarlo.NormalIn
     return val_
 end
 
-function CharactheristicExponent(v::num_, mcProcess::proc) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
-    return CharactheristicExponent_i(im * v, mcProcess)
+function characteristic_exponent(v::num_, mcProcess::proc) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
+    return characteristic_exponent_i(im * v, mcProcess)
 end
-function CharactheristicExponent_v(v, mcProcess::proc) where {proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
-    return CharactheristicExponent_vi(im .* v, mcProcess)
+function characteristic_exponent_v(v, mcProcess::proc) where {proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
+    return characteristic_exponent_vi(im .* v, mcProcess)
 end
-function CharactheristicExponent(v::num_, mcProcess::proc, T::num2) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess, num2 <: Number}
-    ce = CharactheristicExponent(v, mcProcess)
+function characteristic_exponent(v::num_, mcProcess::proc, T::num2) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess, num2 <: Number}
+    ce = characteristic_exponent(v, mcProcess)
     cf = ce * T
     return cf
 end
 
-function CharactheristicFunction(v, mcProcess::proc, T::num2) where {proc <: FinancialMonteCarlo.AbstractMonteCarloProcess, num2 <: Number}
-    ce = CharactheristicExponent(v, mcProcess)
-    return exp(ce * T)
+function Base.broadcasted(::S, ::typeof(characteristic_exponent), v::Array, mcProcess) where {S <: Base.Broadcast.BroadcastStyle}
+    return characteristic_exponent_v(v, mcProcess[])
 end
-function Base.broadcasted(::S, ::typeof(CharactheristicExponent), v::Array, mcProcess) where {S <: Base.Broadcast.BroadcastStyle}
-    return CharactheristicExponent_v(v, mcProcess[])
+function Base.broadcasted(::S, ::typeof(characteristic_exponent), v::V, mcProcess) where {S <: Base.Broadcast.BroadcastStyle, V <: Base.Broadcast.Broadcasted}
+    return characteristic_exponent_v(v, mcProcess[])
 end
-function Base.broadcasted(::S, ::typeof(CharactheristicExponent), v::V, mcProcess) where {S <: Base.Broadcast.BroadcastStyle, V <: Base.Broadcast.Broadcasted}
-    return CharactheristicExponent_v(v, mcProcess[])
+function Base.broadcasted(::S, ::typeof(characteristic_exponent_i), v::Array, mcProcess) where {S <: Base.Broadcast.BroadcastStyle}
+    return characteristic_exponent_vi(v, mcProcess[])
 end
-function Base.broadcasted(::S, ::typeof(CharactheristicExponent_i), v::Array, mcProcess) where {S <: Base.Broadcast.BroadcastStyle}
-    return CharactheristicExponent_vi(v, mcProcess[])
-end
-function Base.broadcasted(::S, ::typeof(CharactheristicExponent_i), v::V, mcProcess) where {S <: Base.Broadcast.BroadcastStyle, V <: Base.Broadcast.Broadcasted}
-    return CharactheristicExponent_vi(v, mcProcess[])
+function Base.broadcasted(::S, ::typeof(characteristic_exponent_i), v::V, mcProcess) where {S <: Base.Broadcast.BroadcastStyle, V <: Base.Broadcast.Broadcasted}
+    return characteristic_exponent_vi(v, mcProcess[])
 end
 using ChainRulesCore: rrule_via_ad
-function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::typeof(Base.broadcasted), ::typeof(CharactheristicExponent_i), v, model)
-    res = CharactheristicExponent_vi(v, model)
+function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::typeof(Base.broadcasted), ::typeof(characteristic_exponent_i), v, model)
+    res = characteristic_exponent_vi(v, model)
     function update_pullback(slice)
-        _, pb_fwd = ChainRulesCore.rrule_via_ad(config, CharactheristicExponent_vi, v, model)
+        _, pb_fwd = ChainRulesCore.rrule_via_ad(config, characteristic_exponent_vi, v, model)
         _, der_v, der_mc = pb_fwd(slice)
         return NoTangent(), NoTangent(), der_v, der_mc
     end
     return res, update_pullback
 end
-function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::typeof(Base.broadcasted), ::typeof(CharactheristicExponent), v, model)
-    res = CharactheristicExponent_v(v, model)
+function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::typeof(Base.broadcasted), ::typeof(characteristic_exponent), v, model)
+    res = characteristic_exponent_v(v, model)
     function update_pullback(slice)
-        _, pb_fwd = ChainRulesCore.rrule_via_ad(config, CharactheristicExponent_v, v, model)
+        _, pb_fwd = ChainRulesCore.rrule_via_ad(config, characteristic_exponent_v, v, model)
         _, der_v, der_mc = pb_fwd(slice)
         return NoTangent(), NoTangent(), der_v, der_mc
     end

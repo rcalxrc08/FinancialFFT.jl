@@ -4,10 +4,9 @@ imag_mod(x) = imag(x)
 adapt_array(x, _) = x
 using ChainRulesCore
 function call_to_put(C, S0_adj, df, opt::EuropeanOption)
-    iscall = ChainRulesCore.@ignore_derivatives ifelse(opt.isCall, 1, 0)
     K = opt.K
-    adj = -S0_adj + K * df
-    return iscall * adj + (C - adj)
+    P = C - S0_adj + K * df
+    return ifelse(opt.isCall, C, P)
 end
 
 function call_to_put(C, _, df, opt::BinaryEuropeanOption)

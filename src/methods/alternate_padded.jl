@@ -76,6 +76,12 @@ function Base.materialize(bc1::Base.Broadcast.Broadcasted{Base.Broadcast.ArraySt
     return AlternatePaddedVector(in_part, even_part, odd_part, fin_part, length(first(axes_result)))
 end
 
+function Base.sum(x::AlternatePaddedVector)
+    isfinalodd = isodd(x.n)
+    nhalf = div(x.n, 2) - 1
+    return (nhalf + isfinalodd) * x.value_odd + nhalf * x.value_even + x.bound_initial_value + x.bound_final_value
+end
+
 using ChainRulesCore
 function ChainRulesCore.rrule(::Type{AlternatePaddedVector}, bound_initial_value::T, value_even::T, value_odd::T, bound_final_value::T, n::Int64) where {T}
     function AlternatePaddedVector_pb(Δapv)

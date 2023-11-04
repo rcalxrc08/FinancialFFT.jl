@@ -5,7 +5,7 @@ N = 18;
 
 method_cm = CarrMadanMethod(A, N);
 S0 = 100.0;
-K = 101.0;
+K = 107.0;
 r = 0.02;
 T = 1.0;
 d = 0.01
@@ -33,9 +33,12 @@ method_lewis = LewisMethod(700.0, 200000);
 @show result_lewis = pricer(Model, zero_rate, method_lewis, EUData);
 method_cm_lewis = CarrMadanLewisMethod(A, N);
 @show result_cm_lewis = pricer(Model, zero_rate, method_cm_lewis, EUData);
+method_density = FinancialFFT.DensityInverter(18)
+@show result_density = pricer(Model, zero_rate, method_density, EUData);
 toll = 1e-2;
 @testset "dual test" begin
     #test_dual(analytic_result, result_cm, toll)
     test_dual(analytic_result, result_lewis, toll)
     test_dual(analytic_result, result_cm_lewis, toll)
+    test_dual(analytic_result, result_density, toll)
 end

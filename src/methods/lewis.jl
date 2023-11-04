@@ -22,17 +22,14 @@ export LewisMethod;
 exp_mod(x) = exp(real_mod(x)) * cos(imag_mod(x))
 
 using MuladdMacro
-function evaluate_integrand_lewis_v(v, corr_adj, mcProcess::FinancialMonteCarlo.BaseProcess, abstractPayoff::FinancialMonteCarlo.EuropeanOption)
+function evaluate_integrand_lewis_v(v_im_adj, corr_adj, mcProcess::FinancialMonteCarlo.BaseProcess, abstractPayoff::FinancialMonteCarlo.EuropeanOption)
     T = abstractPayoff.T
-    v_im_adj = @. 1 // 2 + v * im
-    real_res = @. FinancialFFT.exp_mod(v_im_adj * corr_adj + FinancialFFT.CharactheristicExponent_i(v_im_adj, mcProcess) * T) / abs2(v_im_adj)
-    return real_res
+    return @. FinancialFFT.exp_mod(v_im_adj * corr_adj + FinancialFFT.characteristic_exponent_i(v_im_adj, mcProcess) * T) / abs2(v_im_adj)
 end
 
-function evaluate_integrand_lewis_v(v, corr_adj, mcProcess::FinancialMonteCarlo.BaseProcess, abstractPayoff::FinancialMonteCarlo.BinaryEuropeanOption)
+function evaluate_integrand_lewis_v(v_im_adj, corr_adj, mcProcess::FinancialMonteCarlo.BaseProcess, abstractPayoff::FinancialMonteCarlo.BinaryEuropeanOption)
     T = abstractPayoff.T
-    v_im_adj = @. 1 // 2 + v * im
-    return @. FinancialFFT.real_mod(exp(v_im_adj * corr_adj + FinancialFFT.CharactheristicExponent_i(v_im_adj, mcProcess) * T) * conj(v_im_adj)) / abs2(v_im_adj)
+    return @. FinancialFFT.real_mod(exp(v_im_adj * corr_adj + FinancialFFT.characteristic_exponent_i(v_im_adj, mcProcess) * T) * conj(v_im_adj)) / abs2(v_im_adj)
 end
 
 function convert_integral_result_to_price(discounted_sum_, _, _, df, opt::BinaryEuropeanOption)
@@ -42,12 +39,9 @@ function convert_integral_result_to_price(discounted_sum_, _, _, df, opt::Binary
 end
 
 function convert_integral_result_to_price(discounted_sum_, S0, dT, df, opt::EuropeanOption)
-    S0_adj = S0 * exp(dT)
-    C = S0_adj - opt.K * discounted_sum_
-    iscall = ChainRulesCore.@ignore_derivatives ifelse(opt.isCall, 1, 0)
-    K = opt.K
-    adj = -S0_adj + K * df
-    return iscall * adj + (C - adj)
+    C = S0 * exp(dT) - opt.K * discounted_sum_
+    P = opt.K * (df - discounted_sum_)
+    return ifelse(opt.isCall, C, P)
 end
 
 """
@@ -59,7 +53,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     A = method.A
     N = method.N
     S0 = mcProcess.underlying.S0
-    corr = FinancialFFT.CharactheristicExponent_i(1, mcProcess) * T
+    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     S0_K = S0 / K
@@ -69,7 +63,8 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     x_in = A * range_init
     x = eps_typed .+ x_in
     corr_adj = mod - corr
-    y = evaluate_integrand_lewis_v(x, corr_adj, mcProcess, abstractPayoff)
+    v_im_adj = @. (1 + x * (2 * im)) / 2 # I can't use Irrationals because of https://github.com/JuliaGPU/CUDA.jl/issues/1926
+    y = evaluate_integrand_lewis_v(v_im_adj, corr_adj, mcProcess, abstractPayoff)
     sum_ = sum(y)
     dx_adj = A / (N - 1)
     df = exp(-rT)
