@@ -16,4 +16,4 @@ function call_to_put(C, _, df, opt::BinaryEuropeanOption)
 end
 
 include("alternate_vectors.jl")
-include("alternate_padded.jl")
+include("alternate_padded_vectors.jl")
