@@ -39,6 +39,7 @@ function convert_integral_result_to_price(discounted_sum_, _, _, df, opt::Binary
 end
 
 function convert_integral_result_to_price(discounted_sum_, S0, dT, df, opt::EuropeanOption)
+    #simplify the following
     C = S0 * exp(dT) - opt.K * discounted_sum_
     P = opt.K * (df - discounted_sum_)
     return ifelse(opt.isCall, C, P)
@@ -53,22 +54,21 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     A = method.A
     N = method.N
     S0 = mcProcess.underlying.S0
-    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     S0_K = S0 / K
     mod = log(S0_K) + rT + dT
-    eps_typed = ChainRulesCore.@ignore_derivatives eps(Float64)
-    range_init = ChainRulesCore.@ignore_derivatives adapt_array(collect(range(-1, length = N, stop = 1)), mode)
-    x_in = A * range_init
-    x = eps_typed .+ x_in
+    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
     corr_adj = mod - corr
-    v_im_adj = @. (1 + x * (2 * im)) / 2 # I can't use Irrationals because of https://github.com/JuliaGPU/CUDA.jl/issues/1926
+    eps_typed = ChainRulesCore.@ignore_derivatives eps(zero(typeof(corr_adj)))
+    range_init = ChainRulesCore.@ignore_derivatives adapt_array(collect(range(-1, length = N, stop = 1)), mode)
+    one_half = 1 // 2
+    v_im_adj = @. one_half + (eps_typed + A * range_init) * im
     y = evaluate_integrand_lewis_v(v_im_adj, corr_adj, mcProcess, abstractPayoff)
-    sum_ = sum(y)
+    total_sum_lewis = sum(y)
     dx_adj = A / (N - 1)
     df = exp(-rT)
-    discounted_sum = dx_adj * sum_ / π * df
+    discounted_sum = dx_adj * total_sum_lewis / π * df
     price = convert_integral_result_to_price(discounted_sum, S0, dT, df, abstractPayoff)
     return price
 end

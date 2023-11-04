@@ -2,6 +2,10 @@
 real_mod(x) = real(x)
 imag_mod(x) = imag(x)
 adapt_array(x, _) = x
+using Adapt
+function adapt_itp(itp, _)
+    return itp
+end
 using ChainRulesCore
 function call_to_put(C, S0_adj, df, opt::EuropeanOption)
     K = opt.K

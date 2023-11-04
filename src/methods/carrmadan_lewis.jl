@@ -10,31 +10,27 @@ struct CarrMadanLewisMethod{num <: Number, num_1 <: Integer} <: AbstractFFTMetho
     A::num
     Npow::num_1
     function CarrMadanLewisMethod(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
-        @assert(A > 0.0, "A must be positive")
-        @assert(N > 2, "N must be greater than 2")
-        @assert(N < 24, "N will cause overflow")
+        ChainRulesCore.@ignore_derivatives @assert(A > 0.0, "A must be positive")
+        ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
+        ChainRulesCore.@ignore_derivatives @assert(N < 24, "N will cause overflow")
         return new{num, num_1}(A, N)
     end
 end
 
 export CarrMadanLewisMethod;
 using Interpolations
-using Adapt
-function adapt_itp(itp, _)
-    return itp
-end
 """
 Documentation CarrMadanLewis Method
 """
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanLewisMethod, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: Number}
     Npow = method.Npow
-    N = 2^Npow
+    N = ChainRulesCore.@ignore_derivatives 2^Npow
     S0 = mcProcess.underlying.S0
     A = method.A
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
-    idx = 0:(N-1)
+    idx = ChainRulesCore.@ignore_derivatives 0:(N-1)
     one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)
     weights_simpson = ChainRulesCore.@ignore_derivatives AlternatePaddedVector(Int8(1), Int8(4), Int8(2), Int8(1), N)
     support_array = ChainRulesCore.@ignore_derivatives @. one_minus_one * weights_simpson

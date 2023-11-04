@@ -11,9 +11,9 @@ struct CarrMadanMethod{num <: Number, num_1 <: Integer} <: AbstractFFTMethod
     A::num
     Npow::num_1
     function CarrMadanMethod(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
-        @assert(A > 0.0, "A must be positive")
-        @assert(N > 2, "N must be greater than 2")
-        @assert(N < 24, "N will cause overflow")
+        ChainRulesCore.@ignore_derivatives @assert(A > 0.0, "A must be positive")
+        ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
+        ChainRulesCore.@ignore_derivatives @assert(N < 24, "N will cause overflow")
         return new{num, num_1}(A, N)
     end
 end
@@ -56,7 +56,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     # res = @. FinancialFFT.characteristic_exponent(im * (v_im + 1) * Int8(-1), mcProcess) * T
     one_adj = ChainRulesCore.@ignore_derivatives Int8(1)
     minus_one_adj = ChainRulesCore.@ignore_derivatives Int8(-1)
-    one_minus_one = ChainRulesCore.@ignore_derivatives @. ifelse(iseven(real_vec), one_adj, minus_one_adj)
+    one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(one_adj, minus_one_adj, N)
     two_adj = ChainRulesCore.@ignore_derivatives Int8(2)
     four_adj = ChainRulesCore.@ignore_derivatives Int8(4)
     weights_ = ChainRulesCore.@ignore_derivatives @. ifelse(iseven(real_vec), two_adj, four_adj)
