@@ -12,6 +12,7 @@ jobs:
           import Pkg
           ENV["JULIA_PKG_SERVER"] = ""
           Pkg.Registry.add("General")
+          Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/rcalxrc08/LocalRegistry.git"))
         shell: julia --color=yes {0}
       - name: "Install CompatHelper"
         run: |
