@@ -18,6 +18,4 @@ function call_to_put(C, _, df, opt::BinaryEuropeanOption)
     res = iscall * C + (1 - iscall) * (df - C)
     return res
 end
-
-include("alternate_vectors.jl")
-include("alternate_padded_vectors.jl")
+using AlternateVectors
