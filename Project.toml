@@ -16,6 +16,7 @@ Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 
 [compat]
 Adapt = "3"
+AlternateVectors = "0.1"
 ChainRulesCore = "1"
 DataInterpolations = "4"
 FFTW = "1"
