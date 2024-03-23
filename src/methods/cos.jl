@@ -72,12 +72,13 @@ function finalize_cos_method(S0_adj, opt::Array, driftT_adj, df, cal_res)
     return @. compute_discounted_price_cos_method(S0_adj, driftT_adj, cal_res, opt, df)
 end
 
-function compute_limits_full_2(x::FinancialMonteCarlo.BaseProcess, rT, dT, T)
-    muT = rT - dT
-    s = 10
-    epss = 1e-4
-    xtr = inv(s) * (muT + T * characteristic_exponent_i(s, x) - log(epss))
-    return -xtr, xtr
+function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
+    drift = rT - dT
+    epss = 1e-9
+    s_min = 1.0
+    s_max = 50.0
+    x_toll_bisection = 1e-14
+    compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min, s_max, x_toll_bisection)
 end
 """
 Documentation CosMethod Method
@@ -87,7 +88,7 @@ function cos_method_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::Financ
     S0 = mcProcess.underlying.S0
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(r.r, T)
-    a, b = ChainRulesCore.@ignore_derivatives compute_limits_full_2(mcProcess, rT, dT, T)
+    a, b = compute_chernorff_limits(mcProcess, rT, dT, T)
     bma = b - a
     u = ChainRulesCore.@ignore_derivatives FinancialFFT.adapt_array(collect((0:N) * (pi / bma)), mode)
     driftT = rT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
