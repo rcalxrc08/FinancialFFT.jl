@@ -16,10 +16,9 @@ z_r = ZeroRate(r)
 @show FinancialFFT.cos_method_pricer(Model, z_r, method, opt, T)
 @show FinancialFFT.cos_method_pricer(Model, z_r, method, BinaryEuropeanOption(T, K), T)
 # using BenchmarkTools
-# @btime FinancialFFT.cos_method_pricer($Model, $z_r, $method, $opt, $T)
-# KK = collect(100.0 * (1:20) / 10.0)
-# opts = EuropeanOption.(T, KK)
-# @btime FinancialFFT.cos_method_pricer($Model, $z_r, $method, $opts, $T)
+KK = collect(100.0 * (1:20) / 10.0)
+opts = EuropeanOption.(T, KK)
+FinancialFFT.cos_method_pricer(Model, z_r, method, opts, T)
 using DualNumbers
 @show FinancialFFT.cos_method_pricer(Model, z_r, method, EuropeanOption(T, dual(K, 1.0)), T)
 # using CUDA
