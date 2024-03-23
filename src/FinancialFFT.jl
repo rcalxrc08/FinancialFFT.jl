@@ -9,11 +9,13 @@ function __init__()
 end
 
 include("methods/abstracts.jl")
+include("methods/extrema_computation_opt.jl")
 include("methods/utils.jl")
 include("methods/charexp.jl")
 include("methods/carrmadan.jl")
 include("methods/carrmadan_lewis.jl")
 include("methods/lewis.jl")
+include("methods/cos.jl")
 include("methods/density.jl")
 
 export pricer

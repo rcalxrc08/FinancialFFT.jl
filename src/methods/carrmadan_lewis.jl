@@ -41,7 +41,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     integral_value = @. real_mod(Y)
     pi_over_A = pi / A
     ks = ChainRulesCore.@ignore_derivatives pi_over_A * (-N .+ 2 * idx)
-    spline_cub = ChainRulesCore.@ignore_derivatives adapt_itp(cubic_spline_interpolation(ks, integral_value), mode)
+    spline_cub = ChainRulesCore.@ignore_derivatives adapt_itp(CubicSplineInterpolation(ks, integral_value), mode)
     prices = @. S0 * exp(dT) - exp(-rT) / pi * dx / 3 * sqrt(S0 * StrikeVec) * spline_cub(log(StrikeVec / S0))
     return prices
 end

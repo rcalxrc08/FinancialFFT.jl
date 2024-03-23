@@ -18,6 +18,9 @@ function fft(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex{
     return y
 end
 
+function v_value_mod(s::Hyper)
+    return s.value
+end
 function real_mod(x::Hyper)
     return hyper(real(x.value), real(x.epsilon1), real(x.epsilon2), real(x.epsilon12))
 end
