@@ -19,11 +19,11 @@ end
 
 Base.broadcastable(x::CosMethodResult) = Ref(x)
 
-function chi_vectorized(u_el, adj, sincos_1, sincos_2, exp_d)
-    sin_uu_adj_1, cos_uu_adj_1 = sincos_1
-    sin_uu_adj_2, cos_uu_adj_2 = sincos_2
-    res = (cos_uu_adj_1 * exp_d - cos_uu_adj_2 + u_el * (sin_uu_adj_1 * exp_d - sin_uu_adj_2)) / (1 + u_el^2)
-    return (1 + !adj) * (res - (sin_uu_adj_1 - sin_uu_adj_2) / (adj + u_el))
+function chi_vectorized(u_el, adj, bma, a, exp_u)
+    sin_uu_adj_1, cos_uu_adj_1 = sincos(u_el * bma)
+    sin_uu_adj_2, cos_uu_adj_2 = sincos(u_el * a)
+    res = (cos_uu_adj_1 * exp_u - cos_uu_adj_2 + u_el * (sin_uu_adj_1 * exp_u + sin_uu_adj_2)) / (1 + u_el^2)
+    return (1 + !adj) * (res - (sin_uu_adj_1 + sin_uu_adj_2) / (adj + u_el))
 end
 
 function uk_call(u, a, b, z)
@@ -32,7 +32,7 @@ function uk_call(u, a, b, z)
     inv_bma = inv(bma)
     exp_u = exp(b)
     adjj = @. (1 + !adjuster) * b * adjuster
-    res = @. inv_bma * (chi_vectorized(u, adjuster, sincos(u * bma), sincos(-u * a), exp_u) - adjj) * exp(FinancialFFT.real_mod(z)), FinancialFFT.imag_mod(z)
+    res = @. inv_bma * (chi_vectorized(u, adjuster, bma, a, exp_u) - adjj) * exp(FinancialFFT.real_mod(z)), FinancialFFT.imag_mod(z)
     return res
 end
 
@@ -88,7 +88,7 @@ function cos_method_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::Financ
     S0 = mcProcess.underlying.S0
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(r.r, T)
-    a, b = compute_chernorff_limits(mcProcess, rT, dT, T)
+    a, b = ChainRulesCore.@ignore_derivatives compute_chernorff_limits(mcProcess, rT, dT, T)
     bma = b - a
     u = ChainRulesCore.@ignore_derivatives FinancialFFT.adapt_array(collect((0:N) * (pi / bma)), mode)
     driftT = rT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
