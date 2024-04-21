@@ -18,13 +18,22 @@ z_r = ZeroRate(r)
 # using BenchmarkTools
 KK = collect(100.0 * (1:20) / 10.0)
 opts = EuropeanOption.(T, KK)
-FinancialFFT.cos_method_pricer(Model, z_r, method, opts, T)
-using DualNumbers
-@show FinancialFFT.cos_method_pricer(Model, z_r, method, EuropeanOption(T, dual(K, 1.0)), T)
+# @show FinancialFFT.cos_method_pricer(Model, z_r, method, opts, T);
+# using DualNumbers
+# @show FinancialFFT.cos_method_pricer(Model, z_r, method, EuropeanOption(T, dual(K, 1.0)), T)
 # using CUDA
 # cuda_mode = FinancialMonteCarlo.CudaMode()
 # CUDA.allowscalar(false)
-# @btime FinancialFFT.cos_method_pricer($Model, $z_r, $method, $opts, $T, $cuda_mode)
+@show FinancialFFT.pricer(Model, z_r, method, opt);
+@show FinancialFFT.pricer(Model, z_r, method, opts);
+# @btime FinancialFFT.cos_method_pricer($Model, $z_r, $method, $opt, $T);
+# @btime FinancialFFT.cos_method_pricer($Model, $z_r, $method, $opt, $T, $cuda_mode);
+
+# @btime FinancialFFT.pricer($Model, $z_r, $method, $opt);
+# @btime FinancialFFT.pricer($Model, $z_r, $method, $opt, $cuda_mode);
+
+# @btime FinancialFFT.pricer($Model, $z_r, $method, $opts);
+# @btime FinancialFFT.pricer($Model, $z_r, $method, $opts, $cuda_mode);
 
 # function blsprice_cos(S0, K, r, T, sigma, d)
 #     Model = BlackScholesProcess(sigma, Underlying(S0, d))
