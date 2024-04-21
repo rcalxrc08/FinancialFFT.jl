@@ -68,7 +68,7 @@ end
 function finalize_cos_method(S0_adj, opt, driftT_adj, df, cal_res)
     return compute_discounted_price_cos_method(S0_adj, driftT_adj, cal_res, opt, df)
 end
-function finalize_cos_method(S0_adj, opt::Array, driftT_adj, df, cal_res)
+function finalize_cos_method(S0_adj, opt::AbstractArray, driftT_adj, df, cal_res)
     return @. compute_discounted_price_cos_method(S0_adj, driftT_adj, cal_res, opt, df)
 end
 
@@ -100,7 +100,7 @@ function cos_method_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::Financ
     return finalize_cos_method(S0 * exp(-dT), opt, driftT_adj, df, cal_res)
 end
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, abstractPayoffs::Array{U}, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, abstractPayoffs::Array{U}, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
     TT = unique([opt.T for opt in abstractPayoffs])
     zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs)
     prices = Array{typeof(zero_typed)}(undef, length(abstractPayoffs))
