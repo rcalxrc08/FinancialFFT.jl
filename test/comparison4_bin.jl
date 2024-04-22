@@ -12,9 +12,11 @@ sigma = 0.2;
 @show analytic_result = blsbin(S0, K, r, T, sigma, d);
 function test_method_f(S0, K, r, T, sigma, d, iscall, abs_method, toll)
     f(S0, K, r, T, sigma, d) = blsbin(S0, K, r, T, sigma, d, iscall)
+    @show f(S0, K, r, T, sigma, d)
     @show x = Zygote.gradient(f, S0, K, r, T, sigma, d)
     # g(S0, K, r, T, sigma, d) = pricer(BlackScholesProcess(sigma, Underlying(S0, d)), ZeroRate(r), abs_method, BinaryEuropeanOption(T, K, iscall), FinancialMonteCarlo.CudaMode())
     g(S0, K, r, T, sigma, d) = pricer(BlackScholesProcess(sigma, Underlying(S0, d)), ZeroRate(r), abs_method, BinaryEuropeanOption(T, K, iscall))
+    @show g(S0, K, r, T, sigma, d)
     @show y = Zygote.gradient(g, S0, K, r, T, sigma, d)
     descr = string(typeof(abs_method)) * " _ " * string(iscall)
     @testset "$descr" begin

@@ -104,24 +104,24 @@ function characteristic_exponent_vi(imv, mcProcess::FinancialMonteCarlo.NormalIn
     return val_
 end
 
-function characteristic_exponent(v::num_, mcProcess::proc) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
-    return characteristic_exponent_i(im * v, mcProcess)
-end
-function characteristic_exponent_v(v, mcProcess::proc) where {proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
-    return characteristic_exponent_vi(im .* v, mcProcess)
-end
-function characteristic_exponent(v::num_, mcProcess::proc, T::num2) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess, num2 <: Number}
-    ce = characteristic_exponent(v, mcProcess)
-    cf = ce * T
-    return cf
-end
+# function characteristic_exponent(v::num_, mcProcess::proc) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
+#     return characteristic_exponent_i(im * v, mcProcess)
+# end
+# function characteristic_exponent_v(v, mcProcess::proc) where {proc <: FinancialMonteCarlo.AbstractMonteCarloProcess}
+#     return characteristic_exponent_vi(im .* v, mcProcess)
+# end
+# function characteristic_exponent(v::num_, mcProcess::proc, T::num2) where {num_ <: Number, proc <: FinancialMonteCarlo.AbstractMonteCarloProcess, num2 <: Number}
+#     ce = characteristic_exponent(v, mcProcess)
+#     cf = ce * T
+#     return cf
+# end
 
-function Base.broadcasted(::S, ::typeof(characteristic_exponent), v::Array, mcProcess) where {S <: Base.Broadcast.BroadcastStyle}
-    return characteristic_exponent_v(v, mcProcess[])
-end
-function Base.broadcasted(::S, ::typeof(characteristic_exponent), v::V, mcProcess) where {S <: Base.Broadcast.BroadcastStyle, V <: Base.Broadcast.Broadcasted}
-    return characteristic_exponent_v(v, mcProcess[])
-end
+# function Base.broadcasted(::S, ::typeof(characteristic_exponent), v::Array, mcProcess) where {S <: Base.Broadcast.BroadcastStyle}
+#     return characteristic_exponent_v(v, mcProcess[])
+# end
+# function Base.broadcasted(::S, ::typeof(characteristic_exponent), v::V, mcProcess) where {S <: Base.Broadcast.BroadcastStyle, V <: Base.Broadcast.Broadcasted}
+#     return characteristic_exponent_v(v, mcProcess[])
+# end
 function Base.broadcasted(::S, ::typeof(characteristic_exponent_i), v::Array, mcProcess) where {S <: Base.Broadcast.BroadcastStyle}
     return characteristic_exponent_vi(v, mcProcess[])
 end
@@ -138,12 +138,12 @@ function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::typeof(Bas
     end
     return res, update_pullback
 end
-function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::typeof(Base.broadcasted), ::typeof(characteristic_exponent), v, model)
-    res = characteristic_exponent_v(v, model)
-    function update_pullback(slice)
-        _, pb_fwd = ChainRulesCore.rrule_via_ad(config, characteristic_exponent_v, v, model)
-        _, der_v, der_mc = pb_fwd(slice)
-        return NoTangent(), NoTangent(), der_v, der_mc
-    end
-    return res, update_pullback
-end
+# function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::typeof(Base.broadcasted), ::typeof(characteristic_exponent), v, model)
+#     res = characteristic_exponent_v(v, model)
+#     function update_pullback(slice)
+#         _, pb_fwd = ChainRulesCore.rrule_via_ad(config, characteristic_exponent_v, v, model)
+#         _, der_v, der_mc = pb_fwd(slice)
+#         return NoTangent(), NoTangent(), der_v, der_mc
+#     end
+#     return res, update_pullback
+# end
