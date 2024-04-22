@@ -8,6 +8,7 @@ function __init__()
     @require TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea" include("deps/taylorseries_dependencies.jl")
 end
 
+using AlternateVectors, MuladdMacro, ChainRulesCore, FinancialMonteCarlo, Adapt
 include("methods/abstracts.jl")
 include("methods/extrema_computation_opt.jl")
 include("methods/utils.jl")

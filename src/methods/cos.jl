@@ -1,5 +1,5 @@
 # Option Parameters
-using AlternateVectors, MuladdMacro, ChainRulesCore, FinancialMonteCarlo
+
 struct CosMethod{num_1 <: Integer} <: FinancialFFT.AbstractIntegralMethod
     N::num_1
     function CosMethod(N::num_1) where {num_1 <: Integer}
@@ -74,7 +74,7 @@ end
 
 function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
     drift = rT - dT
-    epss = 1e-9
+    epss = 1e-12
     s_min = 1.0
     s_max = 50.0
     x_toll_bisection = 1e-14
@@ -93,8 +93,8 @@ function cos_method_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::Financ
     u = ChainRulesCore.@ignore_derivatives FinancialFFT.adapt_array(collect((0:N) * (pi / bma)), mode)
     driftT = rT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
     v_char_exp = @. FinancialFFT.characteristic_exponent_i(u * im, mcProcess) * T
-    uk, v_char_exp_re = uk_call(u, a, b, v_char_exp)
-    cal_res = CosMethodResult(u, v_char_exp_re, uk)
+    uk, v_char_exp_im = uk_call(u, a, b, v_char_exp)
+    cal_res = CosMethodResult(u, v_char_exp_im, uk)
     driftT_adj = driftT - a
     df = exp(-rT)
     return finalize_cos_method(S0 * exp(-dT), opt, driftT_adj, df, cal_res)

@@ -26,6 +26,10 @@ opts = EuropeanOption.(T, KK)
 # CUDA.allowscalar(false)
 @show FinancialFFT.pricer(Model, z_r, method, opt);
 @show FinancialFFT.pricer(Model, z_r, method, opts);
+using DualNumbers, HyperDualNumbers, ForwardDiff
+@show FinancialFFT.cos_method_pricer(BlackScholesProcess(dual(sigma, 1.0), Underlying(S0, d)), z_r, method, EuropeanOption(T, K), T)
+@show FinancialFFT.cos_method_pricer(BlackScholesProcess(ForwardDiff.Dual(sigma, 1.0), Underlying(S0, d)), z_r, method, EuropeanOption(T, K), T)
+@show FinancialFFT.cos_method_pricer(BlackScholesProcess(hyper(sigma, 1.0, 1.0, 0.0), Underlying(S0, d)), z_r, method, EuropeanOption(T, K), T)
 # @btime FinancialFFT.cos_method_pricer($Model, $z_r, $method, $opt, $T);
 # @btime FinancialFFT.cos_method_pricer($Model, $z_r, $method, $opt, $T, $cuda_mode);
 

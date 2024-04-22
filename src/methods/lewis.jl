@@ -1,4 +1,3 @@
-using ChainRulesCore
 """
 Struct for Lewis Integration Method
 
@@ -18,10 +17,8 @@ struct LewisMethod{num <: Number, num_1 <: Integer} <: AbstractIntegralMethod
     end
 end
 export LewisMethod;
-#Equivalent to real(exp(z))
+#Equivalent to real(exp(z)) but more efficient
 exp_mod(x) = exp(real_mod(x)) * cos(imag_mod(x))
-
-using MuladdMacro
 
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.EuropeanOption)
     corr_h = corr_adj / 2
