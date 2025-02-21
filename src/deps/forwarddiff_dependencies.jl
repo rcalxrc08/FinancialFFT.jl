@@ -1,5 +1,5 @@
 using FFTW, .ForwardDiff
-import FFTW.fft!;
+import FFTW.fft!, FFTW.fft
 
 function v_value_mod(s::ForwardDiff.Dual)
     return s.value

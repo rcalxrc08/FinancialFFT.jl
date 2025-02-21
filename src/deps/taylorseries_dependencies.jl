@@ -1,5 +1,5 @@
 using .TaylorSeries, FFTW
-import FFTW.fft!;
+import FFTW.fft!, FFTW.fft
 
 function get_diff(x::AbstractArray, n::Integer)
     return TaylorSeries.getcoeff.(x, n)

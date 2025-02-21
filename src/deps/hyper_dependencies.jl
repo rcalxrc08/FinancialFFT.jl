@@ -1,5 +1,5 @@
 using .HyperDualNumbers, FFTW
-import FFTW.fft!;
+import FFTW.fft!, FFTW.fft;
 
 function fft!(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex{num}} where {num <: Number}
     Xcomplex, Xder1, Xder2, Xder12 = HyperDualNumbers.value.(x), HyperDualNumbers.epsilon1.(x), HyperDualNumbers.epsilon2.(x), HyperDualNumbers.epsilon12.(x)
