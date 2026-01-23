@@ -61,6 +61,20 @@ function compute_call_discounted_price_cos_method(S0, driftT_adj, cal_res, opt, 
     return compute_call_price_cos_method(x, cal_res, opt) * df
 end
 
+function compute_call_price_cos_method_vec_smile(u, x, v_char_exp, uk_adj)
+    return @. (uk_adj * cos(u * x' + v_char_exp))'
+end
+
+function compute_call_price_cos_method_smile(x, cal_res, opt::FinancialFFT.EuropeanOptionSmile, df)
+    t_1 = @views sum(compute_call_price_cos_method_vec_smile(cal_res.u, x, cal_res.v_char_exp, cal_res.uk_adj), dims = 2)[:]
+    return @. opt.K * t_1 * df
+end
+
+function compute_call_discounted_price_cos_method(S0, driftT_adj, cal_res, opt::FinancialFFT.EuropeanOptionSmile, df)
+    x = @. log(S0 / opt.K) + driftT_adj
+    return compute_call_price_cos_method_smile(x, cal_res, opt, df)
+end
+
 function compute_discounted_price_cos_method(S0_adj, driftT_adj, cal_res, opt, df)
     price_call = compute_call_discounted_price_cos_method(S0_adj, driftT_adj, cal_res, opt, df)
     return FinancialFFT.call_to_put(price_call, S0_adj, df, opt)
