@@ -3,7 +3,7 @@ using FinancialFFT, FinancialMonteCarlo
 @testset "Smiles Struct Consistency" begin
     K_vec = [90.0, 100.0, 110.0]
     K_vec_w = [90.0, 100.0, 110.0, 111.0]
-    K_vec_w2 = [90.0, 100.0, 110.0, -111.0]
+    K_vec_w2 = [90.0, 100.0, -111.0]
     isCall_vec = [true, false, true]
     T = 1.0
     smile_eu = FinancialFFT.EuropeanOptionSmile(T, K_vec, isCall_vec)
