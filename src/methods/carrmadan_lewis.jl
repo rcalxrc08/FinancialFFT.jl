@@ -71,3 +71,21 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     prices = @. S0 * exp(dT) - exp(-rT) / pi * dx / 3 * sqrt(S0 * StrikeVec) * $spline_cub(log(StrikeVec / S0))
     return call_to_put(prices, S0 * exp(dT), exp(-rT), opt)
 end
+
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, abstractPayoffs::Array{U}, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
+    TT = unique([opt.T for opt in abstractPayoffs])
+    zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs)
+    prices = Array{typeof(zero_typed)}(undef, length(abstractPayoffs))
+
+    for T in TT
+        index_same_t = findall(op -> (op.T == T), abstractPayoffs)
+        payoffs = abstractPayoffs[index_same_t]
+        strikes = [opt.K for opt in payoffs]
+        prices_call = pricer(mcProcess, strikes, zero_rate, T, method)
+        dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+        prices_final = [call_to_put(prices_call[i], mcProcess.underlying.S0 * exp(dT), exp(-FinancialMonteCarlo.integral(zero_rate.r, T)), payoffs[i]) for i in eachindex(payoffs)]
+        prices[index_same_t] = prices_final
+    end
+
+    return prices
+end
