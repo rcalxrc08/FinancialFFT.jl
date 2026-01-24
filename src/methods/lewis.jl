@@ -50,7 +50,7 @@ end
 function convert_integral_result_to_price(discounted_sum, S0, dT, df, opt::EuropeanOption)
     S0_adj = S0 * exp(dT) / df
     diff_typed = S0_adj - opt.K
-    return df * (ifelse(opt.isCall, diff_typed, zero(diff_typed)) + opt.K * (1 - dx_adj * discounted_sum / pi))
+    return df * (ifelse(opt.isCall, diff_typed, zero(diff_typed)) + opt.K * (1 - discounted_sum))
 end
 
 function convert_integral_result_to_price_interf(dx_adj, discounted_sum, S0, dT, df, opt::EuropeanOptionSmile)
