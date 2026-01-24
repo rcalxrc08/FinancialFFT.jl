@@ -34,13 +34,26 @@ end
 #     return @. FinancialFFT.exp_mod((1 + 2 * v * im) / 2 * corr_adj' + char_exp_v) / (1 // 4 + v^2)
 # end
 
+# function evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, char_exp_v)
+#     v2 = 2v
+#     @show corr_adj
+#     @show char_exp_v
+#     @show v2
+#     term = corr_adj * (1 + v2 * im) / 2 + char_exp_v
+#     exp_re = exp(FinancialFFT.real_mod(term))
+#     term_im = FinancialFFT.imag_mod(term)
+#     sin_im, cos_im = sincos(term_im)
+#     return 2 * exp_re * (cos_im + sin_im * v2) / (1 + v2^2)
+# end
+
+# function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOption)
+#     return @. evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, char_exp_v)
+# end
+
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOption)
-    v2 = 2v
-    term = corr_adj * (1 + v2 * im) / 2 + char_exp_v
-    exp_re = exp(FinancialFFT.real_mod(term))
-    term_im = FinancialFFT.imag_mod(term)
-    sin_im, cos_im = sincos(term_im)
-    return 2 * exp_re * (cos_im + sin_im * v2) / (1 + v2^2)
+    corr_h = corr_adj / 2
+    corr_im = corr_adj * im
+    return @. FinancialFFT.real_mod(exp(corr_h + v * corr_im + char_exp_v) / (1 // 2 + im * v))
 end
 
 function convert_integral_result_to_price(discounted_sum_, _, _, df, opt::BinaryEuropeanOption)
