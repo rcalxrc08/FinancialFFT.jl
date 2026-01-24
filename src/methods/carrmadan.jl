@@ -107,7 +107,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     return prices
 end
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractFFTMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     res = first(pricer(mcProcess, [abstractPayoff.K], zero_rate, abstractPayoff.T, method))
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), abstractPayoff.T)
     return call_to_put(res, mcProcess.underlying.S0 * exp(dT), exp(-FinancialMonteCarlo.integral(zero_rate.r, abstractPayoff.T)), abstractPayoff)
