@@ -27,21 +27,17 @@ function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCa
 end
 
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::EuropeanOptionSmile)
-    return @. FinancialFFT.exp_mod(corr_adj' / 2 + v * corr_adj' * im + char_exp_v) / (1 // 4 + v^2)
+    return @. FinancialFFT.exp_mod((1 // 2 + v * im) * corr_adj' + char_exp_v) / (1 // 4 + v^2)
 end
-
-# function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::EuropeanOptionSmile)
-#     return @. FinancialFFT.exp_mod((1 + 2 * v * im) / 2 * corr_adj' + char_exp_v) / (1 // 4 + v^2)
-# end
 
 # function evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, char_exp_v)
 #     v2 = 2v
-#     @show corr_adj
-#     @show char_exp_v
-#     @show v2
-#     term = corr_adj * (1 + v2 * im) / 2 + char_exp_v
-#     exp_re = exp(FinancialFFT.real_mod(term))
-#     term_im = FinancialFFT.imag_mod(term)
+#     # @show corr_adj
+#     # @show char_exp_v
+#     # @show v2
+#     term = (1 // 2 + v * im) * corr_adj #+ char_exp_v
+#     exp_re = exp(FinancialFFT.real_mod(term + char_exp_v))
+#     term_im = FinancialFFT.imag_mod(term + char_exp_v)
 #     sin_im, cos_im = sincos(term_im)
 #     return 2 * exp_re * (cos_im + sin_im * v2) / (1 + v2^2)
 # end
