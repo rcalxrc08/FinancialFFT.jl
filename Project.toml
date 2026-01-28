@@ -1,7 +1,7 @@
 name = "FinancialFFT"
 uuid = "ccc4acef-1676-4a84-946d-4093fe376f06"
-authors = ["Nicola <nicola.scaramuzzino@yandex.com> and contributors"]
 version = "0.1.5"
+authors = ["Nicola <nicola.scaramuzzino@yandex.com> and contributors"]
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -20,7 +20,7 @@ AlternateVectors = "0.1, 0.2, 0.3, 0.4, 0.5"
 ChainRulesCore = "1"
 DataInterpolations = "4, 5, 6, 7, 8"
 FFTW = "1"
-FinancialMonteCarlo = "0.3"
+FinancialMonteCarlo = "0.3, 0.4"
 Interpolations = "0.10.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16"
 MuladdMacro = "0.2"
 Requires = "1"
