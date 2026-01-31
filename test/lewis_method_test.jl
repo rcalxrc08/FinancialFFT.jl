@@ -26,7 +26,7 @@ function blsprice_lewis(S0, K, r, T, sigma, d, iscall = true)
 end
 function blsprice_lewis_smile(S0, K, r, T, sigma, d, iscall = true)
     Model = BlackScholesProcess(sigma, Underlying(S0, d))
-    opt = FinancialFFT.EuropeanOptionSmile(T, [K], [iscall])
+    opt = FinancialMonteCarlo.EuropeanOptionSmile(T, [K], [iscall])
     A = 600.0
     N = 20000
     method = LewisMethod(A, N)

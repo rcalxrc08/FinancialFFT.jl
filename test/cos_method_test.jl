@@ -22,7 +22,7 @@ function blsprice_cos(S0, K, r, T, sigma, d, iscall = true)
 end
 function blsprice_cos_smile(S0, K, r, T, sigma, d, iscall = true)
     Model = BlackScholesProcess(sigma, Underlying(S0, d))
-    opt = FinancialFFT.EuropeanOptionSmile(T, [K], [iscall])
+    opt = FinancialMonteCarlo.EuropeanOptionSmile(T, [K], [iscall])
     N = 2^12
     method = CosMethod(N)
     z_r = ZeroRate(r)
