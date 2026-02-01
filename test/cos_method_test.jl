@@ -36,6 +36,14 @@ function blsbin_cos(S0, K, r, T, sigma, d, iscall = true)
     z_r = ZeroRate(r)
     return pricer(Model, z_r, method, opt)
 end
+function blsbin_cos_smile(S0, K, r, T, sigma, d, iscall = true)
+    Model = BlackScholesProcess(sigma, Underlying(S0, d))
+    opt = FinancialMonteCarlo.BinaryEuropeanOptionSmile(T, [K], [iscall])
+    N = 2^12
+    method = CosMethod(N)
+    z_r = ZeroRate(r)
+    return pricer(Model, z_r, method, opt)[1]
+end
 toll = 1e-10
 
 @testset "Cos Method Test" begin
@@ -45,8 +53,10 @@ toll = 1e-10
     @test abs(cos_price - price) < toll
     @test abs(cos_price_smile - price) < toll
     price_cos_bin = blsbin_cos(S0, K, r, T, sigma, d)
+    price_cos_bin_smile = blsbin_cos_smile(S0, K, r, T, sigma, d)
     price_bin = blsbin(S0, K, r, T, sigma, d)
     @test abs(price_cos_bin - price_bin) < toll
+    @test abs(price_cos_bin_smile - price_bin) < toll
 
     cos_price = blsprice_cos(S0, K, r, T, sigma, d, false)
     cos_price_smile = blsprice_cos_smile(S0, K, r, T, sigma, d, false)
@@ -54,8 +64,10 @@ toll = 1e-10
     @test abs(cos_price - price) < toll
     @test abs(cos_price_smile - price) < toll
     price_cos_bin = blsbin_cos(S0, K, r, T, sigma, d, false)
+    price_cos_bin_smile = blsbin_cos_smile(S0, K, r, T, sigma, d, false)
     price_bin = blsbin(S0, K, r, T, sigma, d, false)
     @test abs(price_cos_bin - price_bin) < toll
+    @test abs(price_cos_bin_smile - price_bin) < toll
 end
 
 @testset "Cos Method HyperDuals Test" begin
@@ -70,15 +82,21 @@ end
     @test abs(cos_price - price) < toll
     @test abs(cos_price_smile - price) < toll
     price_cos_bin = blsbin_cos(S0, K, r, T, sigma, d)
+    price_cos_bin_smile = blsbin_cos_smile(S0, K, r, T, sigma, d)
     price_bin = blsbin(S0, K, r, T, sigma, d)
     @test abs(price_cos_bin - price_bin) < toll
+    @test abs(price_cos_bin_smile - price_bin) < toll
 end
 
 @testset "Cos Method Zygote Test" begin
     gradient_cos_price = Zygote.gradient(blsprice_cos, S0, K, r, T, sigma, d)
+    gradient_cos_price_smile = Zygote.gradient(blsprice_cos_smile, S0, K, r, T, sigma, d)
     gradient_price = Zygote.gradient(blsprice, S0, K, r, T, sigma, d)
     @test maximum(abs.(gradient_cos_price .- gradient_price)) < toll
+    @test maximum(abs.(gradient_cos_price_smile .- gradient_price)) < toll
     gradient_cos_bin = Zygote.gradient(blsbin_cos, S0, K, r, T, sigma, d)
+    gradient_cos_bin_smile = Zygote.gradient(blsbin_cos_smile, S0, K, r, T, sigma, d)
     gradient_bin = Zygote.gradient(blsbin, S0, K, r, T, sigma, d)
     @test maximum(abs.(gradient_cos_bin .- gradient_bin)) < toll
+    @test maximum(abs.(gradient_cos_bin_smile .- gradient_bin)) < toll
 end

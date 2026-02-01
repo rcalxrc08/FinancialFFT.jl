@@ -42,6 +42,15 @@ function blsbin_lewis(S0, K, r, T, sigma, d, iscall = true)
     z_r = ZeroRate(r)
     return pricer(Model, z_r, method, opt)
 end
+function blsbin_lewis_smile(S0, K, r, T, sigma, d, iscall = true)
+    Model = BlackScholesProcess(sigma, Underlying(S0, d))
+    opt = FinancialMonteCarlo.BinaryEuropeanOptionSmile(T, [K], [iscall])
+    A = 600.0
+    N = 20000
+    method = LewisMethod(A, N)
+    z_r = ZeroRate(r)
+    return pricer(Model, z_r, method, opt)[1]
+end
 toll = 1e-10
 
 @testset "Lewis Method Test" begin
@@ -51,16 +60,20 @@ toll = 1e-10
     @test abs(lewis_price - price) < toll
     @test abs(lewis_price_smile - price) < toll
     price_lewis_bin = blsbin_lewis(S0, K, r, T, sigma, d)
+    price_lewis_bin_smile = blsbin_lewis_smile(S0, K, r, T, sigma, d)
     price_bin = blsbin(S0, K, r, T, sigma, d)
     @test abs(price_lewis_bin - price_bin) < toll
+    @test abs(price_lewis_bin_smile - price_bin) < toll
     lewis_price = blsprice_lewis(S0, K, r, T, sigma, d, false)
     lewis_price_smile = blsprice_lewis_smile(S0, K, r, T, sigma, d, false)
     price = blsprice(S0, K, r, T, sigma, d, false)
     @test abs(lewis_price - price) < toll
     @test abs(lewis_price_smile - price) < toll
     price_lewis_bin = blsbin_lewis(S0, K, r, T, sigma, d, false)
+    price_lewis_bin_smile = blsbin_lewis_smile(S0, K, r, T, sigma, d, false)
     price_bin = blsbin(S0, K, r, T, sigma, d, false)
     @test abs(price_lewis_bin - price_bin) < toll
+    @test abs(price_lewis_bin_smile - price_bin) < toll
 end
 
 @testset "Lewis Method HyperDuals Test" begin
@@ -75,8 +88,10 @@ end
     @test abs(lewis_price - price) < toll
     @test abs(lewis_price_smile - price) < toll
     price_lewis_bin = blsbin_lewis(S0, K, r, T, sigma, d)
+    price_lewis_bin_smile = blsbin_lewis_smile(S0, K, r, T, sigma, d)
     price_bin = blsbin(S0, K, r, T, sigma, d)
     @test abs(price_lewis_bin - price_bin) < toll
+    @test abs(price_lewis_bin_smile - price_bin) < toll
 end
 
 @testset "Lewis Method Zygote Test" begin
@@ -86,6 +101,8 @@ end
     @test maximum(abs.(gradient_lewis_price .- gradient_price)) < toll
     @test maximum(abs.(gradient_lewis_price_smile .- gradient_price)) < toll
     gradient_lewis_bin = Zygote.gradient(blsbin_lewis, S0, K, r, T, sigma, d)
+    gradient_lewis_bin_smile = Zygote.gradient(blsbin_lewis_smile, S0, K, r, T, sigma, d)
     gradient_bin = Zygote.gradient(blsbin, S0, K, r, T, sigma, d)
     @test maximum(abs.(gradient_lewis_bin .- gradient_bin)) < toll
+    @test maximum(abs.(gradient_lewis_bin_smile .- gradient_bin)) < toll
 end
