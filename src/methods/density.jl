@@ -19,7 +19,7 @@ function density_y(mcProcess, T, r, N, A, St, K, mode)
     vec = ChainRulesCore.@ignore_derivatives adapt_array(collect(-div(n, 2) .+ vec_lin), mode)            # Indices
     drift_rd = FinancialMonteCarlo.integral(r.r - mcProcess.underlying.d, T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
-    one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), n)
+    one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(n, EvenOddPattern(Int8(1), Int8(-1)))
     drift_rf = drift_rd + log(St) - log(K) - corr
     dt = pi / A # Step size, frequency space
     dt_im = dt * im

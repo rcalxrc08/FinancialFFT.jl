@@ -31,8 +31,10 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
     idx = ChainRulesCore.@ignore_derivatives 0:(N-1)
-    one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)
-    weights_simpson = ChainRulesCore.@ignore_derivatives AlternatePaddedVector(Int8(1), Int8(4), Int8(2), Int8(1), N)
+    # one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)
+    one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(N, EvenOddPattern(Int8(1), Int8(-1)))
+    # weights_simpson = ChainRulesCore.@ignore_derivatives AlternatePaddedVector(Int8(1), Int8(4), Int8(2), Int8(1), N)
+    weights_simpson = ChainRulesCore.@ignore_derivatives PatternVector(N, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
     support_array = ChainRulesCore.@ignore_derivatives @. one_minus_one * weights_simpson
     dx = A / N
     x = ChainRulesCore.@ignore_derivatives adapt_array(collect(idx * dx), mode)
@@ -56,8 +58,10 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
     idx = ChainRulesCore.@ignore_derivatives 0:(N-1)
-    one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)
-    weights_simpson = ChainRulesCore.@ignore_derivatives AlternatePaddedVector(Int8(1), Int8(4), Int8(2), Int8(1), N)
+    # one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)
+    one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(N, EvenOddPattern(Int8(1), Int8(-1)))
+    # weights_simpson = ChainRulesCore.@ignore_derivatives AlternatePaddedVector(Int8(1), Int8(4), Int8(2), Int8(1), N)
+    weights_simpson = ChainRulesCore.@ignore_derivatives PatternVector(N, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
     support_array = ChainRulesCore.@ignore_derivatives @. one_minus_one * weights_simpson
     dx = A / N
     x = ChainRulesCore.@ignore_derivatives adapt_array(collect(idx * dx), mode)
