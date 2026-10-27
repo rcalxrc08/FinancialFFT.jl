@@ -1,11 +1,13 @@
 """
-Struct for Lewis Integration Method
+    LewisMethod(A, N)
 
-		bsProcess=LewisMethod(A,N)
+Direct quadrature of the Lewis (2001) formula along the line `Im(u) = 1/2`: the integrand is evaluated
+on `N` equally spaced nodes in `[-A, A]` and summed. No FFT and no interpolation are involved, so every
+strike is priced exactly on its own and all AD back-ends (dual numbers, ForwardDiff, ReverseDiff, Zygote) are supported.
 
-Where:\n
-		A	=	volatility of the process.
-		N	=	volatility of the process.
+# Arguments
+- `A`: half-width of the frequency integration domain (`A > 0`).
+- `N`: number of quadrature nodes (`N > 2`).
 """
 struct LewisMethod{num <: Number, num_1 <: Integer} <: AbstractIntegralMethod
     A::num
@@ -146,7 +148,21 @@ function lw_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financ
 end
 
 """
-Documentation LewisMethod Method
+    pricer(mcProcess, zero_rate, method, payoff[, mode])
+
+Prices `payoff` under `mcProcess` with the Fourier method `method`
+(`LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CarrMadanMethod` or `DensityInverter`).
+
+# Arguments
+- `mcProcess`: a `FinancialMonteCarlo.BaseProcess`, e.g. `BlackScholesProcess(σ, Underlying(S0, d))`.
+- `zero_rate`: a `FinancialMonteCarlo.AbstractZeroRateCurve`, e.g. `ZeroRate(r)`.
+- `method`: the configuration of the numerical method.
+- `payoff`: an `EuropeanOption` or a `BinaryEuropeanOption`, a smile (`EuropeanOptionSmile`,
+  `BinaryEuropeanOptionSmile`, several strikes sharing the same maturity), or an array of `EuropeanOption`
+  with possibly different maturities. See the manual for the payoffs supported by each method.
+- `mode`: `FinancialMonteCarlo.SerialMode()` (default) or a CUDA mode when CUDA.jl is loaded.
+
+Returns a price, or a vector of prices for smiles and arrays of options.
 """
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     return lw_pricer(mcProcess, zero_rate, method, abstractPayoff.T, abstractPayoff, mode)

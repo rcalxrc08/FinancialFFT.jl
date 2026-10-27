@@ -23,7 +23,8 @@ function optimize_ts_with_bisection(Model, T, log_epss, toll_, mul, a, b, f_a = 
     @assert (b_a > 0 && sign_f_a != sign_f_b) "not possible"
     x_half = (a + b) / 2
     f_x_half = compute_ts_derivative_full_complex(x_half, Model, T, log_epss, mul)
-    if b_a < toll_
+    # relative tolerance: for short maturities the optimum is large and the absolute one is below the float spacing
+    if b_a < toll_ * max(one(b), b)
         #I should check if it is a maxima or a minima. In case of maxima, I should run again the bisection in one of the two sections [a,x*-eps] or [x*+eps,b]
         is_minima = sign_f_a && !sign_f_b
         if (is_minima)
@@ -44,8 +45,43 @@ function optimize_ts_with_bisection(Model, T, log_epss, toll_, mul, a, b, f_a = 
     end
 end
 
+# Supremum of the s > 0 such that E[exp(mul * s * X)] is finite, i.e. characteristic_exponent_i(mul * s, model) is defined:
+# beyond it the exponent returns meaningless finite values and the Chernoff bound does not hold.
+exponential_moment_bound(model, mul) = Inf
+exponential_moment_bound(model::FinancialMonteCarlo.KouProcess, mul) = v_value_mod(mul > 0 ? model.λ₊ : model.λ₋)
+# Positive root in s of 1 - a s² - mul b s = 0, where the argument of the log (VG) or of the sqrt (NIG) vanishes.
+function quadratic_moment_bound(a, b, mul)
+    a, b = v_value_mod(a), v_value_mod(b)
+    return (sqrt(b^2 + 4 * a) - mul * b) / (2 * a)
+end
+exponential_moment_bound(model::FinancialMonteCarlo.VarianceGammaProcess, mul) = quadratic_moment_bound(model.σ^2 * model.κ / 2, model.θ * model.κ, mul)
+exponential_moment_bound(model::FinancialMonteCarlo.NormalInverseGaussianProcess, mul) = quadratic_moment_bound(model.σ^2 * model.κ, 2 * model.θ * model.κ, mul)
+
+# The optimal s grows as the maturity shrinks (s* = sqrt(-2 log(eps) / (σ² T)) in Black Scholes),
+# so the upper end of the bracket is doubled until it contains the minimum, without crossing the exponential moment bound.
+# Returns the bracket and whether it contains a sign change of the derivative.
+function widen_bisection_bracket(Model, T, log_epss, mul, s_min, s_max, max_doublings = 30)
+    s_bound = (1 - 1e-8) * exponential_moment_bound(Model, mul)
+    s_max = min(s_max, s_bound)
+    s_min = min(s_min, s_max / 2)
+    sign_f_min = signbit(compute_ts_derivative_full_complex(s_min, Model, T, log_epss, mul))
+    has_sign_change(s) = signbit(compute_ts_derivative_full_complex(s, Model, T, log_epss, mul)) != sign_f_min
+    n = 0
+    while !has_sign_change(s_max) && s_max < s_bound && n < max_doublings
+        s_max = min(2 * s_max, s_bound)
+        n += 1
+    end
+    return s_min, s_max, has_sign_change(s_max)
+end
+
 function compute_chernoff_extrema_bisection_single(Model, T, log_epss, s_min, s_max, x_toll_bisection, mul, driftT)
-    s_opt = ChainRulesCore.@ignore_derivatives optimize_ts_with_bisection(Model, v_value_mod(T), v_value_mod(log_epss), x_toll_bisection, mul, s_min, s_max)
+    s_opt = ChainRulesCore.@ignore_derivatives begin
+        T_val = v_value_mod(T)
+        log_epss_val = v_value_mod(log_epss)
+        s_min_adj, s_max_adj, is_bracketed = widen_bisection_bracket(Model, T_val, log_epss_val, mul, s_min, s_max)
+        # if the bound is still decreasing at the exponential moment bound, the best admissible s is the bound itself
+        is_bracketed ? optimize_ts_with_bisection(Model, T_val, log_epss_val, x_toll_bisection, mul, s_min_adj, s_max_adj) : s_max_adj
+    end
     t_opt_bis = compute_ts(s_opt, Model, T, log_epss, mul)
     return driftT - mul * t_opt_bis
 end

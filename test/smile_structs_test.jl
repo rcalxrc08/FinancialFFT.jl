@@ -1,4 +1,3 @@
-using FinancialFFT, FinancialMonteCarlo
 
 @testset "Smiles Struct Consistency" begin
     K_vec = [90.0, 100.0, 110.0]

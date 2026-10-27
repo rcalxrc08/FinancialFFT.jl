@@ -1,10 +1,15 @@
 """
-Struct for Lewis Integration Method
+    CarrMadanLewisMethod(A, Npow)
 
-		bsProcess=CarrMadanLewisMethod(σ::num1) where {num1 <: Number}
+FFT evaluation of the Lewis (2001) formula: the integrand along the line `Im(u) = 1/2` is sampled
+on `[0, A)` with `2^Npow` nodes and Simpson weights, a single FFT returns the integral on a log-strike grid,
+and prices at the requested strikes are obtained through cubic-spline interpolation.
 
-Where:\n
-		σ	=	volatility of the process.
+# Arguments
+- `A`: upper bound of the frequency integration domain (`A > 0`).
+- `Npow`: base-2 logarithm of the number of FFT nodes (`2 < Npow < 24`).
+
+The spline step is excluded from ChainRules-based differentiation, so Zygote gradients are not reliable for this method.
 """
 struct CarrMadanLewisMethod{num <: Number, num_1 <: Integer} <: AbstractFFTMethod
     A::num
@@ -19,9 +24,6 @@ end
 
 export CarrMadanLewisMethod;
 using Interpolations
-"""
-Documentation CarrMadanLewis Method
-"""
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanLewisMethod, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: Number}
     Npow = method.Npow
     N = ChainRulesCore.@ignore_derivatives 2^Npow

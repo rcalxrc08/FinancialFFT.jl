@@ -1,5 +1,13 @@
-# Option Parameters
+"""
+    CosMethod(N)
 
+Fourier-cosine expansion method of Fang & Oosterlee (2008). The density of the log-price is expanded on
+a truncation interval `[a, b]` with the cosine terms `k = 0, …, N`; the interval is computed from a
+Chernoff bound on the tails of the process (see `compute_chernoff_extrema_bisection`), so no range parameter is needed.
+
+# Arguments
+- `N`: number of cosine terms (`N > 2`).
+"""
 struct CosMethod{num_1 <: Integer} <: FinancialFFT.AbstractIntegralMethod
     N::num_1
     function CosMethod(N::num_1) where {num_1 <: Integer}
@@ -125,9 +133,6 @@ function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT
     x_toll_bisection = 1e-14
     compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min, s_max, x_toll_bisection)
 end
-"""
-Documentation CosMethod Method
-"""
 function cos_method_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, opt, T, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     N = method.N
     S0 = mcProcess.underlying.S0

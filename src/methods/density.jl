@@ -1,3 +1,14 @@
+"""
+    DensityInverter(N, xmax = NaN)
+
+Recovers the density of the log-moneyness `log(S_T / K)` by inverting the characteristic function with a
+single FFT on `2^N` points spanning `[-xmax, xmax]`, then integrates the payoff against it.
+
+# Arguments
+- `N`: base-2 logarithm of the number of grid points (`N > 2`).
+- `xmax`: half-width of the log-moneyness grid. It can be omitted only for `BlackScholesProcess`,
+  where it defaults to `|drift| + 8σ√T`; for every other process it must be provided.
+"""
 struct DensityInverter{num_1 <: Integer, num <: Number} <: AbstractIntegralMethod
     N::num_1
     xmax::num
@@ -68,9 +79,6 @@ function compute_xmax(::FinancialMonteCarlo.BaseProcess, _, _, method::DensityIn
     return xmax
 end
 
-"""
-Documentation DensityInverter Method
-"""
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.DensityInverter, opt, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     xmax = ChainRulesCore.@ignore_derivatives compute_xmax(mcProcess, r, opt, method)
     N = method.N

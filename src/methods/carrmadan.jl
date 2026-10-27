@@ -1,11 +1,15 @@
 """
-Struct for Carr Madan Method
+    CarrMadanMethod(A, Npow)
 
-		bsProcess=CarrMadanMethod(σ::num1) where {num1 <: Number}
+Carr–Madan (1999) FFT method. The damped call transform is integrated with Simpson weights
+on the frequency grid `v ∈ [0, A)` with `2^Npow` nodes, a single FFT returns call prices on a
+log-strike grid, and prices at the requested strikes are obtained through cubic-spline interpolation.
 
-Where:\n
-		A	    = 	volatility of the process.
-		Npow	=	volatility of the process.
+# Arguments
+- `A`: upper bound of the frequency integration domain (`A > 0`).
+- `Npow`: base-2 logarithm of the number of FFT nodes (`2 < Npow < 24`).
+
+The spline step is excluded from ChainRules-based differentiation, so Zygote gradients are not reliable for this method.
 """
 struct CarrMadanMethod{num <: Number, num_1 <: Integer} <: AbstractFFTMethod
     A::num
@@ -21,19 +25,19 @@ export CarrMadanMethod;
 
 using DataInterpolations, FFTW;
 """
-Pricing European Options through Fast Fourier Transform Method (Carr Madan)
+    pricer(mcProcess, StrikeVec, zero_rate, T, method::Union{CarrMadanMethod, CarrMadanLewisMethod}[, mode])
 
-		VectorOfPrice=CarrMadanPricer(mcProcess::FinancialMonteCarlo.BaseProcess,S0::Number,StrikeVec::Array{U},r::Number,T::Number,Npow::Integer,A::Real,d::Number=0.0) where {U <: Number}
+Prices European **call** options with maturity `T` and strikes `StrikeVec` with a single FFT.
 
-Where:\n
-		S0 = Spot price.
-		StrikeVec = Vector of Strike of the Option to price.
-		r= zero rate with tenor T.
-		T= tenor of the options.
-		Npow= Integer Parameter for the FFT. Represent the log2 of the number of nodes.
-		A= Real Parameter of the FFT. Represent a maximum for the axis.
+# Arguments
+- `mcProcess`: a `FinancialMonteCarlo.BaseProcess`, e.g. `BlackScholesProcess(σ, Underlying(S0, d))`.
+- `StrikeVec`: vector of strikes.
+- `zero_rate`: a `FinancialMonteCarlo.AbstractZeroRateCurve`, e.g. `ZeroRate(r)`.
+- `T`: maturity.
+- `method`: a `CarrMadanMethod` or a `CarrMadanLewisMethod`.
+- `mode`: `FinancialMonteCarlo.SerialMode()` (default) or a CUDA mode when CUDA.jl is loaded.
 
-		VectorOfPrice= Price of the European Options with Strike equals to StrikeVec, tenor T and the market prices a risk free rate of r.
+Returns a vector of call prices, one per strike.
 """
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanMethod, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: Number}
     Npow = method.Npow

@@ -1,18 +1,15 @@
-using FinancialFFT
-using Test
-path1 = joinpath(dirname(pathof(FinancialFFT)), "..", "test")
-test_listTmp = readdir(path1);
+using FinancialFFT, FinancialMonteCarlo, FinancialToolbox, Test
+using DualNumbers, HyperDualNumbers, TaylorSeries, ForwardDiff, ReverseDiff, Zygote
 
-BlackList = ["REQUIRE", "runtests.jl", "Project.toml", "Manifest.toml", "cuda", "af", "wip", "bench.jl", "main_carrmadan2.jl", "main_carrmadan3.jl", "main_density.jl", "main_lewis copy 2.jl", "main_lewis copy.jl"];
-func_scope(x::String) = include(x);
-test_list = [test_element for test_element in test_listTmp if !any(x -> x == test_element, BlackList)]
-println("Running tests:\n")
-for (current_test, i) in zip(test_list, 1:length(test_list))
-    println("------------------------------------------------------------")
-    println("  * $(current_test) *")
-    func_scope(joinpath(path1, current_test))
-    println("------------------------------------------------------------")
-    if (i < length(test_list))
-        println("")
+include("utils.jl")
+include("cases.jl")
+
+# Suites can be selected with `Pkg.test("FinancialFFT"; test_args = ["gradients"])`.
+const SUITES = ["smile_structs", "extrema_computation", "black_scholes", "gradients", "other_models", "multiple_options"]
+const SELECTED_SUITES = isempty(ARGS) ? SUITES : ARGS
+
+@testset "FinancialFFT" begin
+    for suite in SELECTED_SUITES
+        include("$(suite)_test.jl")
     end
 end
