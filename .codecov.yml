@@ -1,4 +1,3 @@
 comment: false
 ignore:
-  - "src/methods/cuda/*"
-  - "src/deps/cuda_dependencies.jl"
+  - "ext/FinancialFFTCUDAExt.jl"

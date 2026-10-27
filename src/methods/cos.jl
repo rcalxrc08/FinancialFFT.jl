@@ -34,22 +34,6 @@ function chi_vectorized(u_el, adj, bma, a, exp_u)
     return (1 + !adj) * (res - (sin_uu_adj_1 + sin_uu_adj_2) / (adj + u_el))
 end
 
-function uk_call_vec(u_el, a, z, adjj_el, adjuster_el, exp_u, inv_bma, bma)
-    uk = inv_bma * (chi_vectorized(u_el, adjuster_el, bma, a, exp_u) - adjj_el) * exp(FinancialFFT.real_mod(z))
-    v_char_exp_im = FinancialFFT.imag_mod(z)
-    return uk, v_char_exp_im, u_el
-end
-
-function uk_call_new(u, a, b, z)
-    bma = b - a
-    adjuster = ChainRulesCore.@ignore_derivatives PatternVector(length(u), InitialValuePattern(true, false))
-    inv_bma = inv(bma)
-    exp_u = exp(b)
-    adjj = @. (1 + !adjuster) * b * adjuster
-    res = @. uk_call_vec(u, a, z, adjj, !adjuster, exp_u, inv_bma, bma)
-    return res
-end
-
 function uk_call(u, a, b, z)
     bma = b - a
     adjuster = ChainRulesCore.@ignore_derivatives PatternVector(length(u), InitialValuePattern(true, false))
