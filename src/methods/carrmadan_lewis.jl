@@ -45,8 +45,12 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     integral_value = @. real_mod(Y)
     pi_over_A = pi / A
     ks = ChainRulesCore.@ignore_derivatives pi_over_A * (-N .+ 2 * idx)
-    spline_cub = ChainRulesCore.@ignore_derivatives adapt_itp(CubicSplineInterpolation(ks, integral_value), mode)
-    prices = @. S0 * exp(dT) - exp(-rT) / pi * dx / 3 * sqrt(S0 * StrikeVec) * spline_cub(log(StrikeVec / S0))
+    # Interpolations cannot build the spline from device data: it is built on the host, and moved to the device
+    # only when the strikes are there
+    spline_cub = ChainRulesCore.@ignore_derivatives adapt_itp(CubicSplineInterpolation(ks, adapt(Array, integral_value)), StrikeVec)
+    # map and not a broadcast: ReverseDiff tracks the coefficients of the spline, and cannot broadcast a function that
+    # captures tracked values; on the device, map runs as a kernel
+    prices = @. S0 * exp(dT) - exp(-rT) / pi * dx / 3 * sqrt(S0 * StrikeVec) * $map(spline_cub, log(StrikeVec / S0))
     return prices
 end
 
@@ -72,13 +76,17 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     integral_value = @. real_mod(Y)
     pi_over_A = pi / A
     ks = ChainRulesCore.@ignore_derivatives pi_over_A * (-N .+ 2 * idx)
-    spline_cub = ChainRulesCore.@ignore_derivatives adapt_itp(CubicSplineInterpolation(ks, integral_value), mode)
     StrikeVec = opt.K
-    prices = @. S0 * exp(dT) - exp(-rT) / pi * dx / 3 * sqrt(S0 * StrikeVec) * $spline_cub(log(StrikeVec / S0))
+    # Interpolations cannot build the spline from device data: it is built on the host, and moved to the device
+    # only when the strikes are there
+    spline_cub = ChainRulesCore.@ignore_derivatives adapt_itp(CubicSplineInterpolation(ks, adapt(Array, integral_value)), StrikeVec)
+    # map and not a broadcast: ReverseDiff tracks the coefficients of the spline, and cannot broadcast a function that
+    # captures tracked values; on the device, map runs as a kernel
+    prices = @. S0 * exp(dT) - exp(-rT) / pi * dx / 3 * sqrt(S0 * StrikeVec) * $map(spline_cub, log(StrikeVec / S0))
     return call_to_put(prices, S0 * exp(dT), exp(-rT), opt)
 end
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, abstractPayoffs::Array{U}, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, abstractPayoffs::Array{U}, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
     TT = unique([opt.T for opt in abstractPayoffs])
     zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs)
     prices = Array{typeof(zero_typed)}(undef, length(abstractPayoffs))
@@ -87,7 +95,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
         index_same_t = findall(op -> (op.T == T), abstractPayoffs)
         payoffs = abstractPayoffs[index_same_t]
         strikes = [opt.K for opt in payoffs]
-        prices_call = pricer(mcProcess, strikes, zero_rate, T, method)
+        prices_call = pricer(mcProcess, strikes, zero_rate, T, method, mode)
         dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
         prices_final = [call_to_put(prices_call[i], mcProcess.underlying.S0 * exp(dT), exp(-FinancialMonteCarlo.integral(zero_rate.r, T)), payoffs[i]) for i in eachindex(payoffs)]
         prices[index_same_t] = prices_final

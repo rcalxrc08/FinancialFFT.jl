@@ -17,7 +17,7 @@ methods to `pricer`. Switching from Monte Carlo to a Fourier method only means r
 - Payoffs: European and binary (digital) options, calls and puts, smiles and arrays of options with different maturities.
 - Non-constant zero rates and dividends.
 - Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl and TaylorSeries.jl (Zygote gradients of `CarrMadanMethod` and `CarrMadanLewisMethod` are not reliable, since the spline is excluded from differentiation; ReverseDiff.jl requires version 1.18 or later).
-- GPU execution through CUDA.jl (experimental).
+- GPU execution through CUDA.jl, see [GPU](@ref).
 
 ## Installation
 
@@ -46,10 +46,32 @@ model = MertonProcess(σ, 5.0, 0.03, 0.02, Underlying(S0, d))
 pricer(model, zero_rate, CosMethod(2^12), option)
 ```
 
+## GPU
+
+With CUDA.jl loaded, passing `FinancialMonteCarlo.CudaMode()` as the last argument of `pricer` evaluates the
+characteristic function and the integrals on the GPU:
+
+```julia
+using CUDA
+smile = FinancialMonteCarlo.EuropeanOptionSmile(T, CuArray([90.0, 100.0, 110.0]), CuArray([true, true, false]))
+pricer(model, zero_rate, CosMethod(2^12), smile, FinancialMonteCarlo.CudaMode())
+```
+
+- `LewisMethod`, `CosMethod`, `CarrMadanLewisMethod` and `DensityInverter` run on the GPU, with the accuracy they have on the CPU. `CarrMadanMethod` ignores the mode and runs on the CPU.
+- The strikes of a smile must be on the device. A single option and an array of options are given as on the CPU.
+- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU, with the same limitations as on the CPU. ReverseDiff.jl and Mooncake.jl cannot differentiate GPU code.
+
 ## Testing
 
 ```julia
 ] test FinancialFFT
+```
+
+The GPU tests are not part of the default run; on a machine with a CUDA GPU they run with
+
+```julia
+using Pkg
+Pkg.test("FinancialFFT"; test_args = ["gpu"])
 ```
 
 ## Contents

@@ -21,7 +21,6 @@ end
 export LewisMethod;
 #Equivalent to real(exp(z)) but more efficient
 exp_mod(x) = exp(real_mod(x)) * cos(imag_mod(x))
-reim_mod(x) = real_mod(x), imag_mod(x)
 
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.EuropeanOption)
     corr_h = corr_adj / 2
@@ -33,8 +32,7 @@ function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::EuropeanOptionSm
     return @. FinancialFFT.exp_mod((1 // 2 + v * im) * corr_adj' + char_exp_v) / (1 // 4 + v^2)
 end
 
-function evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, char_exp_v)
-    re1, im1 = char_exp_v
+function evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, re1, im1)
     re_term = corr_adj / 2 + re1
     term_im = corr_adj * v + im1
     exp_re = exp(re_term)
@@ -42,12 +40,16 @@ function evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, char_exp_v)
     return exp_re * (cos_im / 2 + sin_im * v) / (1 // 4 + v^2)
 end
 
+# The real and imaginary parts are passed as separate arrays: Zygote cannot differentiate a GPU broadcast
+# whose intermediate results are tuples.
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOption)
-    return @. evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, reim_mod(char_exp_v))
+    re_char_exp, im_char_exp = real_mod.(char_exp_v), imag_mod.(char_exp_v)
+    return @. evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, re_char_exp, im_char_exp)
 end
 
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOptionSmile)
-    return @. evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj', reim_mod(char_exp_v))
+    re_char_exp, im_char_exp = real_mod.(char_exp_v), imag_mod.(char_exp_v)
+    return @. evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj', re_char_exp, im_char_exp)
 end
 
 # function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOption)
