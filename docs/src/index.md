@@ -59,7 +59,7 @@ pricer(model, zero_rate, CosMethod(2^12), smile, FinancialMonteCarlo.CudaMode())
 
 - `LewisMethod`, `CosMethod`, `CarrMadanLewisMethod` and `DensityInverter` run on the GPU, with the accuracy they have on the CPU. `CarrMadanMethod` ignores the mode and runs on the CPU.
 - The strikes of a smile must be on the device. A single option and an array of options are given as on the CPU.
-- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU, with the same limitations as on the CPU. ReverseDiff.jl and Mooncake.jl cannot differentiate GPU code.
+- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU, with the same limitations as on the CPU. ReverseDiff.jl and Mooncake.jl are not supported on the GPU.
 
 ## Testing
 

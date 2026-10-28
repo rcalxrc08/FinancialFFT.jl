@@ -1,7 +1,7 @@
 # GPU execution in CudaMode. Not in SUITES, since GitHub CI has no GPU: on a machine with a CUDA GPU run
 #     Pkg.test("FinancialFFT"; test_args = ["gpu"])
 # Smiles keep their strikes on the device. CarrMadanMethod ignores the mode and runs on the CPU; ReverseDiff and
-# Mooncake cannot differentiate GPU code.
+# Mooncake are not supported on the GPU.
 using CUDA
 
 function gpu_payoff(kind, T, K, iscall)
