@@ -48,4 +48,11 @@ end
     @testset "ReverseDiff Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(18, 3.0), 1e-5))
         test_within(() -> max_abs_diff(ReverseDiff.gradient(x -> kou_price(method)(x...), kou_params), collect(reference)), toll)
     end
+    # a recorded tape replayed at new inputs recomputes the fft in its forward pass
+    @testset "ReverseDiff replayed tape, DensityInverter" begin
+        f = x -> kou_price(FinancialFFT.DensityInverter(12, 3.0))(x...)
+        tape = ReverseDiff.GradientTape(f, kou_params)
+        new_params = kou_params .* 1.1
+        @test ReverseDiff.gradient!(tape, new_params) ≈ ReverseDiff.gradient(f, new_params)
+    end
 end
