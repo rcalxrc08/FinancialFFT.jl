@@ -9,5 +9,5 @@ FinancialFFT = {path = ".."}
 
 [compat]
 Documenter = "1"
-FinancialMonteCarlo = "0.4"
+FinancialMonteCarlo = "0.4, 0.5"
 FinancialToolbox = "0.7, 0.8"

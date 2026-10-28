@@ -79,7 +79,7 @@ function compute_xmax(::FinancialMonteCarlo.BaseProcess, _, _, method::DensityIn
 end
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.DensityInverter, opt, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
-    xmax = ChainRulesCore.@ignore_derivatives compute_xmax(mcProcess, r, opt, method)
+    xmax = ChainRulesCore.@ignore_derivatives ignore_derivatives_mod(compute_xmax(mcProcess, r, opt, method))
     N = method.N
     T = opt.T
     f_x = density_y(mcProcess, T, r, N, xmax, mcProcess.underlying.S0, opt.K, mode)

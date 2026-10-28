@@ -2,6 +2,9 @@
 real_mod(x) = real(x)
 imag_mod(x) = imag(x)
 adapt_array(x, _) = x
+# Quantities that are constants for differentiation (truncation ranges, grids). ReverseDiff does not honor
+# ChainRulesCore.@ignore_derivatives, so its extension strips the tracking here.
+ignore_derivatives_mod(x) = x
 function adapt_itp(itp, _)
     return itp
 end

@@ -122,7 +122,7 @@ function cos_method_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::Financ
     S0 = mcProcess.underlying.S0
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(r.r, T)
-    a, b = ChainRulesCore.@ignore_derivatives compute_chernorff_limits(mcProcess, rT, dT, T)
+    a, b = ChainRulesCore.@ignore_derivatives ignore_derivatives_mod.(compute_chernorff_limits(mcProcess, rT, dT, T))
     bma = b - a
     u = ChainRulesCore.@ignore_derivatives FinancialFFT.adapt_array(collect((0:N) * (pi / bma)), mode)
     driftT = rT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
