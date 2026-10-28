@@ -59,9 +59,6 @@ adjust_price_adimensional(V, ::BinaryEuropeanOption) = V
 
 function compute_xmax(mcProcess::BlackScholesProcess, r, opt, method::DensityInverter)
     xmax = method.xmax
-    if (!isnan(xmax))
-        return xmax
-    end
     S0 = mcProcess.underlying.S0
     d = mcProcess.underlying.d
     sigma = mcProcess.σ
@@ -70,7 +67,9 @@ function compute_xmax(mcProcess::BlackScholesProcess, r, opt, method::DensityInv
     r_d = FinancialMonteCarlo.integral(r.r, T) - FinancialMonteCarlo.integral(d, T)
     mu = abs(log(S0) - log(K) + r_d - sigma^2 / 2 * T)
     sig = sigma * sqrt(T)
-    return mu + 8 * sig
+    # both branches promoted to a common type: the default xmax is a NaN16, and a Union return type breaks Mooncake
+    xmax_default, xmax_user = promote(mu + 8 * sig, xmax)
+    return isnan(xmax) ? xmax_default : xmax_user
 end
 
 function compute_xmax(::FinancialMonteCarlo.BaseProcess, _, _, method::DensityInverter)

@@ -15,6 +15,9 @@
             @testset "Zygote" begin
                 test_within(() -> max_abs_diff([something(x, 0.0) for x in Zygote.gradient(f, args...)], reference), toll.zygote)
             end
+            @testset "Mooncake" begin
+                test_within(() -> max_abs_diff(mooncake_gradient(x -> f(x...), args), reference), toll.mooncake)
+            end
         end
     end
 end

@@ -33,6 +33,9 @@ components(x::Taylor1) = x.coeffs
 max_abs_diff(x, y) = maximum(abs.(components(x) .- components(y)))
 max_abs_diff(x::AbstractArray, y::AbstractArray) = maximum(abs.(x .- y))
 
+# Reverse mode gradient of a scalar function of a vector with Mooncake.
+mooncake_gradient(f, x) = Mooncake.value_and_gradient!!(Mooncake.prepare_gradient_cache(f, x), f, x)[2][2]
+
 # A combination that is known to fail (error or inaccurate result): it is recorded as broken against `toll`,
 # so that the suite reports it as soon as it starts working.
 struct Broken

@@ -42,4 +42,7 @@ end
     @testset "ForwardDiff Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(18, 3.0), 1e-5))
         test_within(() -> max_abs_diff(ForwardDiff.gradient(x -> kou_price(method)(x...), kou_params), collect(reference)), toll)
     end
+    @testset "Mooncake Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(18, 3.0), 1e-5))
+        test_within(() -> max_abs_diff(mooncake_gradient(x -> kou_price(method)(x...), kou_params), collect(reference)), toll)
+    end
 end

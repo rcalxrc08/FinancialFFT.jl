@@ -1,5 +1,5 @@
 using FinancialFFT, FinancialMonteCarlo, FinancialToolbox, Test
-using DualNumbers, HyperDualNumbers, TaylorSeries, ForwardDiff, ReverseDiff, Zygote
+using DualNumbers, HyperDualNumbers, TaylorSeries, ForwardDiff, ReverseDiff, Zygote, Mooncake
 
 include("utils.jl")
 include("cases.jl")
