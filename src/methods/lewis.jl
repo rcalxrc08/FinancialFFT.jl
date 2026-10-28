@@ -3,7 +3,7 @@
 
 Direct quadrature of the Lewis (2001) formula along the line `Im(u) = 1/2`: the integrand is evaluated
 on `N` equally spaced nodes in `[-A, A]` and summed. No FFT and no interpolation are involved, so every
-strike is priced exactly on its own and all AD back-ends (dual numbers, ForwardDiff, ReverseDiff, Zygote) are supported.
+strike is priced exactly on its own and dual numbers, hyper-dual numbers, TaylorSeries, ForwardDiff, Zygote and Mooncake are supported.
 
 # Arguments
 - `A`: half-width of the frequency integration domain (`A > 0`).

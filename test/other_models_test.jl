@@ -7,7 +7,7 @@
     methods = [
         "CosMethod" => (CosMethod(2^12), 1e-5, 1e-5),
         "CarrMadanLewisMethod" => (CarrMadanLewisMethod(600.0, 16), 1e-7, Broken(1e-5)),
-        "CarrMadanMethod" => (CarrMadanMethod(400.0, 18), Broken(1e-2), nothing),
+        "CarrMadanMethod" => (CarrMadanMethod(400.0, 18), 1e-2, nothing),
         "DensityInverter" => (FinancialFFT.DensityInverter(18, 3.0), 1e-7, 1e-4),
     ]
     for (model_name, model) in model_cases(S0, d), (method_name, (method, toll_eu, toll_bin)) in methods
