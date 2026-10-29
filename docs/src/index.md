@@ -67,7 +67,7 @@ pricer(model, zero_rate, CosMethod(2^12), smile, FinancialMonteCarlo.CudaMode())
 ] test FinancialFFT
 ```
 
-The GPU tests are not part of the default run; on a machine with a CUDA GPU they run with
+The GPU tests are not part of the default run; on a machine with a CUDA GPU they run with the following command, which adds CUDA.jl to the test environment:
 
 ```julia
 using Pkg

@@ -1,18 +1,17 @@
 [deps]
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 DualNumbers = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
 FinancialMonteCarlo = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
 FinancialToolbox = "2edd74a5-e968-5e45-af77-76d29aa6a478"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
-CUDA = "5, 6"
 DualNumbers = "0.5, 0.6"
 FinancialMonteCarlo = "0.5.1"
 FinancialToolbox = "0.7, 0.8"

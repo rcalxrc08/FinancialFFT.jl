@@ -1,3 +1,10 @@
+# CUDA is not a test dependency, since CI has no GPU: the "gpu" suite adds it to the test environment, before loading
+# the packages that adding it may update.
+if "gpu" in ARGS
+    using Pkg
+    Pkg.add("CUDA")
+end
+
 using FinancialFFT, FinancialMonteCarlo, FinancialToolbox, Test
 using DualNumbers, HyperDualNumbers, TaylorSeries, ForwardDiff, ReverseDiff, Zygote, Mooncake
 
