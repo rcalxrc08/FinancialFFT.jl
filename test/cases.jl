@@ -29,4 +29,5 @@ model_cases(S0, d) = [
     "Kou" => KouProcess(0.2, 5.0, 0.3, 30.0, 20.0, Underlying(S0, d)),
     "VarianceGamma" => VarianceGammaProcess(0.2, 0.03, 0.01, Underlying(S0, d)),
     "NormalInverseGaussian" => NormalInverseGaussianProcess(0.2, 0.01, 0.01, Underlying(S0, d)),
+    "Heston" => HestonProcess(0.3, 0.2, 0.0, 1.5, -0.7, 0.04, Underlying(S0, d)),
 ]

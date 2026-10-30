@@ -12,6 +12,7 @@ and the dividend yield.
 | Kou double exponential | `KouProcess(σ, λ, p, λ₊, λ₋, underlying)` |
 | Variance Gamma | `VarianceGammaProcess(σ, θ, κ, underlying)` |
 | Normal Inverse Gaussian | `NormalInverseGaussianProcess(σ, θ, κ, underlying)` |
+| Heston | `HestonProcess(σ, σ₀, λ, κ, ρ, θ, underlying)` |
 
 ## Curves
 
@@ -35,3 +36,9 @@ The exponent is per unit of time (methods multiply it by `T`) and must not conta
 the drift implied by the zero and dividend curves and the martingale correction `characteristic_exponent_i(1, process)`.
 A vectorized variant `characteristic_exponent_vi` is defined next to each exponent in `src/methods/charexp.jl`. The function is broadcast over arrays and
 differentiated by every AD back-end, so it must be written generically, without type restrictions on `imv`.
+
+Methods call `characteristic_exponent_i(imv, process, T)`, the log of ``E[\exp(imv\, X_T)]``, which defaults to the
+exponent above times `T`. A process that is not Lévy, such as Heston, has no exponent per unit of time and defines this
+three argument method (and `characteristic_exponent_vi`) directly. A process with semi-heavy tails also needs
+`exponential_moment_bound(process, mul[, T])`, which limits the truncation range of `CosMethod`: pass `T` when the bound
+depends on the maturity, as the moment explosion of Heston does.

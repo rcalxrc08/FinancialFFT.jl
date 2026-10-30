@@ -10,6 +10,7 @@ It currently contains the following capabilities:
 
 - Support for the following Single Name Models:
     - Black Scholes
+    - Heston
     - Kou
     - Merton
     - Normal Inverse Gaussian

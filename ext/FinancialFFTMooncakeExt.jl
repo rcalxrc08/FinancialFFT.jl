@@ -25,4 +25,7 @@ function Mooncake.rrule!!(::CoDual{typeof(fft)}, x::CoDual{<:ComplexVector})
     return CoDual(y, dy), fft_pullback!!
 end
 
+# The complex sqrt of Base bitcasts its argument, which Mooncake refuses to differentiate. The overlay is only seen by Mooncake.
+Mooncake.@mooncake_overlay FinancialFFT.sqrt_mod(z::Complex{<:IEEEFloat}) = sqrt(sqrt(abs2(z))) * cis(angle(z) / 2)
+
 end

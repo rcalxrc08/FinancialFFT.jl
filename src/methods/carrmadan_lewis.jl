@@ -31,7 +31,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     A = method.A
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
-    correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
+    correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     idx = ChainRulesCore.@ignore_derivatives 0:(N-1)
     # one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)
     one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(N, EvenOddPattern(Int8(1), Int8(-1)))
@@ -41,7 +41,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     dx = A / N
     x = ChainRulesCore.@ignore_derivatives adapt_array(collect(idx * dx), mode)
     x_im = @. 1 // 2 + x * im
-    Y = fft(@. support_array * exp(correction * x_im + FinancialFFT.characteristic_exponent_i(x_im, mcProcess) * T) / abs2(x_im))
+    Y = fft(@. support_array * exp(correction * x_im + FinancialFFT.characteristic_exponent_i(x_im, mcProcess, T)) / abs2(x_im))
     integral_value = @. real_mod(Y)
     pi_over_A = pi / A
     ks = ChainRulesCore.@ignore_derivatives pi_over_A * (-N .+ 2 * idx)
@@ -62,7 +62,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     T = opt.T
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
-    correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
+    correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     idx = ChainRulesCore.@ignore_derivatives 0:(N-1)
     # one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)
     one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(N, EvenOddPattern(Int8(1), Int8(-1)))
@@ -72,7 +72,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     dx = A / N
     x = ChainRulesCore.@ignore_derivatives adapt_array(collect(idx * dx), mode)
     x_im = @. 1 // 2 + x * im
-    Y = fft(@. support_array * exp(correction * x_im + FinancialFFT.characteristic_exponent_i(x_im, mcProcess) * T) / abs2(x_im))
+    Y = fft(@. support_array * exp(correction * x_im + FinancialFFT.characteristic_exponent_i(x_im, mcProcess, T)) / abs2(x_im))
     integral_value = @. real_mod(Y)
     pi_over_A = pi / A
     ks = ChainRulesCore.@ignore_derivatives pi_over_A * (-N .+ 2 * idx)

@@ -53,7 +53,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     # the final value A is excluded, the first node is moved away from the singularity in 0 (without mutation, for Zygote)
     v = @. ifelse(iszero(real_vec), eps_, real_vec * dx)
     # ChainRulesCore.@ignore_derivatives v[1] = 1e-22 #wrong
-    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
+    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     # v_adj = @. v - im
     # v_adj = @. -im * (v * im - im * im)
     # v_adj = @. im * (v_im + 1) * Int8(-1)
@@ -81,7 +81,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     v_im = @. v * im
     alfa = 0.0
     # φ(v - i) = E[exp((1 + iv) X)], i.e. the exponent evaluated in 1 + iv
-    complex_vec_z_k = @. one_minus_one * cis(drift_rd * v) * (exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess) * T - v_im * corr - corr) - 1) / ((v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
+    complex_vec_z_k = @. one_minus_one * cis(drift_rd * v) * (exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess, T) - v_im * corr - corr) - 1) / ((v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
     # complex_vec_z_k = @. exp(v_im * (drift_rd + b)) * (exp(FinancialFFT.characteristic_exponent_i(-(v_im + 1), mcProcess) * T - (v_im + 1) * corr) - 1) / (v_im * (v_im + 1)) * (dx * weights_ / 3)
     # complex_vec_z_k = @. exp(v_im * (r - d) * T + v_im * b) * (exp(FinancialFFT.characteristic_exponent_i(-(v_im + 1), mcProcess) * T - (-im*v_im - 1im) * 1im * corr) - 1) / (v_im + v_im^2) * dx * weights_ / 3
     y = fft(complex_vec_z_k)

@@ -1,6 +1,8 @@
 
 real_mod(x) = real(x)
 imag_mod(x) = imag(x)
+# Mooncake cannot differentiate the complex sqrt of Base: its extension overlays this hook.
+sqrt_mod(x) = sqrt(x)
 adapt_array(x, _) = x
 # Quantities that are constants for differentiation (truncation ranges, grids). ReverseDiff does not honor
 # ChainRulesCore.@ignore_derivatives, so its extension strips the tracking here.

@@ -13,7 +13,7 @@ methods to `pricer`. Switching from Monte Carlo to a Fourier method only means r
 ## Features
 
 - Methods: [`LewisMethod`](@ref), [`CosMethod`](@ref), [`CarrMadanLewisMethod`](@ref), [`CarrMadanMethod`](@ref), [`FinancialFFT.DensityInverter`](@ref).
-- Models: Black–Scholes, Merton, Kou, Variance Gamma, Normal Inverse Gaussian.
+- Models: Black–Scholes, Merton, Kou, Variance Gamma, Normal Inverse Gaussian, Heston.
 - Payoffs: European and binary (digital) options, calls and puts, smiles and arrays of options with different maturities.
 - Non-constant zero rates and dividends.
 - Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl and TaylorSeries.jl (Zygote gradients of `CarrMadanMethod` and `CarrMadanLewisMethod` are not reliable, since the spline is excluded from differentiation; ReverseDiff.jl requires version 1.18 or later).

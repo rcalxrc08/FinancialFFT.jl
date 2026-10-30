@@ -134,13 +134,13 @@ function lw_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financ
     S0 = mcProcess.underlying.S0
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
-    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess) * T
+    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     eps_typed = ChainRulesCore.@ignore_derivatives eps(zero(Float64))
     range_init = ChainRulesCore.@ignore_derivatives adapt_array(collect(range(-1, length = N, stop = 1)), mode)
     one_half = 1 // 2
     v = ChainRulesCore.@ignore_derivatives @. (eps_typed + A * range_init)
     # v_im_adj = @. one_half + v * im
-    char_exp_v = @. FinancialFFT.characteristic_exponent_i(one_half + v * im, mcProcess) * T
+    char_exp_v = @. FinancialFFT.characteristic_exponent_i(one_half + v * im, mcProcess, T)
     lw_result = LewisMethodResult(char_exp_v, v)
     dx_adj = A / (N - 1)
     df = exp(-rT)
