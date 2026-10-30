@@ -7,7 +7,7 @@
     methods = [
         "CosMethod" => (CosMethod(2^12), 1e-5, 1e-5),
         "CarrMadanLewisMethod" => (CarrMadanLewisMethod(600.0, 16), 1e-7, Broken(1e-5)),
-        "CarrMadanMethod" => (CarrMadanMethod(400.0, 18), 1e-2, nothing),
+        "CarrMadanMethod" => (CarrMadanMethod(400.0, 18), 1e-5, nothing),
         "DensityInverter" => (FinancialFFT.DensityInverter(18, 3.0), 1e-7, 1e-4),
     ]
     for (model_name, model) in model_cases(S0, d), (method_name, (method, toll_eu, toll_bin)) in methods
@@ -62,9 +62,9 @@ end
         # γ = 0 in 1 when κ + λ = ρσ
         @test iszero(FinancialFFT.characteristic_exponent_i(1, HestonProcess(0.6, 0.2, 0.0, 0.3, 0.5, 0.04, Underlying(100.0, 0.0)), 1.0))
     end
-    @testset "Broadcast matches the scalar function" begin
+    @testset "Vectorized function matches the scalar one" begin
         zs = collect(0.5 .+ range(0.0, 50.0, length = 11) .* im)
-        @test FinancialFFT.characteristic_exponent_i.(zs, Ref(model), 1.3) ≈ [FinancialFFT.characteristic_exponent_i(z, model, 1.3) for z in zs]
+        @test FinancialFFT.characteristic_exponent_vi(zs, model, 1.3) ≈ [FinancialFFT.characteristic_exponent_i(z, model, 1.3) for z in zs]
     end
     # Reference value of the COS paper, Fang & Oosterlee (2008)
     @testset "Benchmark, $method_name" for (method_name, method) in (("LewisMethod", LewisMethod(600.0, 20000)), ("CosMethod", CosMethod(2^12)), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16)))
@@ -81,6 +81,29 @@ end
             opt = EuropeanOption(T, K)
             @test abs(pricer(model, ZeroRate(r), CosMethod(2^12), opt) - pricer(model, ZeroRate(r), LewisMethod(600.0, 20000), opt)) < 1e-4
         end
+    end
+end
+
+# The undamped transform of the time value has a kink at the forward, and decays like 1 / v²: it misses this strike by S0 / (π A).
+@testset "CarrMadanMethod damping" begin
+    S0, r, d, T = 100.0, 0.02, 0.01, 1.0
+    reference_method = LewisMethod(600.0, 20000)
+    opt = EuropeanOption(T, S0 * exp((r - d) * T))
+    @testset "At the forward, $model_name" for (model_name, model) in model_cases(S0, d)
+        @test abs(pricer(model, ZeroRate(r), CarrMadanMethod(400.0, 18), opt) - pricer(model, ZeroRate(r), reference_method, opt)) < 1e-5
+    end
+    @testset "Damping below the moment bound" begin
+        # the default damping would need E[S^1.75], which is not finite
+        kou = KouProcess(0.2, 1.0, 0.1, 1.1, 20.0, Underlying(S0, d))
+        @test FinancialFFT.carr_madan_damping(kou, T, 0.75) ≈ 0.05
+        @test FinancialFFT.carr_madan_damping(kou, T, 0.01) == 0.01
+        @test abs(pricer(kou, ZeroRate(r), CarrMadanMethod(400.0, 18), opt) - pricer(kou, ZeroRate(r), reference_method, opt)) < 1e-5
+        heston = HestonProcess(1.5, 0.3, 0.0, 0.5, 0.9, 0.04, Underlying(S0, d))
+        @test FinancialFFT.carr_madan_damping(heston, 2.0, 0.75) < FinancialFFT.carr_madan_damping(heston, 0.5, 0.75)
+    end
+    @testset "User defined damping" begin
+        model = last(first(model_cases(S0, d)))
+        @test abs(pricer(model, ZeroRate(r), CarrMadanMethod(400.0, 18, 0.5), opt) - pricer(model, ZeroRate(r), reference_method, opt)) < 1e-5
     end
 end
 

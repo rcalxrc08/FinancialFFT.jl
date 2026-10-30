@@ -167,9 +167,6 @@ end
 # function Base.broadcasted(::S, ::typeof(characteristic_exponent), v::V, mcProcess) where {S <: Base.Broadcast.BroadcastStyle, V <: Base.Broadcast.Broadcasted}
 #     return characteristic_exponent_v(v, mcProcess[])
 # end
-function Base.broadcasted(::S, ::typeof(characteristic_exponent_i), v::Array, mcProcess, T) where {S <: Base.Broadcast.BroadcastStyle}
-    return characteristic_exponent_vi(v, mcProcess[], T[])
-end
 function Base.broadcasted(::S, ::typeof(characteristic_exponent_i), v::V, mcProcess, T) where {S <: Base.Broadcast.BroadcastStyle, V <: Base.Broadcast.Broadcasted}
     return characteristic_exponent_vi(v, mcProcess[], T[])
 end
