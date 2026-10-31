@@ -12,6 +12,7 @@ end
 function adapt_array(x, ::FinancialMonteCarlo.AbstractCudaMode)
     return CuArray(x)
 end
+adapt_array(x::Union{Number, CuArray}, ::FinancialMonteCarlo.AbstractCudaMode) = x
 
 function adapt_itp(itp, ::CuArray)
     return adapt(CuArray, itp)

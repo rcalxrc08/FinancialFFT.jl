@@ -13,8 +13,7 @@ FinancialFFT.DensityInverter
 ## Pricing
 
 ```@docs
-pricer(::FinancialMonteCarlo.BaseProcess, ::FinancialMonteCarlo.AbstractZeroRateCurve, ::LewisMethod, ::Any, ::FinancialMonteCarlo.BaseMode)
-pricer(::FinancialMonteCarlo.BaseProcess, ::Array{U, 1}, ::FinancialMonteCarlo.AbstractZeroRateCurve, ::Number, ::CarrMadanMethod, ::FinancialMonteCarlo.BaseMode) where {U <: Number}
+pricer(::FinancialMonteCarlo.BaseProcess, ::FinancialMonteCarlo.AbstractZeroRateCurve, ::LewisMethod, ::FinancialFFT.FourierPayoff, ::FinancialMonteCarlo.BaseMode)
 ```
 
 ## Index

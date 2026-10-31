@@ -5,22 +5,43 @@
     zero_rate = ZeroRate(r)
     scalar_prices(method, opts) = [pricer(model, zero_rate, method, opt) for opt in opts]
 
-    @testset "Array of options with different maturities, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "CosMethod" => CosMethod(2^12), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16), "CarrMadanMethod" => CarrMadanMethod(400.0, 18))
-        opts = [EuropeanOption(1.0, 100.0), EuropeanOption(0.5, 70.0), EuropeanOption(1.0, 120.0, false), EuropeanOption(2.0, 100.0), EuropeanOption(0.5, 100.0)]
-        @test max_abs_diff(pricer(model, zero_rate, method, opts), scalar_prices(method, opts)) < 1e-12
+    @testset "Options with different maturities, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "CosMethod" => CosMethod(2^12), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16), "CarrMadanMethod" => CarrMadanMethod(400.0, 18), "DensityInverter" => FinancialFFT.DensityInverter(18, 3.0))
+        opts = [EuropeanOption(1.0, 100.0), EuropeanOption(0.5, 70.0), BinaryEuropeanOption(1.0, 120.0, false), EuropeanOption(2.0, 100.0), BinaryEuropeanOption(0.5, 100.0)]
+        @test max_abs_diff(pricer.(model, zero_rate, method, opts), scalar_prices(method, opts)) < 1e-12
     end
 
     Ks = [80.0, 90.0, 100.0, 110.0, 120.0]
     calls = [true, false, true, false, true]
-    @testset "Smiles, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "CosMethod" => CosMethod(2^12), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16))
+    @testset "Smiles, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "CosMethod" => CosMethod(2^12), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16), "CarrMadanMethod" => CarrMadanMethod(400.0, 18), "DensityInverter" => FinancialFFT.DensityInverter(18, 3.0))
         smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls)
         @test max_abs_diff(pricer(model, zero_rate, method, smile), scalar_prices(method, EuropeanOption.(1.0, Ks, calls))) < 1e-12
         binary_smile = FinancialMonteCarlo.BinaryEuropeanOptionSmile(1.0, Ks, calls)
         @test max_abs_diff(pricer(model, zero_rate, method, binary_smile), scalar_prices(method, BinaryEuropeanOption.(1.0, Ks, calls))) < 1e-12
     end
 
-    @testset "Vector of strikes, $name" for (name, method) in ("CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16), "CarrMadanMethod" => CarrMadanMethod(400.0, 18))
-        @test max_abs_diff(pricer(model, Ks, zero_rate, 1.0, method), scalar_prices(method, EuropeanOption.(1.0, Ks))) < 1e-12
+    # A payoff without a formula must not fall back on the vanilla one.
+    @test_throws MethodError pricer(model, zero_rate, CarrMadanLewisMethod(600.0, 16), BarrierOptionUpOut(1.0, 100.0, 120.0))
+
+    # Several strikes through the batched fft, against the sum of the scalar prices.
+    @testset "Smile gradients, DensityInverter, $kind" for (kind, smile_type, option_type) in (("european", FinancialMonteCarlo.EuropeanOptionSmile, EuropeanOption), ("binary", FinancialMonteCarlo.BinaryEuropeanOptionSmile, BinaryEuropeanOption))
+        method = FinancialFFT.DensityInverter(12, 3.0)
+        build(x) = MertonProcess(x[1], 5.0, 0.03, 0.02, Underlying(x[2], d))
+        smile_sum(x) = sum(pricer(build(x), zero_rate, method, smile_type(1.0, x[3] .* Ks, calls)))
+        scalar_sum(x) = sum(pricer(build(x), zero_rate, method, option_type(1.0, x[3] * K, iscall)) for (K, iscall) in zip(Ks, calls))
+        x = [0.2, S0, 1.0]
+        reference = ForwardDiff.gradient(scalar_sum, x)
+        @test max_abs_diff(ForwardDiff.gradient(smile_sum, x), reference) < 1e-11
+        @test max_abs_diff(ReverseDiff.gradient(smile_sum, x), reference) < 1e-11
+        @test max_abs_diff(Zygote.gradient(smile_sum, x)[1], reference) < 1e-11
+        @test max_abs_diff(mooncake_gradient(smile_sum, x), reference) < 1e-11
+    end
+
+    # The strikes of a smile share the grid of the extreme ones, which is wider than the default of each strike.
+    @testset "Smile of DensityInverter with the default grid" begin
+        sigma = 0.2
+        bs = BlackScholesProcess(sigma, Underlying(S0, d))
+        prices = pricer(bs, zero_rate, FinancialFFT.DensityInverter(18), FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls))
+        @test max_abs_diff(prices, blsprice.(S0, Ks, r, 1.0, sigma, d, calls)) < 1e-7
     end
 
     # The truncation range shrinks with the maturity and, for Kou, is limited by the exponential moment bound.

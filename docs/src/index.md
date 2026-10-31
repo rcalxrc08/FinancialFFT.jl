@@ -14,7 +14,7 @@ methods to `pricer`. Switching from Monte Carlo to a Fourier method only means r
 
 - Methods: [`LewisMethod`](@ref), [`CosMethod`](@ref), [`CarrMadanLewisMethod`](@ref), [`CarrMadanMethod`](@ref), [`FinancialFFT.DensityInverter`](@ref).
 - Models: Black–Scholes, Merton, Kou, Variance Gamma, Normal Inverse Gaussian, Heston.
-- Payoffs: European and binary (digital) options, calls and puts, smiles and arrays of options with different maturities.
+- Payoffs: European and binary (digital) options, calls and puts, and their smiles (several strikes, one maturity), with every method. Options with different maturities are priced by broadcasting, `pricer.(model, zero_rate, method, options)`.
 - Non-constant zero rates and dividends.
 - Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl and TaylorSeries.jl (Zygote gradients of `CarrMadanMethod` and `CarrMadanLewisMethod` are not reliable, since the spline is excluded from differentiation; ReverseDiff.jl requires version 1.18 or later).
 - GPU execution through CUDA.jl, see [GPU](@ref).
@@ -58,7 +58,7 @@ pricer(model, zero_rate, CosMethod(2^12), smile, FinancialMonteCarlo.CudaMode())
 ```
 
 - `LewisMethod`, `CosMethod`, `CarrMadanLewisMethod` and `DensityInverter` run on the GPU, with the accuracy they have on the CPU. `CarrMadanMethod` ignores the mode and runs on the CPU.
-- The strikes of a smile must be on the device. A single option and an array of options are given as on the CPU.
+- The strikes of a smile must be on the device. A single option is given as on the CPU.
 - ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU, with the same limitations as on the CPU. ReverseDiff.jl and Mooncake.jl are not supported on the GPU.
 
 ## Testing

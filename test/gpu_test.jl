@@ -60,22 +60,20 @@ end
             end
         end
 
-        @testset "Several options, GPU vs CPU" begin
+        @testset "Smiles, GPU vs CPU" begin
             model = MertonProcess(0.2, 5.0, 0.03, 0.02, Underlying(100.0, 0.01))
             zero_rate = ZeroRate(0.02)
             Ks = [80.0, 90.0, 100.0, 110.0, 120.0]
             calls = [true, false, true, false, true]
-            @testset "Array of options with different maturities, $(case.name)" for case in filter(case -> !(case.method isa FinancialFFT.DensityInverter), gpu_cases)
-                opts = [EuropeanOption(1.0, 100.0), EuropeanOption(0.5, 70.0), EuropeanOption(1.0, 120.0, false), EuropeanOption(2.0, 100.0)]
-                @test max_abs_diff(pricer(model, zero_rate, case.method, opts, FinancialMonteCarlo.CudaMode()), pricer(model, zero_rate, case.method, opts)) < 1e-10
-            end
             @testset "Smiles, $(case.name)" for case in filter(case -> haskey(case.payoffs, :european_smile), gpu_cases)
+                method = case.method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 3.0) : case.method
                 smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, CuArray(Ks), CuArray(calls))
                 @test max_abs_diff(Array(pricer(model, zero_rate, case.method, smile, FinancialMonteCarlo.CudaMode())), pricer(model, zero_rate, case.method, FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls))) < 1e-10
             end
-            @testset "Vector of strikes, CarrMadanLewisMethod" begin
-                method = CarrMadanLewisMethod(600.0, 16)
-                @test max_abs_diff(pricer(model, Ks, zero_rate, 1.0, method, FinancialMonteCarlo.CudaMode()), pricer(model, Ks, zero_rate, 1.0, method)) < 1e-10
+            @testset "Smile with the strikes on the host, $(case.name)" for case in filter(case -> haskey(case.payoffs, :european_smile), gpu_cases)
+                method = case.method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 3.0) : case.method
+                smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls)
+                @test max_abs_diff(Array(pricer(model, zero_rate, method, smile, FinancialMonteCarlo.CudaMode())), pricer(model, zero_rate, method, smile)) < 1e-10
             end
         end
     end

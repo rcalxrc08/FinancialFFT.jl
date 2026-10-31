@@ -4,6 +4,7 @@
 Carr–Madan (1999) FFT method. The damped call transform is integrated with Simpson weights
 on the frequency grid `v ∈ [0, A)` with `2^Npow` nodes, a single FFT returns call prices on a
 log-strike grid, and prices at the requested strikes are obtained through cubic-spline interpolation.
+Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles.
 
 # Arguments
 - `A`: upper bound of the frequency integration domain (`A > 0`). The strike grid has step `2π / A`.
@@ -30,22 +31,15 @@ export CarrMadanMethod;
 using DataInterpolations, FFTW;
 # E[S^(1 + α)] must be finite: 1 + α stays at most halfway between 1 and the exponential moment bound of the upper tail.
 carr_madan_damping(mcProcess, T, α) = min(α, (exponential_moment_bound(mcProcess, 1, v_value_mod(T)) - 1) / 2)
-"""
-    pricer(mcProcess, StrikeVec, zero_rate, T, method::Union{CarrMadanMethod, CarrMadanLewisMethod}[, mode])
+# The binary call is minus the strike derivative of the call: α + iv leaves the denominator of the transform, and the
+# price is divided by K.
+carr_madan_factor(::VanillaPayoff) = identity
+carr_madan_factor(::BinaryPayoff) = one
+carr_madan_call(price, ::VanillaPayoff) = price
+carr_madan_call(price, opt::BinaryPayoff) = @. price / opt.K
 
-Prices European **call** options with maturity `T` and strikes `StrikeVec` with a single FFT.
-
-# Arguments
-- `mcProcess`: a `FinancialMonteCarlo.BaseProcess`, e.g. `BlackScholesProcess(σ, Underlying(S0, d))`.
-- `StrikeVec`: vector of strikes.
-- `zero_rate`: a `FinancialMonteCarlo.AbstractZeroRateCurve`, e.g. `ZeroRate(r)`.
-- `T`: maturity.
-- `method`: a `CarrMadanMethod` or a `CarrMadanLewisMethod`.
-- `mode`: `FinancialMonteCarlo.SerialMode()` (default) or a CUDA mode when CUDA.jl is loaded.
-
-Returns a vector of call prices, one per strike.
-"""
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 1}, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, T::Number, method::CarrMadanMethod, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: Number}
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt::FourierPayoff, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+    T = opt.T
     Npow = method.Npow
     N = 2^Npow
     S0 = mcProcess.underlying.S0
@@ -68,40 +62,18 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, StrikeVec::Array{U, 
     drift_rd = rT - dT
     v_im = @. v * im
     alfa = ChainRulesCore.@ignore_derivatives carr_madan_damping(mcProcess, T, method.α)
+    den = carr_madan_factor(opt)
     # transform of exp(α k) C(k): E[exp((1 + α + iv) X)] / ((α + iv) (1 + α + iv)), i.e. the exponent evaluated in 1 + α + iv
-    complex_vec_z_k = @. one_minus_one * cis(drift_rd * v) * exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess, T) - (v_im + 1 + alfa) * corr) / ((v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
+    complex_vec_z_k = @. one_minus_one * cis(drift_rd * v) * exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess, T) - (v_im + 1 + alfa) * corr) / (den(v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
     y = fft(complex_vec_z_k)
     z_T = @. real_mod(y) / pi
 
     # not -b .+ dk * real_vec: a TwicePrecision range breaks Mooncake when it reuses the rule (no _copy method)
     ks = ChainRulesCore.@ignore_derivatives StepRangeLen(-b, dk, N)
     spline_cub = ChainRulesCore.@ignore_derivatives CubicSplineInterpolation(ks, z_T)
-    k_interp = @. log(StrikeVec / S0)
+    k_interp = @. log(opt.K / S0)
     # map and not a broadcast: ReverseDiff tracks the coefficients of the spline, and cannot broadcast a function that
     # captures tracked values
-    return @. S0 * exp(-dT - alfa * (k_interp - drift_rd)) * $map(spline_cub, k_interp)
-end
-
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, abstractPayoffs::Array{U}, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
-    TT = unique([opt.T for opt in abstractPayoffs])
-    zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs)
-    prices = Array{typeof(zero_typed)}(undef, length(abstractPayoffs))
-
-    for T in TT
-        index_same_t = findall(op -> (op.T == T), abstractPayoffs)
-        payoffs = abstractPayoffs[index_same_t]
-        strikes = [opt.K for opt in payoffs]
-        prices_call = pricer(mcProcess, strikes, zero_rate, T, method)
-        dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
-        prices_final = [call_to_put(prices_call[i], mcProcess.underlying.S0 * exp(dT), exp(-FinancialMonteCarlo.integral(zero_rate.r, T)), payoffs[i]) for i in eachindex(payoffs)]
-        prices[index_same_t] = prices_final
-    end
-
-    return prices
-end
-
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, abstractPayoff::FinancialMonteCarlo.EuropeanOption, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
-    res = first(pricer(mcProcess, [abstractPayoff.K], zero_rate, abstractPayoff.T, method))
-    dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), abstractPayoff.T)
-    return call_to_put(res, mcProcess.underlying.S0 * exp(dT), exp(-FinancialMonteCarlo.integral(zero_rate.r, abstractPayoff.T)), abstractPayoff)
+    prices = @. S0 * exp(-dT - alfa * (k_interp - drift_rd)) * $map(spline_cub, k_interp)
+    return call_to_put(carr_madan_call(prices, opt), S0 * exp(-dT), exp(-rT), opt)
 end

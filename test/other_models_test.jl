@@ -3,18 +3,17 @@
 @testset "Other models vs LewisMethod" begin
     S0, r, d, T = 100.0, 0.02, 0.01, 1.0
     reference_method = LewisMethod(600.0, 20000)
-    # (method, tolerance for EuropeanOption, tolerance for BinaryEuropeanOption); `nothing` when unsupported
+    # (method, tolerance for EuropeanOption, tolerance for BinaryEuropeanOption)
     methods = [
         "CosMethod" => (CosMethod(2^12), 1e-5, 1e-5),
-        "CarrMadanLewisMethod" => (CarrMadanLewisMethod(600.0, 16), 1e-7, Broken(1e-5)),
-        "CarrMadanMethod" => (CarrMadanMethod(400.0, 18), 1e-5, nothing),
+        "CarrMadanLewisMethod" => (CarrMadanLewisMethod(600.0, 16), 1e-7, 1e-7),
+        "CarrMadanMethod" => (CarrMadanMethod(400.0, 18), 1e-5, 1e-7),
         "DensityInverter" => (FinancialFFT.DensityInverter(18, 3.0), 1e-7, 1e-4),
     ]
     for (model_name, model) in model_cases(S0, d), (method_name, (method, toll_eu, toll_bin)) in methods
         @testset "$model_name $method_name" begin
             for K in (90.0, 100.0, 110.0)
                 for (opt, toll) in ((EuropeanOption(T, K), toll_eu), (EuropeanOption(T, K, false), toll_eu), (BinaryEuropeanOption(T, K), toll_bin), (BinaryEuropeanOption(T, K, false), toll_bin))
-                    isnothing(toll) && continue
                     reference = pricer(model, ZeroRate(r), reference_method, opt)
                     # the left tail of Heston goes beyond the default truncation of the density
                     model_method = model isa HestonProcess && method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 5.0) : method

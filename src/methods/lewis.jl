@@ -94,8 +94,6 @@ struct LewisMethodResult{num_1, num_2}
     end
 end
 
-Base.broadcastable(x::LewisMethodResult) = Ref(x)
-
 function lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
     corr_adj = log(S0 / abstractPayoff.K) + rT_corr + dT
     char_exp_v = char_exp_v_r.char_exp_v
@@ -120,15 +118,25 @@ function lw_integrate(char_exp_v_r, abstractPayoff::BinaryEuropeanOptionSmile, d
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
 end
 
-function lw_integrate_v(char_exp_v_r, abstractPayoff::Array, df, dT, dx_adj, S0, rT_corr)
-    return @. lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
-end
+"""
+    pricer(mcProcess, zero_rate, method, payoff[, mode])
 
-function lw_integrate_v(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
-    return lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
-end
+Prices `payoff` under `mcProcess` with the Fourier method `method`
+(`LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CarrMadanMethod` or `DensityInverter`).
 
-function lw_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, T, abstractPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+# Arguments
+- `mcProcess`: a `FinancialMonteCarlo.BaseProcess`, e.g. `BlackScholesProcess(σ, Underlying(S0, d))`.
+- `zero_rate`: a `FinancialMonteCarlo.AbstractZeroRateCurve`, e.g. `ZeroRate(r)`.
+- `method`: the configuration of the numerical method.
+- `payoff`: an `EuropeanOption` or a `BinaryEuropeanOption`, a smile (`EuropeanOptionSmile`,
+  `BinaryEuropeanOptionSmile`, several strikes sharing the same maturity). Options with different maturities are
+  priced by broadcasting, `pricer.(mcProcess, zero_rate, method, payoffs)`.
+- `mode`: `FinancialMonteCarlo.SerialMode()` (default) or a CUDA mode when CUDA.jl is loaded.
+
+Returns a price, or a vector of prices for smiles.
+"""
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+    T = abstractPayoff.T
     A = method.A
     N = method.N
     S0 = mcProcess.underlying.S0
@@ -145,41 +153,5 @@ function lw_pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financ
     dx_adj = A / (N - 1)
     df = exp(-rT)
     rT_corr = rT - corr
-    prices = lw_integrate_v(lw_result, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
-    return prices
-end
-
-"""
-    pricer(mcProcess, zero_rate, method, payoff[, mode])
-
-Prices `payoff` under `mcProcess` with the Fourier method `method`
-(`LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CarrMadanMethod` or `DensityInverter`).
-
-# Arguments
-- `mcProcess`: a `FinancialMonteCarlo.BaseProcess`, e.g. `BlackScholesProcess(σ, Underlying(S0, d))`.
-- `zero_rate`: a `FinancialMonteCarlo.AbstractZeroRateCurve`, e.g. `ZeroRate(r)`.
-- `method`: the configuration of the numerical method.
-- `payoff`: an `EuropeanOption` or a `BinaryEuropeanOption`, a smile (`EuropeanOptionSmile`,
-  `BinaryEuropeanOptionSmile`, several strikes sharing the same maturity), or an array of `EuropeanOption`
-  with possibly different maturities. See the manual for the payoffs supported by each method.
-- `mode`: `FinancialMonteCarlo.SerialMode()` (default) or a CUDA mode when CUDA.jl is loaded.
-
-Returns a price, or a vector of prices for smiles and arrays of options.
-"""
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
-    return lw_pricer(mcProcess, zero_rate, method, abstractPayoff.T, abstractPayoff, mode)
-end
-
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::LewisMethod, abstractPayoffs::Array{U}, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode()) where {U <: FinancialMonteCarlo.EuropeanOption}
-    TT = unique([opt.T for opt in abstractPayoffs])
-    zero_typed = FinancialMonteCarlo.predict_output_type_zero(mcProcess, zero_rate, abstractPayoffs)
-    prices = Array{typeof(zero_typed)}(undef, length(abstractPayoffs))
-
-    for T in TT
-        index_same_t = findall(op -> (op.T == T), abstractPayoffs)
-        payoffs = abstractPayoffs[index_same_t]
-        prices[index_same_t] .= lw_pricer(mcProcess, zero_rate, method, T, payoffs, mode)
-    end
-
-    return prices
+    return lw_integrate(lw_result, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
 end
