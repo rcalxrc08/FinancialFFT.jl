@@ -1,9 +1,8 @@
 using Documenter, FinancialFFT, FinancialMonteCarlo
 makedocs(
-    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico"], repolink = "https://gitlab.com/rcalxrc08/FinancialFFT.jl"),
-    repo = "https://gitlab.com/rcalxrc08/FinancialFFT.jl.git",
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico"], edit_link = "master"),
+    repo = Remotes.GitHub("rcalxrc08", "FinancialFFT.jl"),
     sitename = "FinancialFFT.jl",
     modules = [FinancialFFT],
     pages = ["index.md", "methods.md", "payoffs.md", "models.md", "ad.md", "api.md"],
 )
-get(ENV, "CI", nothing) == "true" ? deploydocs(repo = "https://gitlab.com/rcalxrc08/FinancialFFT.jl.git") : nothing

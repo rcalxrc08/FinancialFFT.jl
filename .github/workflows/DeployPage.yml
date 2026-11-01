@@ -1,0 +1,28 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+permissions:
+  contents: write # the deploy action pushes to gh-pages
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+    - name: Install Julia
+      uses: julia-actions/setup-julia@v3
+      with:
+        version: '1'
+    - run: julia --project=docs -e '
+            import Pkg; Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/rcalxrc08/LocalRegistry.git"));
+            Pkg.Registry.add("General"); Pkg.instantiate()'
+    - run: julia --project=docs --color=yes docs/make.jl
+    - run: touch docs/build/.nojekyll
+    - name: Deploy 🚀
+      uses: JamesIves/github-pages-deploy-action@releases/v4
+      with:
+        BRANCH: gh-pages
+        FOLDER: docs/build
