@@ -1,5 +1,7 @@
 Manifest.toml
 
 docs/build/
+docs/src/assets/logo.png
+docs/src/assets/favicon.ico
 
 .vscode/
