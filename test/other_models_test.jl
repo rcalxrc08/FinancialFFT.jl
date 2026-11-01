@@ -83,6 +83,19 @@ end
     end
 end
 
+# The share measure has much more mass in the right tail than the truncation range covers when λ₊ is close to 1: a call
+# priced directly loses it (0.22 against 99.99 at λ₊ = 1.1), parity does not need it.
+@testset "CosMethod on a heavy right tail vs LewisMethod" begin
+    S0, T = 100.0, 1.0
+    reference_method = LewisMethod(2000.0, 200000)
+    @testset "λ₊ = $λ₊, K = $K" for λ₊ in (3.0, 1.5, 1.1), K in (100.0, 150.0)
+        model = KouProcess(0.2, 5.0, 0.3, λ₊, 20.0, Underlying(S0, 0.0))
+        @testset "$opt" for opt in (EuropeanOption(T, K), EuropeanOption(T, K, false), BinaryEuropeanOption(T, K))
+            @test abs(pricer(model, ZeroRate(0.0), CosMethod(2^12), opt) - pricer(model, ZeroRate(0.0), reference_method, opt)) < 1e-7
+        end
+    end
+end
+
 # The undamped transform of the time value has a kink at the forward, and decays like 1 / v²: it misses this strike by S0 / (π A).
 @testset "CarrMadanMethod damping" begin
     S0, r, d, T = 100.0, 0.02, 0.01, 1.0

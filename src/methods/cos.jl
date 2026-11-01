@@ -4,6 +4,7 @@
 Fourier-cosine expansion method of Fang & Oosterlee (2008). The density of the log-price is expanded on
 a truncation interval `[a, b]` with the cosine terms `k = 0, …, N`; the interval is computed from a
 Chernoff bound on the tails of the process (see `compute_chernoff_extrema_bisection`), so no range parameter is needed.
+The expansion is on the put, and calls follow from parity: a call needs no information on the right tail of the process.
 
 # Arguments
 - `N`: number of cosine terms (`N > 2`).
@@ -16,95 +17,31 @@ struct CosMethod{num_1 <: Integer} <: FinancialFFT.AbstractIntegralMethod
     end
 end
 export CosMethod
-struct CosMethodResult{num_1, num_2, num_3}
-    u::num_1
-    v_char_exp::num_2
-    uk_adj::num_3
-    function CosMethodResult(a::num_1, b::num_2, c::num_3) where {num_1, num_2, num_3}
-        return new{num_1, num_2, num_3}(a, b, c)
-    end
+# The expansion is on the put, whose payoff is bounded. The coefficients of a call grow like exp(b): they lose accuracy
+# to rounding when the range is wide, and the heavy right tail they need is beyond it when it is not. Parity needs neither.
+# Payoff of the put against cos(u (y - a)) for y = log(S_T / K) in [a, h], with k = 0 halved: adj flags that term.
+function cos_binary_put_integral(u, adj, a, h)
+    return (1 + !adj) * (adj * (h - a) + sin(u * (h - a)) / (adj + u))
 end
 
-
-function chi_vectorized(u_el, adj, bma, a, exp_u)
-    sin_uu_adj_1, cos_uu_adj_1 = sincos(u_el * bma)
-    sin_uu_adj_2, cos_uu_adj_2 = sincos(u_el * a)
-    res = (cos_uu_adj_1 * exp_u - cos_uu_adj_2 + u_el * (sin_uu_adj_1 * exp_u + sin_uu_adj_2)) / (1 + u_el^2)
-    return (1 + !adj) * (res - (sin_uu_adj_1 + sin_uu_adj_2) / (adj + u_el))
+function cos_put_integral(u, adj, a, h)
+    sin_u, cos_u = sincos(u * (h - a))
+    return cos_binary_put_integral(u, adj, a, h) - (1 + !adj) * (exp(h) * (cos_u + u * sin_u) - exp(a)) / (1 + u^2)
 end
 
-function uk_call(u, a, b, z)
-    bma = b - a
-    adjuster = ChainRulesCore.@ignore_derivatives PatternVector(length(u), InitialValuePattern(true, false))
-    inv_bma = inv(bma)
-    exp_u = exp(b)
-    adjj = @. (1 + !adjuster) * b * adjuster
-    #z = @. FinancialFFT.characteristic_exponent_i(u * im, mcProcess) * T
-    res = @. inv_bma * (chi_vectorized(u, adjuster, bma, a, exp_u) - adjj) * exp(FinancialFFT.real_mod(z)), FinancialFFT.imag_mod(z)
-    return res
-end
+cos_payoff_integral(::VanillaPayoff) = cos_put_integral
+cos_payoff_integral(::BinaryPayoff) = cos_binary_put_integral
 
-function compute_call_price_cos_method_vec(u, x, v_char_exp, uk_adj)
-    z = u * x + v_char_exp
-    return uk_adj * cos(z)
-end
+put_to_option(P, S0_adj, df, opt::VanillaPayoff) = @. ifelse(opt.isCall, P + S0_adj - opt.K * df, P)
+put_to_option(P, _, df, opt::BinaryPayoff) = @. ifelse(opt.isCall, df - P, P)
 
-function compute_call_price_cos_method(x, cal_res, opt::EuropeanOption)
-    return opt.K * sum(@. compute_call_price_cos_method_vec(cal_res.u, x, cal_res.v_char_exp, cal_res.uk_adj))
-end
-
-function compute_call_price_cos_method_bin_vec(u, x, v_char_exp, uk_adj)
-    z = u * x + v_char_exp
-    sinz, cosz = sincos(z)
-    return uk_adj * (cosz + u * sinz)
-end
-
-function compute_call_price_cos_method(x, cal_res, ::BinaryEuropeanOption)
-    return -sum(@. compute_call_price_cos_method_bin_vec(cal_res.u, x, cal_res.v_char_exp, cal_res.uk_adj))
-end
-
-function compute_call_discounted_price_cos_method(S0, driftT_adj, cal_res, opt, df)
-    K = opt.K
-    x = log(S0 / K) + driftT_adj
-    return compute_call_price_cos_method(x, cal_res, opt) * df
-end
-
-function compute_call_price_cos_method_vec_smile(u, x, v_char_exp, uk_adj)
-    return @. (uk_adj * cos(u * x' + v_char_exp))'
-end
-
-function compute_call_price_cos_method_vec_smile_bin(u, x, v_char_exp, uk_adj)
-    return @. compute_call_price_cos_method_bin_vec(u, x', v_char_exp, uk_adj)'
-end
-
-function compute_call_price_cos_method_smile(x, cal_res, opt::FinancialMonteCarlo.EuropeanOptionSmile, df)
-    t_1 = @views sum(compute_call_price_cos_method_vec_smile(cal_res.u, x, cal_res.v_char_exp, cal_res.uk_adj), dims = 2)[:]
-    return @. opt.K * t_1 * df
-end
-
-function compute_call_discounted_price_cos_method(S0, driftT_adj, cal_res, opt::FinancialMonteCarlo.EuropeanOptionSmile, df)
-    x = @. log(S0 / opt.K) + driftT_adj
-    return compute_call_price_cos_method_smile(x, cal_res, opt, df)
-end
-
-function compute_call_price_cos_method_smile(x, cal_res, ::FinancialMonteCarlo.BinaryEuropeanOptionSmile, df)
-    t_1 = @views sum(compute_call_price_cos_method_vec_smile_bin(cal_res.u, x, cal_res.v_char_exp, cal_res.uk_adj), dims = 2)[:]
-    return @. -t_1 * df
-end
-
-function compute_call_discounted_price_cos_method(S0, driftT_adj, cal_res, opt::FinancialMonteCarlo.BinaryEuropeanOptionSmile, df)
-    x = @. log(S0 / opt.K) + driftT_adj
-    return compute_call_price_cos_method_smile(x, cal_res, opt, df)
-end
-
-function compute_discounted_price_cos_method(S0_adj, driftT_adj, cal_res, opt, df)
-    price_call = compute_call_discounted_price_cos_method(S0_adj, driftT_adj, cal_res, opt, df)
-    return FinancialFFT.call_to_put(price_call, S0_adj, df, opt)
-end
+cos_series(terms::AbstractVector) = sum(terms)
+cos_series(terms::AbstractMatrix) = vec(sum(terms; dims = 1))
 
 function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
     drift = rT - dT
-    epss = 1e-12
+    # the tail is weighted by the scores in the derivatives: the error of the second one in σ is about 2500 ε
+    epss = 1e-14
     s_min = 1.0
     s_max = 50.0
     x_toll_bisection = 1e-14
@@ -116,14 +53,27 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCar
     S0 = mcProcess.underlying.S0
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(r.r, T)
-    a, b = ChainRulesCore.@ignore_derivatives ignore_derivatives_mod.(compute_chernorff_limits(mcProcess, rT, dT, T))
+    K = adapt_array(opt.K, mode)
+    # The limits are for log(S_T / S0): on y = log(S_T / K) they move with the strike, and the range covers all of them.
+    # Sharing it among the strikes shares the payoff coefficients: only the phase below depends on the strike.
+    a, b = ChainRulesCore.@ignore_derivatives begin
+        a_S0, b_S0 = v_value_mod.(compute_chernorff_limits(mcProcess, rT, dT, T))
+        K_min, K_max = extrema(K)
+        v_value_mod(a_S0 + log(S0 / K_max)), v_value_mod(b_S0 + log(S0 / K_min))
+    end
     bma = b - a
     u = ChainRulesCore.@ignore_derivatives FinancialFFT.adapt_array(collect((0:N) * (pi / bma)), mode)
+    payoff = ChainRulesCore.@ignore_derivatives begin
+        adj = PatternVector(length(u), InitialValuePattern(true, false))
+        cos_payoff_integral(opt).(u, adj, a, max(a, min(0, b)))
+    end
     driftT = rT - FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     v_char_exp = @. FinancialFFT.characteristic_exponent_i(u * im, mcProcess, T)
-    uk, v_char_exp_im = uk_call(u, a, b, v_char_exp)
-    cal_res = CosMethodResult(u, v_char_exp_im, uk)
-    driftT_adj = driftT - a
+    coefficient = @. payoff * exp(FinancialFFT.real_mod(v_char_exp)) / bma
+    phase = @. FinancialFFT.imag_mod(v_char_exp)
+    S0_adj = S0 * exp(-dT)
+    x = strike_columns(@. log(S0_adj / K) + driftT - a)
     df = exp(-rT)
-    return compute_discounted_price_cos_method(S0 * exp(-dT), driftT_adj, cal_res, opt, df)
+    put_price = adjust_price_adimensional(cos_series(@. coefficient * cos(u * x + phase)), opt) .* df
+    return put_to_option(put_price, S0_adj, df, opt)
 end

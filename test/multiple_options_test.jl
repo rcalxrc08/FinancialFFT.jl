@@ -51,10 +51,18 @@
             @test abs(pricer(short_model, zero_rate, CosMethod(2^12), opt) - pricer(short_model, zero_rate, LewisMethod(600.0, 20000), opt)) < 1e-5
         end
     end
-    # The truncation range is centered on the forward and shared by all the strikes: a strike with |log(S0 / K)| larger
-    # than the half width of the range is outside of it, and the cosine expansion aliases.
-    @testset "Strike outside of the truncation range, CosMethod" begin
-        opt = EuropeanOption(0.01, 80.0)
-        test_within(() -> abs(pricer(model, zero_rate, CosMethod(2^12), opt) - pricer(model, zero_rate, LewisMethod(600.0, 20000), opt)), Broken(1e-5))
+    # The truncation range covers the forward of every strike, however far it is from S0: at short maturities these
+    # strikes are many half widths away from it.
+    @testset "Strike far from the spot, CosMethod" begin
+        @testset "K = $K, isCall = $isCall" for K in (50.0, 80.0, 120.0, 300.0), isCall in (true, false)
+            opt = EuropeanOption(0.01, K, isCall)
+            @test abs(pricer(model, zero_rate, CosMethod(2^12), opt) - pricer(model, zero_rate, LewisMethod(600.0, 20000), opt)) < 1e-5
+        end
+        # one range for the whole smile, wider than the range of each of its strikes
+        Ks = [50.0, 80.0, 100.0, 120.0, 300.0]
+        isCall = [true, false, true, false, true]
+        for (smile, payoff) in ((FinancialMonteCarlo.EuropeanOptionSmile(0.01, Ks, isCall), EuropeanOption), (FinancialMonteCarlo.BinaryEuropeanOptionSmile(0.01, Ks, isCall), BinaryEuropeanOption))
+            @test maximum(abs.(pricer(model, zero_rate, CosMethod(2^12), smile) .- pricer.(model, zero_rate, CosMethod(2^12), payoff.(0.01, Ks, isCall)))) < 1e-10
+        end
     end
 end

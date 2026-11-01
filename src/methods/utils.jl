@@ -10,6 +10,9 @@ fft_columns(x::AbstractVector) = fft(x)
 fft_columns(M::AbstractMatrix) = fft_each_column(M)
 fft_columns(M::AbstractMatrix{<:Complex{<:AbstractFloat}}) = fft(M, 1)
 fft_each_column(M) = reduce(hcat, [fft(M[:, j]) for j in axes(M, 2)])
+# One strike per column: the exponent does not depend on the strike.
+strike_columns(x::Number) = x
+strike_columns(x::AbstractVector) = reshape(x, 1, :)
 # Quantities that are constants for differentiation (truncation ranges, grids). ReverseDiff does not honor
 # ChainRulesCore.@ignore_derivatives, so its extension strips the tracking here.
 ignore_derivatives_mod(x) = x

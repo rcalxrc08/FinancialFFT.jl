@@ -26,10 +26,6 @@ struct DensityInverter{num_1 <: Integer, num <: Number} <: AbstractIntegralMetho
 end
 using FFTW
 
-# One strike per column: the exponent does not depend on the strike.
-strike_columns(x::Number) = x
-strike_columns(x::AbstractVector) = reshape(x, 1, :)
-
 function density_y(mcProcess, r, N, A, opt, mode)
     T = opt.T
     n = ChainRulesCore.@ignore_derivatives 2^N
