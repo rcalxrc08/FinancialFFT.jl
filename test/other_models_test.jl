@@ -22,6 +22,15 @@
             end
         end
     end
+    # Value, gradient and Hessian in S0 and r. The density of these models has nodes with a value of exactly zero.
+    δS0, δr = taylorn_variables("δS0 δr"; order = 2)
+    opt = EuropeanOption(T, 105.0)
+    @testset "TaylorN $(first(case)) $method_name" for (i, case) in enumerate(model_cases(S0, d)), (method_name, (method, _, _)) in methods
+        model = last(model_cases(S0 + δS0, d)[i])
+        reference = pricer(model, ZeroRate(r + δr), reference_method, opt)
+        model_method = model isa HestonProcess && method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 5.0) : method
+        @test max_abs_diff(pricer(model, ZeroRate(r + δr), model_method, opt), reference) < 1e-3
+    end
 end
 
 # Heston is not a Lévy process: its exponent is nonlinear in T. The reference is a direct integration of the Riccati equations.

@@ -64,7 +64,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     alfa = ChainRulesCore.@ignore_derivatives carr_madan_damping(mcProcess, T, method.α)
     den = carr_madan_factor(opt)
     # transform of exp(α k) C(k): E[exp((1 + α + iv) X)] / ((α + iv) (1 + α + iv)), i.e. the exponent evaluated in 1 + α + iv
-    complex_vec_z_k = @. one_minus_one * cis(drift_rd * v) * exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess, T) - (v_im + 1 + alfa) * corr) / (den(v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
+    complex_vec_z_k = @. one_minus_one * cis_mod(drift_rd * v) * exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess, T) - (v_im + 1 + alfa) * corr) / (den(v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
     y = fft(complex_vec_z_k)
     z_T = @. real_mod(y) / pi
 

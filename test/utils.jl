@@ -30,8 +30,12 @@ components(x::Dual) = [DualNumbers.value(x), DualNumbers.epsilon(x)]
 components(x::Hyper) = [x.value, x.epsilon1, x.epsilon2, x.epsilon12]
 components(x::ForwardDiff.Dual) = [ForwardDiff.value(x), ForwardDiff.partials(x)...]
 components(x::Taylor1) = x.coeffs
+components(x::TaylorN) = reduce(vcat, [collect(p.coeffs) for p in x.coeffs])
 max_abs_diff(x, y) = maximum(abs.(components(x) .- components(y)))
 max_abs_diff(x::AbstractArray, y::AbstractArray) = maximum(abs.(x .- y))
+
+# TaylorSeries 0.23 renamed set_variables to variables!
+taylorn_variables(names; order) = isdefined(TaylorSeries, :variables!) ? TaylorSeries.variables!(names; order = order) : TaylorSeries.set_variables(names; order = order)
 
 # Reverse mode gradient of a scalar function of a vector with Mooncake.
 mooncake_gradient(f, x) = Mooncake.value_and_gradient!!(Mooncake.prepare_gradient_cache(f, x), f, x)[2][2]

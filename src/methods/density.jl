@@ -26,6 +26,9 @@ struct DensityInverter{num_1 <: Integer, num <: Number} <: AbstractIntegralMetho
 end
 using FFTW
 
+# The floor gets the type of the value from the value itself: the type of a TaylorN says neither its order nor its space.
+density_floor(y, eps_mod) = max(y, zero(y) + eps_mod)
+
 function density_y(mcProcess, r, N, A, opt, mode)
     T = opt.T
     n = ChainRulesCore.@ignore_derivatives 2^N
@@ -41,8 +44,8 @@ function density_y(mcProcess, r, N, A, opt, mode)
     char_exp = characteristic_exponent_i.(vec .* dt_im, mcProcess, T)
     Y_r = fft_columns(@. exp(char_exp + drift_dt_im * vec) * one_minus_one)
     twice_A = 2 * A
-    eps_mod = ChainRulesCore.@ignore_derivatives eltype(drift_rf)(eps(zero(eltype(drift_rf))))
-    density_vals_adj = @. max(abs(FinancialFFT.real_mod(Y_r)) / twice_A, eps_mod)
+    eps_mod = ChainRulesCore.@ignore_derivatives eps(v_value_mod(zero(eltype(drift_rf))))
+    density_vals_adj = density_floor.(abs_mod.(FinancialFFT.real_mod.(Y_r)) ./ twice_A, eps_mod)
     ChainRulesCore.@ignore_derivatives @assert !isnan(sum(density_vals_adj) * twice_A / n) "Returned result is NaN"
     return density_vals_adj #/ almost_one
 end
@@ -74,7 +77,7 @@ function compute_xmax(mcProcess::BlackScholesProcess, r, opt, method::DensityInv
     T = opt.T
     K = opt.K
     r_d = FinancialMonteCarlo.integral(r.r, T) - FinancialMonteCarlo.integral(d, T)
-    mu = abs(log(S0) - log(K) + r_d - sigma^2 / 2 * T)
+    mu = abs_mod(log(S0) - log(K) + r_d - sigma^2 / 2 * T)
     sig = sigma * sqrt(T)
     # both branches promoted to a common type: the default xmax is a NaN16, and a Union return type breaks Mooncake
     xmax_default, xmax_user = promote(mu + 8 * sig, xmax)

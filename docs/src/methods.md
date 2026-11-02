@@ -28,7 +28,7 @@ methods = [LewisMethod(600.0, 20000), CosMethod(2^12), CarrMadanLewisMethod(600.
 
 ## Choosing a method
 
-- `LewisMethod` and `CosMethod` are the most accurate, and the only ones whose Zygote gradients and TaylorSeries results can both be relied upon, see [Automatic differentiation](@ref).
+- `LewisMethod` and `CosMethod` are the most accurate, and with `DensityInverter` the only ones whose Zygote gradients can be relied upon, see [Automatic differentiation](@ref).
 - `CosMethod` has no range parameter: its range comes from the tails of the model and covers the forward of every strike. A smile shares one range, so all of its strikes reuse the same coefficients, at the price of a larger `N` when the strikes are many standard deviations apart. It expands the put and recovers the call by parity, so calls stay accurate on models with a heavy right tail.
 - `CarrMadanLewisMethod` and `CarrMadanMethod` run one FFT for all strikes, so their cost does not grow with the number of strikes; prices between the nodes of the strike grid come from the spline, which is what limits their accuracy.
 - `CarrMadanMethod` needs `A / 2^Npow` to be small with respect to the damping, which is capped by the exponential moments of the model. It ignores the execution mode and runs on the CPU, see [GPU](@ref).

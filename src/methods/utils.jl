@@ -3,6 +3,11 @@ real_mod(x) = real(x)
 imag_mod(x) = imag(x)
 # Mooncake cannot differentiate the complex sqrt of Base: its extension overlays this hook.
 sqrt_mod(x) = sqrt(x)
+# Base defines cis for real numbers only: the TaylorSeries extension overloads this hook.
+cis_mod(x) = cis(x)
+# The abs of a Taylor series refuses a constant term of zero, which a density has at some nodes of its tails: the
+# TaylorSeries extension overloads this hook.
+abs_mod(x) = abs(x)
 adapt_array(x, _) = x
 # Fft of each column. The AD back-ends overload the fft of a vector, hence the fallback; Mooncake sees plain complex
 # numbers, and reaches it through an overlay.

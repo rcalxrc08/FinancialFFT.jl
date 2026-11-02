@@ -2,32 +2,39 @@ module FinancialFFTTaylorSeriesExt
 
 using FinancialFFT, TaylorSeries, FFTW
 import FFTW: fft!, fft
-using TaylorSeries: AbstractSeries
-import FinancialFFT: v_value_mod
+using TaylorSeries: AbstractSeries, constant_term
+import FinancialFFT: v_value_mod, cis_mod, abs_mod
 
-series_order(x::Taylor1) = length(x.coeffs) - 1
+series_order(x) = length(x.coeffs) - 1
 
-function v_value_mod(s::Taylor1)
-    return v_value_mod(s[0])
+function v_value_mod(s::Union{Taylor1, TaylorN})
+    return v_value_mod(constant_term(s))
 end
 
-function get_diff(x::AbstractArray, n::Integer)
-    return TaylorSeries.getcoeff.(x, n)
-end
+cis_mod(x::Union{Taylor1, TaylorN}) = exp(im * x)
+abs_mod(x::Union{Taylor1, TaylorN}) = signbit(v_value_mod(x)) ? -x : x
 
+# Position of each coefficient: its degree in a Taylor1, the degree and the monomial in a TaylorN.
+coefficient_indices(x::Taylor1) = 0:series_order(x)
+coefficient_indices(x::TaylorN) = [(k, j) for k = 0:series_order(x) for j in eachindex(x[k].coeffs)]
+get_coefficient(x::Taylor1, k) = x[k]
+get_coefficient(x::TaylorN, (k, j)) = x[k][j]
+set_coefficient!(x::Taylor1, c, k) = (x[k] = c)
+set_coefficient!(x::TaylorN, c, (k, j)) = (x[k][j] = c)
+
+# The fft is linear, so it maps each coefficient separately. They are written in zeros of the elements, and not in new
+# series, since a TaylorN carries its JetSpace.
 function fft!(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <: Complex{num}} where {num <: Number}
-    Xcomplex = [el[0] for el in x]
-    planned_fft = plan_fft!(similar(Xcomplex))
-    Xcomplex .= planned_fft * Xcomplex
-    idx = 1:series_order(x[1])
-    ders = [get_diff(x, i) for i in idx]
-    for i in idx
-        ders[i] .= planned_fft * ders[i]
+    y = zero.(x)
+    planned_fft = plan_fft!(similar(x, cpx))
+    for idx in coefficient_indices(first(x))
+        coeffs = [get_coefficient(el, idx) for el in x]
+        planned_fft * coeffs
+        for i in eachindex(y)
+            set_coefficient!(y[i], coeffs[i], idx)
+        end
     end
-    for i in eachindex(x)
-        @views ders2 = [ders[order][i] for order in idx]
-        @views x[i] = Taylor1([Xcomplex[i], ders2...])
-    end
+    x .= y
     nothing
 end
 
@@ -37,8 +44,8 @@ function fft(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <:
     return y
 end
 
-# Needed for interpolation
-!hasmethod(floor, (Taylor1,)) ? (Base.floor(x::Taylor1) = @views floor(x[0])) : nothing
-!hasmethod(floor, (AbstractSeries,)) ? (Base.floor(x::AbstractSeries) = @views floor(x[0][1])) : nothing
+# Needed for interpolation. Not hasmethod: older versions of TaylorSeries reach the fallback of Base, which needs round.
+which(floor, (Taylor1{Float64},)).module === TaylorSeries || (Base.floor(x::Taylor1) = floor(constant_term(x)))
+which(floor, (TaylorN{Float64},)).module === TaylorSeries || (Base.floor(x::TaylorN) = floor(constant_term(x)))
 
 end
