@@ -2,10 +2,10 @@
 # `Broken(...)` marks combinations that run but are known to fail: see the manual, "Automatic differentiation".
 
 # `dual` is either one tolerance or a NamedTuple with one tolerance per Black Scholes input (see BS_ARG_NAMES).
-tolerances(; price, dual = price, hyper = dual, taylor = hyper, taylorn = taylor, forwarddiff = dual, reversediff = dual, zygote = dual, mooncake = dual) = (; price, dual, hyper, taylor, taylorn, forwarddiff, reversediff, zygote, mooncake)
+tolerances(; price, dual = price, hyper = dual, taylor = hyper, taylorn = taylor, forwarddiff = dual, hessian = taylor, reversediff = dual, zygote = dual, mooncake = dual) = (; price, dual, hyper, taylor, taylorn, forwarddiff, hessian, reversediff, zygote, mooncake)
 dual_tolerance(toll, name) = toll isa NamedTuple ? toll[name] : toll
 
-# The TaylorSeries check includes the second derivative in σ, hence its looser tolerances.
+# The TaylorSeries checks and the ForwardDiff Hessian include second derivatives, hence their looser tolerances.
 const lewis_tolerances = tolerances(price = 1e-10, taylor = 1e-9)
 const cos_tolerances = tolerances(price = 1e-10, taylor = 1e-9, reversediff = 1e-9, zygote = 1e-9)
 const cml_tolerances = tolerances(price = 1e-5, taylor = 1e-4, zygote = Broken())
@@ -13,7 +13,7 @@ const cml_binary_tolerances = tolerances(price = 1e-7, dual = 1e-6, hyper = 1e-5
 const cm_tolerances = tolerances(price = 1e-5, hyper = 1e-4, zygote = Broken(1e-5))
 const cm_binary_tolerances = tolerances(price = 1e-7, dual = 1e-6, hyper = 1e-5, zygote = Broken())
 const density_tolerances = tolerances(price = 1e-7)
-const density_binary_tolerances = tolerances(price = 1e-4, taylorn = 1e-3)
+const density_binary_tolerances = tolerances(price = 1e-4, taylorn = 1e-3, hessian = 1e-3)
 
 const METHOD_CASES = [
     (name = "LewisMethod", method = LewisMethod(600.0, 20000), payoffs = Dict(kind => lewis_tolerances for kind in PAYOFF_KINDS)),

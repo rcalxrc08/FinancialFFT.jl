@@ -9,6 +9,10 @@
             @testset "ForwardDiff" begin
                 test_within(() -> max_abs_diff(ForwardDiff.gradient(x -> f(x...), args), reference), toll.forwarddiff)
             end
+            # Nested duals, which reach the fft of the FFT methods as arrays of duals. The puts are parity.
+            iscall && @testset "ForwardDiff Hessian" begin
+                test_within(() -> max_abs_diff(ForwardDiff.hessian(x -> f(x...), args), ForwardDiff.hessian(x -> g(x...), args)), toll.hessian)
+            end
             @testset "ReverseDiff" begin
                 test_within(() -> max_abs_diff(ReverseDiff.gradient(x -> f(x...), args), reference), toll.reversediff)
             end
