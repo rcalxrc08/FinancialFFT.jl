@@ -31,6 +31,7 @@ methods = [LewisMethod(600.0, 20000), CosMethod(2^12), CarrMadanLewisMethod(600.
 
 - `LewisMethod` and `CosMethod` are the most accurate, and with `DensityInverter` the only ones whose Zygote gradients can be relied upon, see [Automatic differentiation](@ref).
 - `CosMethod` has no range parameter: its range comes from the tails of the model and covers the forward of every strike. A smile shares one range, so all of its strikes reuse the same coefficients, at the price of a larger `N` when the strikes are many standard deviations apart. It expands the put and recovers the call by parity, so calls stay accurate on models with a heavy right tail. On the CPU the strikes of a smile share the phases of the characteristic function, and each strike sums the series with a Clenshaw recurrence, at the cost of one `sincos` instead of one `cos` per term: in Black Scholes with `N = 2^12`, a smile of 100 strikes costs about 3.5 times a single option, rather than about 18. On the GPU the series stays one broadcast over terms and strikes.
+- `LewisMethod` prices the strikes of a smile from one set of evaluations of the characteristic function: on the CPU each strike sums the quadrature with a Clenshaw recurrence (in Reinsch's form, which stays accurate at the money), at the cost of one `sincos` per strike instead of an `exp` and a `cos` per node, about 6 times faster for smiles of 100-500 strikes with `N = 20000`.
 - `CarrMadanLewisMethod` and `CarrMadanMethod` run one FFT for all strikes, so their cost does not grow with the number of strikes; prices between the nodes of the strike grid come from the spline, which is what limits their accuracy.
 - `CarrMadanMethod` needs `A / 2^Npow` to be small with respect to the damping, which is capped by the exponential moments of the model. It ignores the execution mode and runs on the CPU, see [GPU](@ref).
 - `DensityInverter` needs `xmax` for every model but Black and Scholes. A smile shares one grid, wide enough for all of its strikes, and one characteristic exponent, so with the default `xmax` its prices differ from the prices of the single options by the discretization error.
@@ -40,7 +41,7 @@ model = MertonProcess(σ, 5.0, 0.03, 0.02, Underlying(S0, d))
 pricer(model, zero_rate, FinancialFFT.DensityInverter(18, 8.0), option) - pricer(model, zero_rate, LewisMethod(600.0, 20000), option)
 ```
 
-- `CosDensityMethod` integrates against its [`density`](@ref), whose range is the one of `CosMethod`, so it needs no range parameter either. It is slower than `CosMethod`, which integrates the payoff exactly against the cosine expansion: its purpose is to price with the density that other methods can use.
+- `CosDensityMethod` integrates against its [`density`](@ref), whose range is the one of `CosMethod`, so it needs no range parameter either. It is slower than `CosMethod` (on the CPU the density at each Simpson node costs one Clenshaw recurrence), which integrates the payoff exactly against the cosine expansion: its purpose is to price with the density that other methods can use.
 
 ## Densities
 

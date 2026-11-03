@@ -54,18 +54,8 @@ function cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.BaseM
     return cos_series(@. coefficient * cos(u * x_columns + phase))
 end
 
-# Re Σ_k (c_re_k + i c_im_k) exp(i k θ) = Σ_k c_re_k cos(k θ) - c_im_k sin(k θ): b_k = C_k + 2 cos(θ) b_{k+1} - b_{k+2}, S = b_0 - exp(-iθ) b_1.
-function cos_clenshaw(c_re, c_im, θ)
-    s, c = sincos_mod(θ)
-    t = 2 * c
-    b_1r = b_2r = b_1i = b_2i = zero(t * first(c_re) * first(c_im))
-    for k in lastindex(c_re):-1:(firstindex(c_re)+1)
-        b_1r, b_2r = @muladd(c_re[k] + t * b_1r - b_2r), b_1r
-        b_1i, b_2i = @muladd(c_im[k] + t * b_1i - b_2i), b_1i
-    end
-    b_0r = @muladd(first(c_re) + t * b_1r - b_2r)
-    return b_0r - c * b_1r - s * b_1i
-end
+# Re Σ_k (c_re_k + i c_im_k) exp(i k θ) = Σ_k c_re_k cos(k θ) - c_im_k sin(k θ).
+cos_clenshaw(c_re, c_im, θ) = clenshaw_exp_sum(c_re, c_im, θ, Val(true))
 
 function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
     drift = rT - dT

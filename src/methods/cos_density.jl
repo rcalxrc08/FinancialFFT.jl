@@ -56,15 +56,10 @@ function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financia
     return CosDensity(coefficients, u, a, b)
 end
 
-# Clenshaw recurrence of Σ c_k cos(k θ) = Σ c_k T_k(cos θ): one cos per point instead of one per term.
+# Clenshaw recurrence of Σ c_k cos(k θ), in Reinsch's form (the ends of the range are θ = 0 and π): one sincos per
+# point instead of one cos per term.
 function (f::CosDensity)(y)
-    c = f.coefficients
-    t = cos((y - f.a) * (pi / (f.b - f.a)))
-    b_1 = b_2 = zero(t * first(c))
-    for k in lastindex(c):-1:(firstindex(c)+1)
-        b_1, b_2 = @muladd(c[k] + 2 * t * b_1 - b_2), b_1
-    end
-    value = first(c) + t * b_1 - b_2
+    value = clenshaw_cos_sum(f.coefficients, (y - f.a) * (pi / (f.b - f.a)))
     # beyond the range the series is periodic, while the density is below ε
     is_inside = f.a <= v_value_mod(y) <= f.b
     return ifelse(is_inside, value, zero(value))
@@ -76,6 +71,13 @@ function cos_density_values(f::CosDensity, y::AbstractArray)
     y_vec = vec(y)
     values = sum(@. f.coefficients' * cos(f.u' * (y_vec - f.a)); dims = 2)
     return reshape(values, size(y))
+end
+cos_density_values(f::CosDensity, y::AbstractArray, ::FinancialMonteCarlo.BaseMode) = cos_density_values(f, y)
+# On the CPU, the Clenshaw recurrence at each point (map, for ReverseDiff: the coefficients may be tracked).
+function cos_density_values(f::CosDensity, y::AbstractArray, ::FinancialMonteCarlo.SerialMode)
+    c = f.coefficients
+    scale = pi / (f.b - f.a)
+    return map(y_j -> clenshaw_cos_sum(c, (y_j - f.a) * scale), y)
 end
 
 # Put payoff at a log-moneyness z <= 0, per unit of strike for vanilla options.
@@ -103,7 +105,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCar
         put_payoff = density_put_payoff(opt)
         z_grid, @. simpson * put_payoff(z_grid) * (z_max - z_min) / (3 * M)
     end
-    f_z = cos_density_values(f, z .+ log_K_S0)
+    f_z = cos_density_values(f, z .+ log_K_S0, mode)
     df = exp(-rT)
     put_price = adjust_price_adimensional(cos_series(payoff .* f_z), opt) .* df
     return put_to_option(put_price, S0 * exp(-dT), df, opt)

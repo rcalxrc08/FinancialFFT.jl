@@ -106,7 +106,7 @@ function lw_integrate(char_exp_v_r, abstractPayoff::EuropeanOptionSmile, df, dT,
     corr_adj = @. log(S0 / abstractPayoff.K) + rT_corr + dT
     char_exp_v = char_exp_v_r.char_exp_v
     v_im_adj = char_exp_v_r.v_im_adj
-    total_sum_lewis = sum(evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff), dims = 1)'
+    total_sum_lewis = vec(sum(evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff); dims = 1))
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
 end
 
@@ -114,8 +114,41 @@ function lw_integrate(char_exp_v_r, abstractPayoff::BinaryEuropeanOptionSmile, d
     corr_adj = @. log(S0 / abstractPayoff.K) + rT_corr + dT
     char_exp_v = char_exp_v_r.char_exp_v
     v_im_adj = char_exp_v_r.v_im_adj
-    total_sum_lewis = sum(evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff), dims = 1)'
+    total_sum_lewis = vec(sum(evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff); dims = 1))
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
+end
+
+lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr, ::FinancialMonteCarlo.BaseMode) = lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
+
+# Coefficients C_j of the integrand, Re[exp((1/2 + i v_j) c) C_j] for c = log(S0 / K) + …, as real and imaginary parts:
+# exp(ψ_j) / (1/4 + v_j²) for vanilla options, exp(ψ_j) / (1/2 + i v_j) for binary ones.
+function lewis_coefficients(v, char_exp_v, ::VanillaPayoff)
+    w = @. exp(real_mod(char_exp_v)) / (1 // 4 + v^2)
+    sin_cos = sincos_mod.(imag_mod.(char_exp_v))
+    return (@. w * last(sin_cos)), (@. w * first(sin_cos))
+end
+function lewis_coefficients(v, char_exp_v, ::BinaryPayoff)
+    w = @. exp(real_mod(char_exp_v)) / (1 // 4 + v^2)
+    sin_cos = sincos_mod.(imag_mod.(char_exp_v))
+    return (@. w * (last(sin_cos) / 2 + v * first(sin_cos))), (@. w * (first(sin_cos) / 2 - v * last(sin_cos)))
+end
+
+# The nodes are equally spaced, v_j = v_0 + j h, so the sum over them is exp(c/2) Re[exp(i v_0 c) Σ_j C_j exp(i j h c)]:
+# on the CPU each strike of a smile sums it with the Clenshaw recurrence, one sincos per strike instead of an exp and a cos per
+# node and strike (a single option keeps the broadcast, as cheap). At the money h c is close to 0, hence Reinsch's form.
+function lw_integrate(char_exp_v_r, abstractPayoff::SmilePayoff, df, dT, dx_adj, S0, rT_corr, ::FinancialMonteCarlo.SerialMode)
+    corr_adj = @. log(S0 / abstractPayoff.K) + rT_corr + dT
+    v = char_exp_v_r.v_im_adj
+    c_re, c_im = lewis_coefficients(v, char_exp_v_r.char_exp_v, abstractPayoff)
+    v_0 = first(v)
+    h = (last(v) - v_0) / (length(v) - 1)
+    total_sum_lewis = map(c -> lewis_clenshaw(c_re, c_im, v_0, h, c), corr_adj)
+    return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
+end
+function lewis_clenshaw(c_re, c_im, v_0, h, c)
+    S_re, S_im = clenshaw_exp_sum(c_re, c_im, h * c)
+    s, co = sincos_mod(v_0 * c)
+    return exp(c / 2) * (co * S_re - s * S_im)
 end
 
 """
@@ -153,5 +186,5 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     dx_adj = A / (N - 1)
     df = exp(-rT)
     rT_corr = rT - corr
-    return lw_integrate(lw_result, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
+    return lw_integrate(lw_result, abstractPayoff, df, dT, dx_adj, S0, rT_corr, mode)
 end
