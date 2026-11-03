@@ -99,7 +99,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCar
         log_K_S0_val = v_value_mod.(log_K_S0)
         z_min = @. f.a - log_K_S0_val
         z_max = @. max(z_min, min(0, f.b - log_K_S0_val))
-        t = adapt_array(collect((0:M) / M), mode)
+        t = adapt_array(collect((0:M) ./ convert(typeof(f.a), M)), mode)
         z_grid = @. z_min + (z_max - z_min) * t
         simpson = PatternVector(M + 1, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
         put_payoff = density_put_payoff(opt)

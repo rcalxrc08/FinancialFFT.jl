@@ -11,6 +11,49 @@ abs_mod(x) = abs(x)
 # DualNumbers and HyperDualNumbers have no sincos: their extensions overload this hook.
 sincos_mod(x) = sincos(x)
 adapt_array(x, _) = x
+# The real floating-point type of the inputs, without their derivatives: grids, truncation ranges and the parameters of
+# the methods are built in it, so that Float32 or BigFloat inputs are not promoted to Float64.
+float_type(x...) = ChainRulesCore.@ignore_derivatives typeof(float(v_value_mod(sum(x))))
+# A parameter of a method (a constant for differentiation) in the floating-point type FT.
+to_float_type(FT, x) = ChainRulesCore.@ignore_derivatives convert(FT, v_value_mod(x))
+# Relative tolerance of a computation in FT that has 1e-14 in Float64: scaled by the machine epsilon.
+scaled_tolerance(FT, toll) = FT(toll) * (eps(FT) / FT(eps(Float64)))
+
+# FFTW transforms Float32 and Float64 only: other floating-point types (BigFloat) use a radix-2 FFT (all the grids
+# have 2^N points), with the twiddle factors computed in their precision.
+fft_mod(x) = fft(x)
+fft_mod(x::AbstractVector{Complex{T}}) where {T <: AbstractFloat} = T <: Union{Float32, Float64} ? fft(x) : generic_fft(x)
+function generic_fft(x::AbstractVector{Complex{T}}) where {T}
+    n = length(x)
+    @assert ispow2(n) "the generic FFT needs 2^N points"
+    y = collect(x)
+    # bit reversal
+    j = 0
+    for i in 0:(n-2)
+        if i < j
+            y[i+1], y[j+1] = y[j+1], y[i+1]
+        end
+        m = n >> 1
+        while m >= 1 && j & m != 0
+            j ⊻= m
+            m >>= 1
+        end
+        j |= m
+    end
+    half = 1
+    while half < n
+        for k in 0:(half-1)
+            w = cispi(-T(k) / half)
+            for i in (k+1):(2*half):n
+                t = w * y[i+half]
+                y[i+half] = y[i] - t
+                y[i] += t
+            end
+        end
+        half *= 2
+    end
+    return y
+end
 
 # Σ_k (c_re_k + i c_im_k) exp(i k θ), k = 0, 1, …, as (real part, imaginary part), by the Clenshaw recurrence
 # b_k = C_k + 2 cos(θ) b_{k+1} - b_{k+2}, S = b_0 - exp(-iθ) b_1. Near θ = 0 (or π) the b_k grow like the number of
@@ -78,10 +121,10 @@ function clenshaw_cos_sum(coefficients, θ)
 end
 # Fft of each column. The AD back-ends overload the fft of a vector, hence the fallback; Mooncake sees plain complex
 # numbers, and reaches it through an overlay.
-fft_columns(x::AbstractVector) = fft(x)
+fft_columns(x::AbstractVector) = fft_mod(x)
 fft_columns(M::AbstractMatrix) = fft_each_column(M)
-fft_columns(M::AbstractMatrix{<:Complex{<:AbstractFloat}}) = fft(M, 1)
-fft_each_column(M) = reduce(hcat, [fft(M[:, j]) for j in axes(M, 2)])
+fft_columns(M::AbstractMatrix{<:Complex{<:Union{Float32, Float64}}}) = fft(M, 1)
+fft_each_column(M) = reduce(hcat, [fft_mod(M[:, j]) for j in axes(M, 2)])
 # One strike per column: the exponent does not depend on the strike.
 strike_columns(x::Number) = x
 strike_columns(x::AbstractVector) = reshape(x, 1, :)

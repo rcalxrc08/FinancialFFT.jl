@@ -53,7 +53,7 @@ end
 function density_x(N, A, mode)
     n = ChainRulesCore.@ignore_derivatives 2^N
     vec_lin = ChainRulesCore.@ignore_derivatives 0:(n-1)
-    x_vec = ChainRulesCore.@ignore_derivatives collect(-1 .+ vec_lin * 2 / n)
+    x_vec = ChainRulesCore.@ignore_derivatives collect(-1 .+ vec_lin .* (2 / convert(typeof(A), n)))
     x = @. A * x_vec         # Grid, for the density
     return adapt_array(x, mode)
 end
@@ -70,8 +70,8 @@ smile_payoff(opt::EuropeanOptionSmile, K, isCall) = EuropeanOption(opt.T, K, isC
 smile_payoff(opt::BinaryEuropeanOptionSmile, K, isCall) = BinaryEuropeanOption(opt.T, K, isCall)
 
 function compute_xmax(mcProcess::BlackScholesProcess, r, opt, method::DensityInverter)
-    xmax = method.xmax
     S0 = mcProcess.underlying.S0
+    xmax = to_float_type(float_type(S0, opt.T), method.xmax)
     d = mcProcess.underlying.d
     sigma = mcProcess.σ
     T = opt.T
@@ -90,8 +90,8 @@ function compute_xmax(mcProcess::BlackScholesProcess, r, opt::SmilePayoff, metho
     return max(compute_xmax(mcProcess, r, smile_payoff(opt, K_min, true), method), compute_xmax(mcProcess, r, smile_payoff(opt, K_max, true), method))
 end
 
-function compute_xmax(::FinancialMonteCarlo.BaseProcess, _, _, method::DensityInverter)
-    xmax = method.xmax
+function compute_xmax(mcProcess::FinancialMonteCarlo.BaseProcess, _, opt, method::DensityInverter)
+    xmax = to_float_type(float_type(mcProcess.underlying.S0, opt.T), method.xmax)
     @assert !isnan(xmax) "For generic processes xmax must be populated."
     return xmax
 end
@@ -114,8 +114,8 @@ end
 function density_payout(x, opt, mode)
     S = exp.(x)
     isCall = strike_columns(adapt_array(opt.isCall, mode))
-    call = smile_payoff(opt, 1.0, true)
-    put = smile_payoff(opt, 1.0, false)
+    call = smile_payoff(opt, one(eltype(x)), true)
+    put = smile_payoff(opt, one(eltype(x)), false)
     return @. ifelse(isCall, FinancialMonteCarlo.payout_untyped(S, call), FinancialMonteCarlo.payout_untyped(S, put))
 end
 

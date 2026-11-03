@@ -86,11 +86,14 @@ function convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT
     convert_integral_result_to_price(discounted_sum, S0, dT, df, opt)
 end
 
-struct LewisMethodResult{num_1, num_2}
+# The characteristic exponent on the nodes v >= 0 of the quadrature, and their weights: the integrand is even in v
+# (ψ(1/2 - iv) is the conjugate of ψ(1/2 + iv)), so each node stands for itself and its opposite, the node 0 (odd N) for itself only.
+struct LewisMethodResult{num_1, num_2, num_3}
     char_exp_v::num_1
     v_im_adj::num_2
-    function LewisMethodResult(a::num_1, b::num_2) where {num_1, num_2}
-        return new{num_1, num_2}(a, b)
+    weights::num_3
+    function LewisMethodResult(a::num_1, b::num_2, c::num_3) where {num_1, num_2, num_3}
+        return new{num_1, num_2, num_3}(a, b, c)
     end
 end
 
@@ -98,7 +101,7 @@ function lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
     corr_adj = log(S0 / abstractPayoff.K) + rT_corr + dT
     char_exp_v = char_exp_v_r.char_exp_v
     v_im_adj = char_exp_v_r.v_im_adj
-    total_sum_lewis = sum(evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff))
+    total_sum_lewis = sum(char_exp_v_r.weights .* evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff))
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
 end
 
@@ -106,7 +109,7 @@ function lw_integrate(char_exp_v_r, abstractPayoff::EuropeanOptionSmile, df, dT,
     corr_adj = @. log(S0 / abstractPayoff.K) + rT_corr + dT
     char_exp_v = char_exp_v_r.char_exp_v
     v_im_adj = char_exp_v_r.v_im_adj
-    total_sum_lewis = vec(sum(evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff); dims = 1))
+    total_sum_lewis = vec(sum(char_exp_v_r.weights .* evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff); dims = 1))
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
 end
 
@@ -114,7 +117,7 @@ function lw_integrate(char_exp_v_r, abstractPayoff::BinaryEuropeanOptionSmile, d
     corr_adj = @. log(S0 / abstractPayoff.K) + rT_corr + dT
     char_exp_v = char_exp_v_r.char_exp_v
     v_im_adj = char_exp_v_r.v_im_adj
-    total_sum_lewis = vec(sum(evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff); dims = 1))
+    total_sum_lewis = vec(sum(char_exp_v_r.weights .* evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff); dims = 1))
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
 end
 
@@ -139,7 +142,9 @@ end
 function lw_integrate(char_exp_v_r, abstractPayoff::SmilePayoff, df, dT, dx_adj, S0, rT_corr, ::FinancialMonteCarlo.SerialMode)
     corr_adj = @. log(S0 / abstractPayoff.K) + rT_corr + dT
     v = char_exp_v_r.v_im_adj
-    c_re, c_im = lewis_coefficients(v, char_exp_v_r.char_exp_v, abstractPayoff)
+    c_re_unweighted, c_im_unweighted = lewis_coefficients(v, char_exp_v_r.char_exp_v, abstractPayoff)
+    c_re = c_re_unweighted .* char_exp_v_r.weights
+    c_im = c_im_unweighted .* char_exp_v_r.weights
     v_0 = first(v)
     h = (last(v) - v_0) / (length(v) - 1)
     total_sum_lewis = map(c -> lewis_clenshaw(c_re, c_im, v_0, h, c), corr_adj)
@@ -170,19 +175,22 @@ Returns a price, or a vector of prices for smiles.
 """
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     T = abstractPayoff.T
-    A = method.A
     N = method.N
     S0 = mcProcess.underlying.S0
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
-    eps_typed = ChainRulesCore.@ignore_derivatives eps(zero(Float64))
-    range_init = ChainRulesCore.@ignore_derivatives adapt_array(collect(range(-1, length = N, stop = 1)), mode)
+    FT = float_type(S0, rT, dT, corr)
+    A = to_float_type(FT, method.A)
+    # the N nodes (2j - (N - 1)) A / (N - 1), j = 0, …, N - 1, are symmetric: only the n_half of them in [0, A] are evaluated
+    n_half = cld(N, 2)
+    v, weights = ChainRulesCore.@ignore_derivatives begin
+        j = (N-n_half):(N-1)
+        adapt_array(collect(@. (2 * j - (N - 1)) * (A / (N - 1))), mode), PatternVector(n_half, InitialValuePattern(Int8(isodd(N) ? 1 : 2), Int8(2)))
+    end
     one_half = 1 // 2
-    v = ChainRulesCore.@ignore_derivatives @. (eps_typed + A * range_init)
-    # v_im_adj = @. one_half + v * im
     char_exp_v = @. FinancialFFT.characteristic_exponent_i(one_half + v * im, mcProcess, T)
-    lw_result = LewisMethodResult(char_exp_v, v)
+    lw_result = LewisMethodResult(char_exp_v, v, weights)
     dx_adj = A / (N - 1)
     df = exp(-rT)
     rT_corr = rT - corr

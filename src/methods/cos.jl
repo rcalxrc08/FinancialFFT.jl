@@ -59,11 +59,13 @@ cos_clenshaw(c_re, c_im, θ) = clenshaw_exp_sum(c_re, c_im, θ, Val(true))
 
 function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
     drift = rT - dT
-    # the tail is weighted by the scores in the derivatives: the error of the second one in σ is about 2500 ε
-    epss = 1e-14
-    s_min = 1.0
-    s_max = 50.0
-    x_toll_bisection = 1e-14
+    FT = float_type(drift, T, Model.underlying.S0)
+    # the tail is weighted by the scores in the derivatives: the error of the second one in σ is about 2500 ε (1e-14
+    # in Float64, scaled by the machine epsilon of the other types)
+    epss = scaled_tolerance(FT, 1e-14)
+    s_min = one(FT)
+    s_max = FT(50)
+    x_toll_bisection = max(FT(1e-14), 8 * eps(FT))
     compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min, s_max, x_toll_bisection)
 end
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())

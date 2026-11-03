@@ -30,7 +30,7 @@ export CarrMadanMethod;
 
 using DataInterpolations, FFTW;
 # E[S^(1 + α)] must be finite: 1 + α stays at most halfway between 1 and the exponential moment bound of the upper tail.
-carr_madan_damping(mcProcess, T, α) = min(α, (exponential_moment_bound(mcProcess, 1, v_value_mod(T)) - 1) / 2)
+carr_madan_damping(mcProcess, T, α) = min(α, convert(typeof(α), (exponential_moment_bound(mcProcess, 1, v_value_mod(T)) - 1) / 2))
 # The binary call is minus the strike derivative of the call: α + iv leaves the denominator of the transform, and the
 # price is divided by K.
 carr_madan_factor(::VanillaPayoff) = identity
@@ -45,7 +45,8 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     S0 = mcProcess.underlying.S0
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
-    A = method.A
+    FT = float_type(S0, rT, dT, T)
+    A = to_float_type(FT, method.A)
     #* v-> compute integral as a summation
     dx = A / N
     real_vec = 0:(N-1)
@@ -58,14 +59,15 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     four_adj = ChainRulesCore.@ignore_derivatives Int8(4)
     weights_ = ChainRulesCore.@ignore_derivatives PatternVector(N, PaddedEvenOddPattern(one_adj, four_adj, two_adj, one_adj))
     dk = 2 / A * pi
-    b = pi * N / A
+    # not pi * N / A: an irrational times an integer is a Float64
+    b = N * (pi / A)
     drift_rd = rT - dT
     v_im = @. v * im
-    alfa = ChainRulesCore.@ignore_derivatives carr_madan_damping(mcProcess, T, method.α)
+    alfa = ChainRulesCore.@ignore_derivatives carr_madan_damping(mcProcess, T, to_float_type(FT, method.α))
     den = carr_madan_factor(opt)
     # transform of exp(α k) C(k): E[exp((1 + α + iv) X)] / ((α + iv) (1 + α + iv)), i.e. the exponent evaluated in 1 + α + iv
     complex_vec_z_k = @. one_minus_one * cis_mod(drift_rd * v) * exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess, T) - (v_im + 1 + alfa) * corr) / (den(v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
-    y = fft(complex_vec_z_k)
+    y = fft_mod(complex_vec_z_k)
     z_T = @. real_mod(y) / pi
 
     # not -b .+ dk * real_vec: a TwicePrecision range breaks Mooncake when it reuses the rule (no _copy method)

@@ -86,7 +86,7 @@ end
 # so the upper end of the bracket is doubled until it contains the minimum, without crossing the exponential moment bound.
 # Returns the bracket and whether it contains the minimum; when it does not, the upper end is the best admissible s.
 function widen_bisection_bracket(Model, T, log_epss, mul, s_min, s_max, max_doublings = 30)
-    s_bound = (1 - 1e-8) * exponential_moment_bound(Model, mul, T)
+    s_bound = convert(typeof(s_max), (1 - 1e-8) * exponential_moment_bound(Model, mul, T))
     s_max = min(s_max, s_bound)
     s_min = min(s_min, s_max / 2)
     is_increasing(s) = !signbit(compute_ts_derivative_full_complex(s, Model, T, log_epss, mul))
