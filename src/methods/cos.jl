@@ -38,6 +38,35 @@ put_to_option(P, _, df, opt::BinaryPayoff) = @. ifelse(opt.isCall, df - P, P)
 cos_series(terms::AbstractVector) = sum(terms)
 cos_series(terms::AbstractMatrix) = vec(sum(terms; dims = 1))
 
+# Σ_k coefficient_k cos(u_k x + phase_k) for each x (a number or a vector, one per strike).
+# On the CPU it is the real part of Σ_k C_k exp(i k θ), with C_k = coefficient_k exp(i phase_k) and θ = π x / (b - a): the
+# Clenshaw recurrence costs a sincos per strike instead of a cos per term and strike, and the phases (which
+# do not depend on the strike) are folded into C_k once. Other modes (GPU) cannot index the coefficients, and keep one cos per term.
+function cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.SerialMode)
+    sin_cos = sincos_mod.(phase)
+    c_re = @. coefficient * last(sin_cos)
+    c_im = @. coefficient * first(sin_cos)
+    θ = x .* (last(u) / (length(u) - 1))
+    return map(θ_j -> cos_clenshaw(c_re, c_im, θ_j), θ)
+end
+function cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.BaseMode)
+    x_columns = strike_columns(x)
+    return cos_series(@. coefficient * cos(u * x_columns + phase))
+end
+
+# Re Σ_k (c_re_k + i c_im_k) exp(i k θ) = Σ_k c_re_k cos(k θ) - c_im_k sin(k θ): b_k = C_k + 2 cos(θ) b_{k+1} - b_{k+2}, S = b_0 - exp(-iθ) b_1.
+function cos_clenshaw(c_re, c_im, θ)
+    s, c = sincos_mod(θ)
+    t = 2 * c
+    b_1r = b_2r = b_1i = b_2i = zero(t * first(c_re) * first(c_im))
+    for k in lastindex(c_re):-1:(firstindex(c_re)+1)
+        b_1r, b_2r = @muladd(c_re[k] + t * b_1r - b_2r), b_1r
+        b_1i, b_2i = @muladd(c_im[k] + t * b_1i - b_2i), b_1i
+    end
+    b_0r = @muladd(first(c_re) + t * b_1r - b_2r)
+    return b_0r - c * b_1r - s * b_1i
+end
+
 function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
     drift = rT - dT
     # the tail is weighted by the scores in the derivatives: the error of the second one in σ is about 2500 ε
@@ -72,8 +101,8 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCar
     coefficient = @. payoff * exp(FinancialFFT.real_mod(v_char_exp)) / bma
     phase = @. FinancialFFT.imag_mod(v_char_exp)
     S0_adj = S0 * exp(-dT)
-    x = strike_columns(@. log(S0_adj / K) + driftT - a)
+    x = @. log(S0_adj / K) + driftT - a
     df = exp(-rT)
-    put_price = adjust_price_adimensional(cos_series(@. coefficient * cos(u * x + phase)), opt) .* df
+    put_price = adjust_price_adimensional(cos_phased_series(coefficient, phase, u, x, mode), opt) .* df
     return put_to_option(put_price, S0_adj, df, opt)
 end

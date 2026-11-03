@@ -2,7 +2,9 @@ module FinancialFFTDualNumbersExt
 
 using FinancialFFT, DualNumbers, FFTW
 import FFTW: fft!, fft
-import FinancialFFT: v_value_mod
+import FinancialFFT: v_value_mod, sincos_mod
+
+sincos_mod(x::Dual) = (sin(x), cos(x))
 
 function v_value_mod(s::Dual)
     return s.value

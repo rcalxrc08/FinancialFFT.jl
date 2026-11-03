@@ -8,6 +8,8 @@ cis_mod(x) = cis(x)
 # The abs of a Taylor series refuses a constant term of zero, which a density has at some nodes of its tails: the
 # TaylorSeries extension overloads this hook.
 abs_mod(x) = abs(x)
+# DualNumbers and HyperDualNumbers have no sincos: their extensions overload this hook.
+sincos_mod(x) = sincos(x)
 adapt_array(x, _) = x
 # Fft of each column. The AD back-ends overload the fft of a vector, hence the fallback; Mooncake sees plain complex
 # numbers, and reaches it through an overlay.
