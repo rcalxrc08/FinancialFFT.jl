@@ -10,6 +10,7 @@ following back-ends, loaded with the corresponding package:
 | `CarrMadanLewisMethod` | yes | yes | yes | yes | yes | **no** | yes |
 | `CarrMadanMethod` | yes | yes | yes | yes | yes | **no** | yes |
 | `DensityInverter` | yes | yes | yes | yes | yes | yes | yes |
+| `CosDensityMethod` | yes | yes | yes | yes | yes | yes | yes |
 
 The test suite checks each entry against the closed formulas of Black and Scholes, for European and binary options and
 their smiles, with all of the inputs `S0`, `K`, `r`, `T`, `σ`, `d`. Gradients can be taken through the Heston model too.

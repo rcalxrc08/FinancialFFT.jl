@@ -8,6 +8,14 @@ CosMethod
 CarrMadanLewisMethod
 CarrMadanMethod
 FinancialFFT.DensityInverter
+CosDensityMethod
+```
+
+## Densities
+
+```@docs
+cos_density
+CosDensity
 ```
 
 ## Pricing

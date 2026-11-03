@@ -10,6 +10,7 @@ FinancialMonteCarlo.jl. All of them price every payoff and model of the package.
 | [`CarrMadanLewisMethod`](@ref) | `CarrMadanLewisMethod(A, Npow)` | One FFT of the Lewis integrand on `2^Npow` nodes, then a cubic spline on the strikes |
 | [`CarrMadanMethod`](@ref) | `CarrMadanMethod(A, Npow, α = 0.75)` | One FFT of the damped call transform on `2^Npow` nodes, then a cubic spline on the strikes |
 | [`FinancialFFT.DensityInverter`](@ref) | `FinancialFFT.DensityInverter(N, xmax = NaN)` | FFT of the characteristic function on `2^N` points, then integration of the payoff against the density |
+| [`CosDensityMethod`](@ref) | `CosDensityMethod(N = 128, M = 2^10)` | Cosine expansion of the density with `N` terms, then Simpson's rule for the put on `M` intervals |
 
 All of them agree with the closed formula of Black and Scholes:
 
@@ -22,7 +23,7 @@ zero_rate = ZeroRate(r)
 option = EuropeanOption(T, K)
 exact = blsprice(S0, K, r, T, σ, d)
 
-methods = [LewisMethod(600.0, 20000), CosMethod(2^12), CarrMadanLewisMethod(600.0, 16), CarrMadanMethod(400.0, 18), FinancialFFT.DensityInverter(18)]
+methods = [LewisMethod(600.0, 20000), CosMethod(2^12), CarrMadanLewisMethod(600.0, 16), CarrMadanMethod(400.0, 18), FinancialFFT.DensityInverter(18), CosDensityMethod()]
 [nameof(typeof(method)) => abs(pricer(model, zero_rate, method, option) - exact) for method in methods]
 ```
 
@@ -38,3 +39,19 @@ methods = [LewisMethod(600.0, 20000), CosMethod(2^12), CarrMadanLewisMethod(600.
 model = MertonProcess(σ, 5.0, 0.03, 0.02, Underlying(S0, d))
 pricer(model, zero_rate, FinancialFFT.DensityInverter(18, 8.0), option) - pricer(model, zero_rate, LewisMethod(600.0, 20000), option)
 ```
+
+- `CosDensityMethod` integrates against the density of [`cos_density`](@ref), whose range is the one of `CosMethod`, so it needs no range parameter either. It is slower than `CosMethod`, which integrates the payoff exactly against the cosine expansion: its purpose is to price with the density that other methods can use.
+
+## Densities
+
+[`cos_density`](@ref) returns the density of the log-return `log(S_T / S_0)`, for methods that need the density of a process without a closed formula, such as the likelihood ratio method or Vibrato. The setup runs once, then the density is evaluated at any number of points; it does not depend on `S_0`, so the density of `log(S_T)` given `S_t` is `density(x - log(S_t))`. Scores come from automatic differentiation:
+
+```@example methods
+using ForwardDiff
+
+density = cos_density(model, zero_rate, T)
+score(y) = ForwardDiff.derivative(s -> log(cos_density(MertonProcess(s, 5.0, 0.03, 0.02, Underlying(S0, d)), zero_rate, T)(y)), σ)
+density(0.1), score(0.1)
+```
+
+It is zero outside the range of `CosMethod`, beyond which the density is below `1e-14`, and its error is absolute: far in the tails its relative error, which is the one of a score, grows.

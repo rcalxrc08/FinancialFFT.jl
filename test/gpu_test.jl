@@ -1,6 +1,6 @@
 # GPU execution in CudaMode. Not in SUITES, since GitHub CI has no GPU: on a machine with a CUDA GPU run
 #     Pkg.test("FinancialFFT"; test_args = ["gpu"])
-# which adds CUDA to the test environment (see runtests.jl). Smiles keep their strikes on the device. CarrMadanMethod
+# which adds CUDA to the test environment (see runtests.jl). In CudaMode the strikes of a smile must be on the device. CarrMadanMethod
 # ignores the mode and runs on the CPU; ReverseDiff and Mooncake are not supported on the GPU.
 using CUDA
 
@@ -68,12 +68,7 @@ end
             @testset "Smiles, $(case.name)" for case in filter(case -> haskey(case.payoffs, :european_smile), gpu_cases)
                 method = case.method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 3.0) : case.method
                 smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, CuArray(Ks), CuArray(calls))
-                @test max_abs_diff(Array(pricer(model, zero_rate, case.method, smile, FinancialMonteCarlo.CudaMode())), pricer(model, zero_rate, case.method, FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls))) < 1e-10
-            end
-            @testset "Smile with the strikes on the host, $(case.name)" for case in filter(case -> haskey(case.payoffs, :european_smile), gpu_cases)
-                method = case.method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 3.0) : case.method
-                smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls)
-                @test max_abs_diff(Array(pricer(model, zero_rate, method, smile, FinancialMonteCarlo.CudaMode())), pricer(model, zero_rate, method, smile)) < 1e-10
+                @test max_abs_diff(Array(pricer(model, zero_rate, method, smile, FinancialMonteCarlo.CudaMode())), pricer(model, zero_rate, method, FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls))) < 1e-10
             end
         end
     end

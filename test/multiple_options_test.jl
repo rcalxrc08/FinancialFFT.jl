@@ -5,14 +5,14 @@
     zero_rate = ZeroRate(r)
     scalar_prices(method, opts) = [pricer(model, zero_rate, method, opt) for opt in opts]
 
-    @testset "Options with different maturities, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "CosMethod" => CosMethod(2^12), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16), "CarrMadanMethod" => CarrMadanMethod(400.0, 18), "DensityInverter" => FinancialFFT.DensityInverter(18, 3.0))
+    @testset "Options with different maturities, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "CosMethod" => CosMethod(2^12), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16), "CarrMadanMethod" => CarrMadanMethod(400.0, 18), "DensityInverter" => FinancialFFT.DensityInverter(18, 3.0), "CosDensityMethod" => CosDensityMethod())
         opts = [EuropeanOption(1.0, 100.0), EuropeanOption(0.5, 70.0), BinaryEuropeanOption(1.0, 120.0, false), EuropeanOption(2.0, 100.0), BinaryEuropeanOption(0.5, 100.0)]
         @test max_abs_diff(pricer.(model, zero_rate, method, opts), scalar_prices(method, opts)) < 1e-12
     end
 
     Ks = [80.0, 90.0, 100.0, 110.0, 120.0]
     calls = [true, false, true, false, true]
-    @testset "Smiles, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "CosMethod" => CosMethod(2^12), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16), "CarrMadanMethod" => CarrMadanMethod(400.0, 18), "DensityInverter" => FinancialFFT.DensityInverter(18, 3.0))
+    @testset "Smiles, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "CosMethod" => CosMethod(2^12), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 16), "CarrMadanMethod" => CarrMadanMethod(400.0, 18), "DensityInverter" => FinancialFFT.DensityInverter(18, 3.0), "CosDensityMethod" => CosDensityMethod())
         smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls)
         @test max_abs_diff(pricer(model, zero_rate, method, smile), scalar_prices(method, EuropeanOption.(1.0, Ks, calls))) < 1e-12
         binary_smile = FinancialMonteCarlo.BinaryEuropeanOptionSmile(1.0, Ks, calls)

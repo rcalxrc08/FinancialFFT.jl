@@ -9,6 +9,7 @@ include("methods/carrmadan_lewis.jl")
 include("methods/lewis.jl")
 include("methods/cos.jl")
 include("methods/density.jl")
+include("methods/cos_density.jl")
 
 export pricer
 

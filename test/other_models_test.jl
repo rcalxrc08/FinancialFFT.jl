@@ -9,6 +9,7 @@
         "CarrMadanLewisMethod" => (CarrMadanLewisMethod(600.0, 16), 1e-7, 1e-7),
         "CarrMadanMethod" => (CarrMadanMethod(400.0, 18), 1e-5, 1e-7),
         "DensityInverter" => (FinancialFFT.DensityInverter(18, 3.0), 1e-7, 1e-4),
+        "CosDensityMethod" => (CosDensityMethod(), 1e-6, 1e-6),
     ]
     for (model_name, model) in model_cases(S0, d), (method_name, (method, toll_eu, toll_bin)) in methods
         @testset "$model_name $method_name" begin
