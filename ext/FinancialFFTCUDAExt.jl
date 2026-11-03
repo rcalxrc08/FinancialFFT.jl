@@ -1,6 +1,6 @@
 module FinancialFFTCUDAExt
 
-using FinancialFFT, FinancialMonteCarlo, CUDA, Adapt, ChainRulesCore
+using FinancialFFT, FinancialMonteCarlo, CUDA, Adapt
 import FinancialFFT: adapt_array, adapt_itp
 
 function __init__()
@@ -16,14 +16,6 @@ adapt_array(x::Union{Number, CuArray}, ::FinancialMonteCarlo.AbstractCudaMode) =
 
 function adapt_itp(itp, ::CuArray)
     return adapt(CuArray, itp)
-end
-
-# PatternVectors defines the rrule of the sum of any vector, with a cotangent on the host (a PatternVector): a device
-# array times it is reduced with scalar indexing in the pullbacks that follow (issue #36). The cotangent of the sum
-# of a device vector stays on the device.
-function ChainRulesCore.rrule(::typeof(sum), x::CuArray{T, 1}) where {T}
-    sum_pullback(Δ) = (NoTangent(), fill!(similar(x), unthunk(Δ)))
-    return sum(x), sum_pullback
 end
 
 end
