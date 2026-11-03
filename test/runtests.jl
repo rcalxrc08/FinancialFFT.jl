@@ -13,7 +13,7 @@ include("cases.jl")
 
 # Suites can be selected with `Pkg.test("FinancialFFT"; test_args = ["gradients"])`.
 # The "gpu" suite (gpu_test.jl) needs a CUDA GPU, so it is not in SUITES and runs only when selected.
-const SUITES = ["extrema_computation", "black_scholes", "gradients", "other_models", "multiple_options", "cos_density"]
+const SUITES = ["extrema_computation", "black_scholes", "gradients", "other_models", "multiple_options", "density"]
 const SELECTED_SUITES = isempty(ARGS) ? SUITES : ARGS
 
 @testset "FinancialFFT" begin

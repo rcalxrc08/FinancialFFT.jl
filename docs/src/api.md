@@ -14,8 +14,10 @@ CosDensityMethod
 ## Densities
 
 ```@docs
-cos_density
-CosDensity
+density
+FinancialFFT.AbstractDensity
+FinancialFFT.CosDensity
+FinancialFFT.InvertedDensity
 ```
 
 ## Pricing

@@ -40,18 +40,18 @@ model = MertonProcess(σ, 5.0, 0.03, 0.02, Underlying(S0, d))
 pricer(model, zero_rate, FinancialFFT.DensityInverter(18, 8.0), option) - pricer(model, zero_rate, LewisMethod(600.0, 20000), option)
 ```
 
-- `CosDensityMethod` integrates against the density of [`cos_density`](@ref), whose range is the one of `CosMethod`, so it needs no range parameter either. It is slower than `CosMethod`, which integrates the payoff exactly against the cosine expansion: its purpose is to price with the density that other methods can use.
+- `CosDensityMethod` integrates against its [`density`](@ref), whose range is the one of `CosMethod`, so it needs no range parameter either. It is slower than `CosMethod`, which integrates the payoff exactly against the cosine expansion: its purpose is to price with the density that other methods can use.
 
 ## Densities
 
-[`cos_density`](@ref) returns the density of the log-return `log(S_T / S_0)`, for methods that need the density of a process without a closed formula, such as the likelihood ratio method or Vibrato. The setup runs once, then the density is evaluated at any number of points; it does not depend on `S_0`, so the density of `log(S_T)` given `S_t` is `density(x - log(S_t))`. Scores come from automatic differentiation:
+[`density`](@ref) is the interface for the density of the log-return `log(S_T / S_0)`, for methods that need the density of a process without a closed formula, such as the likelihood ratio method or Vibrato. Like `pricer`, it dispatches on the method: `CosDensityMethod` expands it on cosines, `DensityInverter` inverts the characteristic function by an FFT and interpolates it with a cubic spline. The setup runs once, then the density is evaluated at any number of points; it does not depend on `S_0`, so the density of `log(S_T)` given `S_t` is `f(x - log(S_t))`. Scores come from automatic differentiation:
 
 ```@example methods
 using ForwardDiff
 
-density = cos_density(model, zero_rate, T)
-score(y) = ForwardDiff.derivative(s -> log(cos_density(MertonProcess(s, 5.0, 0.03, 0.02, Underlying(S0, d)), zero_rate, T)(y)), σ)
-density(0.1), score(0.1)
+f = density(model, zero_rate, CosDensityMethod(), T)
+score(y) = ForwardDiff.derivative(s -> log(density(MertonProcess(s, 5.0, 0.03, 0.02, Underlying(S0, d)), zero_rate, CosDensityMethod(), T)(y)), σ)
+f(0.1), score(0.1)
 ```
 
-It is zero outside the range of `CosMethod`, beyond which the density is below `1e-14`, and its error is absolute: far in the tails its relative error, which is the one of a score, grows.
+A density is zero outside its range `[f.a, f.b]`: the range of `CosMethod` for `CosDensityMethod`, beyond which the density is below `1e-14`, and the grid for `DensityInverter`. The COS density costs little to set up and about a microsecond per point; the FFT density costs an FFT on `2^N` points to set up, and a spline evaluation per point. Their errors are absolute: far in the tails, the relative error, which is the one of a score, grows.

@@ -132,3 +132,37 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCar
     prices = vec(sum(p .* f_x; dims = 1)) .* df .* dx
     return adjust_price_adimensional(prices, opt)
 end
+
+"""
+    InvertedDensity
+
+Density of the log-return of `DensityInverter`, returned by [`density`](@ref): the characteristic function is inverted
+by an FFT on the `2^N` points of `[-xmax, xmax]`, and the values are interpolated by a cubic spline, built on the host.
+Its range `[a, b]` is the grid.
+"""
+struct InvertedDensity{num_1, num_2} <: AbstractDensity
+    spline::num_1
+    a::num_2
+    b::num_2
+    function InvertedDensity(spline::num_1, a::num_2, b::num_2) where {num_1, num_2}
+        return new{num_1, num_2}(spline, a, b)
+    end
+end
+
+function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::DensityInverter, T, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+    # with the strike at the spot, the log-moneyness of density_y is the log-return
+    at_the_money = EuropeanOption(T, mcProcess.underlying.S0)
+    xmax = ChainRulesCore.@ignore_derivatives v_value_mod(compute_xmax(mcProcess, zero_rate, at_the_money, method))
+    N = method.N
+    values = density_y(mcProcess, zero_rate, N, xmax, at_the_money, mode)
+    n = 2^N
+    grid = ChainRulesCore.@ignore_derivatives StepRangeLen(-xmax, 2 * xmax / n, n)
+    spline = CubicSplineInterpolation(grid, adapt(Array, values))
+    return InvertedDensity(spline, first(grid), last(grid))
+end
+
+function (f::InvertedDensity)(y)
+    value = f.spline(clamp(y, f.a, f.b))
+    is_inside = f.a <= v_value_mod(y) <= f.b
+    return ifelse(is_inside, value, zero(value))
+end
