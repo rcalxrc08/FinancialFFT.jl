@@ -139,8 +139,8 @@ end
     kou_price(method) = (σ, λ, p, λ₊, λ₋) -> pricer(KouProcess(σ, λ, p, λ₊, λ₋, Underlying(S0, d)), ZeroRate(0.02), method, opt)
     kou_params = [0.2, 5.0, 0.3, 30.0, 20.0]
     reference = Zygote.gradient(kou_price(reference_method), kou_params...)
-    @testset "Zygote Kou parameters, CosMethod" begin
-        test_within(() -> max_abs_diff(collect(Zygote.gradient(kou_price(CosMethod(2^12)), kou_params...)), collect(reference)), 1e-5)
+    @testset "Zygote Kou parameters, $method_name" for (method_name, method, toll) in (("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("CarrMadanMethod", CarrMadanMethod(400.0, 18), 1e-5))
+        test_within(() -> max_abs_diff(collect(Zygote.gradient(kou_price(method), kou_params...)), collect(reference)), toll)
     end
     @testset "ForwardDiff Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("FFTDensityInverter", FFTDensityInverter(), 1e-5))
         test_within(() -> max_abs_diff(ForwardDiff.gradient(x -> kou_price(method)(x...), kou_params), collect(reference)), toll)

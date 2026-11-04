@@ -1,5 +1,6 @@
 module FinancialFFT
 using FFTW, PatternVectors, MuladdMacro, ChainRulesCore, FinancialMonteCarlo, Adapt
+import FinancialMonteCarlo: BinaryEuropeanOptionSmile, EuropeanOptionSmile
 include("methods/abstracts.jl")
 include("methods/mods.jl")
 include("methods/extrema_computation_opt.jl")

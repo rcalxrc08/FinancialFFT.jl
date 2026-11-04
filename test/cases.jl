@@ -8,10 +8,10 @@ dual_tolerance(toll, name) = toll isa NamedTuple ? toll[name] : toll
 # The TaylorSeries checks and the ForwardDiff Hessian include second derivatives, hence their looser tolerances.
 const lewis_tolerances = tolerances(price = 1e-10, taylor = 1e-9)
 const cos_tolerances = tolerances(price = 1e-10, taylor = 1e-9, reversediff = 1e-9, zygote = 1e-9)
-const cml_tolerances = tolerances(price = 1e-5, taylor = 1e-4, zygote = Broken())
-const cml_binary_tolerances = tolerances(price = 1e-7, dual = 1e-6, hyper = 1e-5, zygote = Broken())
-const cm_tolerances = tolerances(price = 1e-5, hyper = 1e-4, zygote = Broken(1e-5))
-const cm_binary_tolerances = tolerances(price = 1e-7, dual = 1e-6, hyper = 1e-5, zygote = Broken())
+const cml_tolerances = tolerances(price = 1e-8, dual = 1e-7, taylor = 1e-6, hessian = 5e-6)
+const cml_binary_tolerances = tolerances(price = 1e-9, dual = 1e-8, hyper = 1e-7)
+const cm_tolerances = tolerances(price = 1e-7, dual = 5e-7, hyper = 5e-6, hessian = 1e-5)
+const cm_binary_tolerances = tolerances(price = 1e-8, dual = 1e-7, hyper = 1e-6)
 const density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6)
 const cos_density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6)
 

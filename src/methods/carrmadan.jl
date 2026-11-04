@@ -3,7 +3,7 @@
 
 Carr–Madan (1999) FFT method. The damped call transform is integrated with Simpson weights
 on the frequency grid `v ∈ [0, A)` with `2^Npow` nodes, a single FFT returns call prices on a
-log-strike grid, and prices at the requested strikes are obtained through cubic-spline interpolation.
+log-strike grid, and prices at the requested strikes are interpolated on it with six-point Lagrange polynomials.
 Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles.
 
 # Arguments
@@ -11,8 +11,6 @@ Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles.
 - `Npow`: base-2 logarithm of the number of FFT nodes (`2 < Npow < 24`).
 - `α`: damping exponent (`α > 0`). It needs `E[S^(1 + α)]` to be finite, so it is capped halfway between 1 and the
   exponential moment bound of the model. The frequency step `A / 2^Npow` must be small with respect to the capped value.
-
-The spline step is excluded from ChainRules-based differentiation, so Zygote gradients are not reliable for this method.
 """
 struct CarrMadanMethod{num <: Number, num_1 <: Integer, num_2 <: Number} <: AbstractFFTMethod
     A::num
@@ -28,7 +26,6 @@ struct CarrMadanMethod{num <: Number, num_1 <: Integer, num_2 <: Number} <: Abst
 end
 export CarrMadanMethod;
 
-using Interpolations, FFTW
 # E[S^(1 + α)] must be finite: 1 + α stays at most halfway between 1 and the exponential moment bound of the upper tail.
 carr_madan_damping(mcProcess, T, α) = min(α, convert(typeof(α), (exponential_moment_bound(mcProcess, 1, v_value_mod(T)) - 1) / 2))
 # The binary call is minus the strike derivative of the call: α + iv leaves the denominator of the transform, and the
@@ -38,7 +35,7 @@ carr_madan_factor(::BinaryPayoff) = one
 carr_madan_call(price, ::VanillaPayoff) = price
 carr_madan_call(price, opt::BinaryPayoff) = @. price / opt.K
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt::FourierPayoff, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     T = opt.T
     Npow = method.Npow
     N = 2^Npow
@@ -50,7 +47,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     #* v-> compute integral as a summation
     dx = A / N
     real_vec = 0:(N-1)
-    v = ChainRulesCore.@ignore_derivatives collect(real_vec * dx)
+    v = ChainRulesCore.@ignore_derivatives adapt_array(collect(real_vec * dx), mode)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     one_adj = ChainRulesCore.@ignore_derivatives Int8(1)
     minus_one_adj = ChainRulesCore.@ignore_derivatives Int8(-1)
@@ -70,12 +67,8 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     y = fft_mod(complex_vec_z_k)
     z_T = @. real_mod(y) / pi
 
-    # not -b .+ dk * real_vec: a TwicePrecision range breaks Mooncake when it reuses the rule (no _copy method)
-    ks = ChainRulesCore.@ignore_derivatives StepRangeLen(-b, dk, N)
-    spline_cub = ChainRulesCore.@ignore_derivatives CubicSplineInterpolation(ks, z_T)
+    # prices on the log-strike grid -b + dk j, j = 0, …, N - 1
     k_interp = @. log(opt.K / S0)
-    # map and not a broadcast: ReverseDiff tracks the coefficients of the spline, and cannot broadcast a function that
-    # captures tracked values
-    prices = @. S0 * exp(-dT - alfa * (k_interp - drift_rd)) * $map(spline_cub, k_interp)
+    prices = @. S0 * exp(-dT - alfa * (k_interp - drift_rd)) * $grid_interpolate(z_T, -b, dk, k_interp)
     return call_to_put(carr_madan_call(prices, opt), S0 * exp(-dT), exp(-rT), opt)
 end

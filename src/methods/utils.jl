@@ -115,11 +115,34 @@ strike_columns(x::AbstractVector) = reshape(x, 1, :)
 # Sum over the first dimension: a number for a vector, one value per strike (column) for a matrix.
 column_sums(terms::AbstractVector) = sum(terms)
 column_sums(terms::AbstractMatrix) = vec(sum(terms; dims = 1))
-# Moves an interpolation to the device of the points where it is evaluated (the CUDA extension handles CuArrays).
-function adapt_itp(itp, _)
-    return itp
+
+# Lagrange polynomial through the nodes -2, …, 3 at t in [0, 1]: interpolation of order h⁶ on a uniform grid of step h.
+# The six terms are paired around t = 1/2, where the products of t + 2, …, t - 3 are symmetric.
+@muladd function lagrange_quintic(t, v_m2, v_m1, v_0, v_1, v_2, v_3)
+    tp2, tp1, tm1, tm2, tm3 = t + 2, t + 1, t - 1, t - 2, t - 3
+    a, b, c = t * tm1, tp2 * tm3, tp1 * tm2
+    return b * c * (t * v_1 - tm1 * v_0) / 12 + a * b * (tm2 * v_m1 - tp1 * v_2) / 24 + a * c * (tp2 * v_3 - tm3 * v_m2) / 120
 end
-include("smile.jl")
+# Node at the left of s (a position in steps from the first node, 0-based), moved inwards within three nodes of the ends,
+# so that the six nodes of the stencil exist.
+lagrange_stencil(s, n) = clamp(floor(Int, v_value_mod(s)), 2, n - 4)
+
+# Values v on the uniform grid x0 + h j, j = 0, …, length(v) - 1, interpolated at k, a number or an array, from the six
+# nodes around each point. Gathers only, whose pullback is a scatter: every back-end differentiates it, on the device
+# too. The grid is a constant for differentiation. The node i (0-based) is v[i + 1].
+function grid_interpolate(v, x0, h, k::Number)
+    s = (k - x0) / h
+    i = ChainRulesCore.@ignore_derivatives lagrange_stencil(s, length(v))
+    return lagrange_quintic(s - i, v[i-1], v[i], v[i+1], v[i+2], v[i+3], v[i+4])
+end
+function grid_interpolate(v, x0, h, k::AbstractArray)
+    s = @. (k - x0) / h
+    i, i_m1, i_1, i_2, i_3, i_4 = ChainRulesCore.@ignore_derivatives begin
+        i = lagrange_stencil.(s, length(v))
+        i, i .- 1, i .+ 1, i .+ 2, i .+ 3, i .+ 4
+    end
+    return lagrange_quintic.(s .- i, v[i_m1], v[i], v[i_1], v[i_2], v[i_3], v[i_4])
+end
 const VanillaPayoff = Union{EuropeanOption, EuropeanOptionSmile}
 const BinaryPayoff = Union{BinaryEuropeanOption, BinaryEuropeanOptionSmile}
 const SmilePayoff = Union{EuropeanOptionSmile, BinaryEuropeanOptionSmile}

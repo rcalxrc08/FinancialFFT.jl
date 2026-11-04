@@ -3,14 +3,12 @@
 
 FFT evaluation of the Lewis (2001) formula: the integrand along the line `Im(u) = 1/2` is sampled
 on `[0, A)` with `2^Npow` nodes and Simpson weights, a single FFT returns the integral on a log-strike grid,
-and prices at the requested strikes are obtained through cubic-spline interpolation.
+and prices at the requested strikes are interpolated on it with six-point Lagrange polynomials.
 Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles.
 
 # Arguments
 - `A`: upper bound of the frequency integration domain (`A > 0`).
 - `Npow`: base-2 logarithm of the number of FFT nodes (`2 < Npow < 24`).
-
-The spline step is excluded from ChainRules-based differentiation, so Zygote gradients are not reliable for this method.
 """
 struct CarrMadanLewisMethod{num <: Number, num_1 <: Integer} <: AbstractFFTMethod
     A::num
@@ -24,7 +22,6 @@ struct CarrMadanLewisMethod{num <: Number, num_1 <: Integer} <: AbstractFFTMetho
 end
 
 export CarrMadanLewisMethod;
-using Interpolations
 # The binary call is minus the strike derivative of the Lewis formula: abs2(x_im) becomes x_im, and sqrt(S0 * K) becomes sqrt(S0 / K).
 lewis_denominator(::VanillaPayoff) = abs2
 lewis_denominator(::BinaryPayoff) = identity
@@ -52,13 +49,8 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     den = lewis_denominator(opt)
     Y = fft_mod(@. support_array * exp(correction * x_im + FinancialFFT.characteristic_exponent_i(x_im, mcProcess, T)) / den(x_im))
     integral_value = @. real_mod(Y)
+    # the integral on the log-strike grid -N π / A + 2 π j / A, j = 0, …, N - 1
     pi_over_A = pi / A
-    ks = ChainRulesCore.@ignore_derivatives pi_over_A * (-N .+ 2 * idx)
-    # Interpolations cannot build the spline from device data: it is built on the host, and moved to the device
-    # only when the strikes are there
-    spline_cub = ChainRulesCore.@ignore_derivatives adapt_itp(CubicSplineInterpolation(ks, adapt(Array, integral_value)), opt.K)
-    # map and not a broadcast: ReverseDiff tracks the coefficients of the spline, and cannot broadcast a function that
-    # captures tracked values; on the device, map runs as a kernel
-    integral = @. exp(-rT) / pi * dx / 3 * $map(spline_cub, log(opt.K / S0))
+    integral = @. exp(-rT) / pi * dx / 3 * $grid_interpolate(integral_value, -N * pi_over_A, 2 * pi_over_A, log(opt.K / S0))
     return call_to_put(carr_madan_lewis_call(integral, S0, dT, opt), S0 * exp(dT), exp(-rT), opt)
 end

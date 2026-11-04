@@ -1,7 +1,7 @@
 # GPU execution in CudaMode. Not in SUITES, since GitHub CI has no GPU: on a machine with a CUDA GPU run
 #     Pkg.test("FinancialFFT"; test_args = ["gpu"])
-# which adds CUDA to the test environment (see runtests.jl). In CudaMode the strikes of a smile must be on the device. CarrMadanMethod
-# ignores the mode and runs on the CPU; ReverseDiff and Mooncake are not supported on the GPU.
+# which adds CUDA to the test environment (see runtests.jl). In CudaMode the strikes of a smile must be on the device. ReverseDiff and
+# Mooncake are not supported on the GPU.
 using CUDA
 
 function gpu_payoff(kind, T, K, iscall)
@@ -23,12 +23,11 @@ end
     if !CUDA.functional()
         @warn "No functional CUDA GPU: only the loading of the extension is tested."
     else
-        gpu_cases = filter(case -> !(case.method isa CarrMadanMethod), METHOD_CASES)
 
         # Prices and gradients with respect to (S0, K, r, T, σ, d), with the tolerances of the CPU suites.
         @testset "Black Scholes vs FinancialToolbox" begin
             args = bs_args()
-            for case in gpu_cases, (kind, toll) in case.payoffs, iscall in (true, false)
+            for case in METHOD_CASES, (kind, toll) in case.payoffs, iscall in (true, false)
                 f = gpu_bs_pricer(case.method, kind, iscall)
                 g = analytic_bs_pricer(kind, iscall)
                 reference = ForwardDiff.gradient(x -> g(x...), args)
@@ -49,7 +48,7 @@ end
         # The characteristic exponents of the other models, evaluated on the device.
         @testset "Other models, GPU vs CPU" begin
             S0, r, d, T, K = 100.0, 0.02, 0.01, 1.0, 105.0
-            for (model_name, model) in model_cases(S0, d), case in gpu_cases, kind in keys(case.payoffs)
+            for (model_name, model) in model_cases(S0, d), case in METHOD_CASES, kind in keys(case.payoffs)
                 method = case.method
                 @testset "$model_name $(case.name) $kind" begin
                     gpu_price = sum(pricer(model, ZeroRate(r), method, gpu_payoff(kind, T, K, true), FinancialMonteCarlo.CudaMode()))
@@ -89,7 +88,7 @@ end
             zero_rate = ZeroRate(0.02)
             Ks = [80.0, 90.0, 100.0, 110.0, 120.0]
             calls = [true, false, true, false, true]
-            @testset "Smiles, $(case.name)" for case in filter(case -> haskey(case.payoffs, :european_smile), gpu_cases)
+            @testset "Smiles, $(case.name)" for case in filter(case -> haskey(case.payoffs, :european_smile), METHOD_CASES)
                 method = case.method
                 smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, CuArray(Ks), CuArray(calls))
                 @test max_abs_diff(Array(pricer(model, zero_rate, method, smile, FinancialMonteCarlo.CudaMode())), pricer(model, zero_rate, method, FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls))) < 1e-10

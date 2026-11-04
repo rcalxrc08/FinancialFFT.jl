@@ -69,10 +69,10 @@ smile = FinancialMonteCarlo.EuropeanOptionSmile(T, CuArray([90.0, 100.0, 110.0])
 pricer(model, zero_rate, CosMethod(2^12), smile, FinancialMonteCarlo.CudaMode())
 ```
 
-- `LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CosDensityMethod` and `FFTDensityInverter` run on the GPU, with the accuracy they have on the CPU. `CarrMadanMethod` ignores the mode and runs on the CPU.
+- Every method runs on the GPU, with the accuracy it has on the CPU.
 - `density(model, zero_rate, method, T, FinancialMonteCarlo.CudaMode())` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
 - The strikes of a smile must be on the device. A single option is given as on the CPU.
-- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU, with the same limitations as on the CPU. ReverseDiff.jl and Mooncake.jl are not supported on the GPU.
+- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU. ReverseDiff.jl and Mooncake.jl are not supported on the GPU.
 
 ## Testing
 

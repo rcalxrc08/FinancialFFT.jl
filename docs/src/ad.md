@@ -7,8 +7,8 @@ following back-ends, loaded with the corresponding package:
 |:--|:--|:--|:--|:--|:--|:--|:--|
 | `LewisMethod` | yes | yes | yes | yes | yes | yes | yes |
 | `CosMethod` | yes | yes | yes | yes | yes | yes | yes |
-| `CarrMadanLewisMethod` | yes | yes | yes | yes | yes | **no** | yes |
-| `CarrMadanMethod` | yes | yes | yes | yes | yes | **no** | yes |
+| `CarrMadanLewisMethod` | yes | yes | yes | yes | yes | yes | yes |
+| `CarrMadanMethod` | yes | yes | yes | yes | yes | yes | yes |
 | `FFTDensityInverter` | yes | yes | yes | yes | yes | yes | yes |
 | `CosDensityMethod` | yes | yes | yes | yes | yes | yes | yes |
 
@@ -40,11 +40,6 @@ Densities are differentiated in the same way, through `log(f(y))` (see [Densitie
 | `CosDensityMethod` | yes | yes | yes | yes | yes | yes | yes |
 
 ## Known limitations
-
-!!! warning "Zygote with the FFT methods"
-    The cubic spline of `CarrMadanMethod` and `CarrMadanLewisMethod` is built by mutating arrays, so it is excluded from
-    the differentiation. Zygote does not raise an error, but the sensitivities that flow through the FFT are lost: the
-    gradient in `σ` is zero, and those in `r`, `T` and `d` are wrong. Use another back-end with these methods.
 
 - ReverseDiff.jl requires version 1.18 or later.
 - On the GPU only ForwardDiff.jl and Zygote.jl are supported, see [GPU](@ref).
