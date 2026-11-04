@@ -10,6 +10,7 @@ include("methods/lewis.jl")
 include("methods/cos.jl")
 include("methods/density.jl")
 include("methods/cos_density.jl")
+include("methods/fft_density.jl")
 
 export pricer
 

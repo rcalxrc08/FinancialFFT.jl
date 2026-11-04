@@ -60,6 +60,31 @@ end
             end
         end
 
+        # Densities computed and evaluated on the device, against the CPU; scores with ForwardDiff and Zygote.
+        @testset "Densities, GPU vs CPU" begin
+            r, d, T, σ = 0.02, 0.01, 1.1, 0.2
+            y = collect(range(-1.0, 1.0, length = 101))
+            y_cu = CuArray(y)
+            for (name, method) in ("FFTDensityInverter" => FFTDensityInverter(), "CosDensityMethod" => CosDensityMethod())
+                @testset "$name $model_name" for (model_name, model) in vcat(["BlackScholes" => BlackScholesProcess(σ, Underlying(100.0, d))], model_cases(100.0, d))
+                    f_gpu = density(model, ZeroRate(r), method, T, FinancialMonteCarlo.CudaMode())
+                    f_cpu = density(model, ZeroRate(r), method, T)
+                    @test max_abs_diff(Array(FinancialFFT.density_values(f_gpu, y_cu)), f_cpu.(y)) < 1e-12
+                end
+                scores(s, mode, points) = sum(log.(FinancialFFT.density_values(density(BlackScholesProcess(s[1], Underlying(100.0, d)), ZeroRate(r), method, T, mode), points)))
+                reference = ForwardDiff.gradient(s -> scores(s, FinancialMonteCarlo.SerialMode(), y), [σ])
+                @testset "$name ForwardDiff" begin
+                    @test ForwardDiff.gradient(s -> scores(s, FinancialMonteCarlo.CudaMode(), y_cu), [σ]) ≈ reference rtol = 1e-10
+                end
+                @testset "$name Zygote" begin
+                    @test Zygote.gradient(s -> scores(s, FinancialMonteCarlo.CudaMode(), y_cu), [σ])[1] ≈ reference rtol = 1e-10
+                end
+            end
+            # a density computed on the device is evaluated on the host after adapt
+            f_gpu = density(BlackScholesProcess(σ, Underlying(100.0, d)), ZeroRate(r), FFTDensityInverter(), T, FinancialMonteCarlo.CudaMode())
+            @test FinancialFFT.adapt(Array, f_gpu)(0.1) ≈ density(BlackScholesProcess(σ, Underlying(100.0, d)), ZeroRate(r), FFTDensityInverter(), T)(0.1) rtol = 1e-12
+        end
+
         @testset "Smiles, GPU vs CPU" begin
             model = MertonProcess(0.2, 5.0, 0.03, 0.02, Underlying(100.0, 0.01))
             zero_rate = ZeroRate(0.02)

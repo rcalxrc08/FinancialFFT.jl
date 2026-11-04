@@ -27,6 +27,14 @@ methods = [LewisMethod(600.0, 20000), CosMethod(2^12), CarrMadanLewisMethod(600.
 [nameof(typeof(method)) => abs(pricer(model, zero_rate, method, option) - exact) for method in methods]
 ```
 
+The error depends on how many times a method evaluates the characteristic exponent, which is most of its cost. COS
+converges exponentially and reaches the rounding floor with a few dozen terms; Lewis does too, once its nodes cover
+the decay of the integrand; the Carr-Madan methods stop at the error of the spline on the strike grid, and the density
+inverter converges like the square of its grid step. `CosDensityMethod` stops at the error of Simpson's rule on `M`
+intervals:
+
+![Error against Black and Scholes as a function of the evaluations of the characteristic exponent](assets/figures/convergence-light.svg)![Error against Black and Scholes as a function of the evaluations of the characteristic exponent](assets/figures/convergence-dark.svg)
+
 ## Choosing a method
 
 - `LewisMethod` and `CosMethod` are the most accurate, and with `DensityInverter` the only ones whose Zygote gradients can be relied upon, see [Automatic differentiation](@ref).
@@ -56,14 +64,47 @@ end
 
 ## Densities
 
-[`density`](@ref) is the interface for the density of the log-return `log(S_T / S_0)`, for methods that need the density of a process without a closed formula, such as the likelihood ratio method or Vibrato. Like `pricer`, it dispatches on the method: `CosDensityMethod` expands it on cosines, `DensityInverter` inverts the characteristic function by an FFT and interpolates it with a cubic spline. The setup runs once, then the density is evaluated at any number of points; it does not depend on `S_0`, so the density of `log(S_T)` given `S_t` is `f(x - log(S_t))`. Scores come from automatic differentiation:
+[`density`](@ref) returns the density of the log-return `log(S_T / S_0)`, for estimators that need it without a closed
+formula, such as the likelihood ratio method or Vibrato. Like `pricer`, it dispatches on the method:
+
+| Method | Density | Range | Cost |
+|:--|:--|:--|:--|
+| [`FFTDensityInverter`](@ref) | one FFT on `2^N` points, cubic interpolation between them | the range of `CosMethod`, from the model | an FFT to set up, about 30 ns a point |
+| [`CosDensityMethod`](@ref) | cosine expansion on `N + 1` terms | the range of `CosMethod`, from the model | `N` exponents to set up, about 300 ns a point (`N = 128`) |
+| [`FinancialFFT.DensityInverter`](@ref) | one FFT on `2^N` points, cubic spline | `[-xmax, xmax]`, given for every model but Black and Scholes | an FFT to set up, a spline per point |
+
+The setup runs once, then the density is evaluated at any number of points: `f(y)` at a point, on the CPU, and
+[`FinancialFFT.density_values`](@ref)`(f, y)` at an array of points, on the GPU too. It does not depend on `S_0`, so the
+density of `log(S_T)` given `S_t` is `f(x - log(S_t))`; outside its range `[f.a, f.b]` it is zero.
+
+```@example methods
+f = density(model, zero_rate, FFTDensityInverter(), T)
+f(0.1), f.a, f.b
+```
+
+![Densities of the log-return of six models](assets/figures/densities-light.svg)![Densities of the log-return of six models](assets/figures/densities-dark.svg)
+
+The density is generic in the number type of the model, so its scores, the weights of the likelihood ratio method,
+come from automatic differentiation of `log(f(y))`; the range is a constant for differentiation:
 
 ```@example methods
 using ForwardDiff
 
-f = density(model, zero_rate, CosDensityMethod(), T)
-score(y) = ForwardDiff.derivative(s -> log(density(MertonProcess(s, 5.0, 0.03, 0.02, Underlying(S0, d)), zero_rate, CosDensityMethod(), T)(y)), σ)
-f(0.1), score(0.1)
+merton(s) = MertonProcess(s, 5.0, 0.03, 0.02, Underlying(S0, d))
+score(y) = ForwardDiff.derivative(s -> log(density(merton(s), zero_rate, FFTDensityInverter(), T)(y)), σ)
+score(0.1)
 ```
 
-A density is zero outside its range `[f.a, f.b]`: the range of `CosMethod` for `CosDensityMethod`, beyond which the density is below `1e-14`, and the grid for `DensityInverter`. The COS density costs little to set up and about a microsecond per point; the FFT density costs an FFT on `2^N` points to set up, and a spline evaluation per point. Their errors are absolute: far in the tails, the relative error, which is the one of a score, grows.
+![Scores of the volatility](assets/figures/scores-light.svg)![Scores of the volatility](assets/figures/scores-dark.svg)
+
+- `FFTDensityInverter` is the one to use for many evaluations, e.g. one per path of a simulation: its interpolation is a
+  gather of four values. Its error is of order `dx⁴` (about `1e-13` with the default `N = 14` in Black and Scholes),
+  and the grid narrows with the horizon, so short steps keep their resolution. Every AD back-end differentiates it, Zygote
+  included, on the CPU and on the GPU.
+- `CosDensityMethod` converges exponentially on smooth densities, and is the most accurate of the three there; it
+  struggles where the density is not smooth, as Variance Gamma over a short step, whose density has a cusp at its mode
+  (2% off with 512 terms, against `6e-6` for `FFTDensityInverter(16)`).
+- `DensityInverter` is mostly a pricer; its density needs `xmax`, and Zygote cannot differentiate its spline.
+
+All errors are absolute: far in the tails, where the density is close to the floor of the machine epsilon, the relative
+error, which is the one of a score, grows.

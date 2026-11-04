@@ -32,6 +32,14 @@ using TaylorSeries
 pricer(BlackScholesProcess(0.2 + δσ, Underlying(100.0 + δS, 0.01)), ZeroRate(0.02), LewisMethod(600.0, 20000), EuropeanOption(1.0, 100.0))
 ```
 
+Densities are differentiated in the same way, through `log(f(y))` (see [Densities](methods.md#Densities)):
+
+| Density | DualNumbers | HyperDualNumbers | TaylorSeries | ForwardDiff | ReverseDiff | Zygote | Mooncake |
+|:--|:--|:--|:--|:--|:--|:--|:--|
+| `FFTDensityInverter` | yes | yes | yes | yes | yes | yes | yes |
+| `CosDensityMethod` | yes | yes | yes | yes | yes | yes | yes |
+| `DensityInverter` | yes | yes | yes | yes | yes | **no** | yes |
+
 ## Known limitations
 
 !!! warning "Zygote with the FFT methods"

@@ -13,6 +13,10 @@ It currently contains the following capabilities:
     - Carr-Madan
     - Carr-Madan-Lewis
     - Density inversion
+    - COS density
+- Densities of the log-return, for the likelihood ratio method and Vibrato (`density`):
+    - FFT inversion of the characteristic function (`FFTDensityInverter`)
+    - COS expansion (`CosDensityMethod`)
 - Support for the following Single Name Models:
     - Black Scholes
     - Heston

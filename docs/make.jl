@@ -4,8 +4,13 @@ assets = mkpath(joinpath(@__DIR__, "src", "assets"))
 for asset in ("logo.png", "favicon.ico")
     cp(joinpath(@__DIR__, "..", "etc", asset), joinpath(assets, asset), force = true)
 end
+# The figures are computed with the package, in a light and a dark variant (see figures.jl and assets/figures.css), in
+# a module of their own: Plots exports a density, which would make the one of FinancialFFT ambiguous in Main.
+module DocumentationFigures
+include(joinpath(@__DIR__, "figures.jl"))
+end
 makedocs(
-    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico"], edit_link = "master"),
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico", "assets/figures.css"], edit_link = "master"),
     repo = Remotes.GitHub("rcalxrc08", "FinancialFFT.jl"),
     sitename = "FinancialFFT.jl",
     modules = [FinancialFFT],

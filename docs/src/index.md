@@ -1,22 +1,34 @@
 # FinancialFFT.jl
 
-FinancialFFT.jl prices European options with Fourier methods: every price is computed from the
-characteristic function of the log-price, so any model with a known characteristic exponent can be priced
-in closed form up to a numerical integration.
+FinancialFFT.jl prices European options from the characteristic function of the log-price. A model enters only
+through its characteristic exponent, so pricing Merton, Kou, Variance Gamma, NIG or Heston costs about as much as Black
+and Scholes: a quadrature, a cosine series or an FFT, with no simulation noise. Prices are generic in the number
+type, so every Greek comes from automatic differentiation, and the same code runs on the GPU.
 
-The package extends [FinancialMonteCarlo.jl](https://github.com/rcalxrc08/FinancialMonteCarlo.jl):
-models (`BlackScholesProcess`, `MertonProcess`, …), curves (`ZeroRate`), underlyings (`Underlying`) and
-payoffs (`EuropeanOption`, `BinaryEuropeanOption`, …) are the ones defined there, and FinancialFFT adds new
-methods to `pricer`. Switching from Monte Carlo to a Fourier method only means replacing the
-`MonteCarloConfiguration` with one of the methods below.
+![Implied volatility smiles of six models](assets/figures/smiles-light.svg)![Implied volatility smiles of six models](assets/figures/smiles-dark.svg)
+
+## Relation to FinancialMonteCarlo.jl
+
+The package adds methods to the `pricer` of [FinancialMonteCarlo.jl](https://github.com/rcalxrc08/FinancialMonteCarlo.jl),
+and uses its types for everything else: the model (`BlackScholesProcess`, `HestonProcess`, …), the underlying
+(`Underlying`), the curve (`ZeroRate`) and the payoff (`EuropeanOption`, `BinaryEuropeanOption`, and their smiles).
+The last-but-one argument picks the numerical method, so moving a European option from simulation to a Fourier method
+changes one argument:
+
+```julia
+pricer(model, zero_rate, MonteCarloConfiguration(10^6, 1), option)  # Monte Carlo, FinancialMonteCarlo.jl
+pricer(model, zero_rate, CosMethod(2^12), option)                    # COS method, FinancialFFT.jl
+```
 
 ## Features
 
-- Methods: [`LewisMethod`](@ref), [`CosMethod`](@ref), [`CarrMadanLewisMethod`](@ref), [`CarrMadanMethod`](@ref), [`FinancialFFT.DensityInverter`](@ref).
+- Pricing methods: [`LewisMethod`](@ref), [`CosMethod`](@ref), [`CarrMadanLewisMethod`](@ref), [`CarrMadanMethod`](@ref), [`FinancialFFT.DensityInverter`](@ref) and [`CosDensityMethod`](@ref), compared in [Methods](methods.md).
+- Densities of the log-return through [`density`](@ref), for the likelihood ratio method and Vibrato: [`CosDensityMethod`](@ref), [`FFTDensityInverter`](@ref) and [`FinancialFFT.DensityInverter`](@ref), see [Densities](methods.md#Densities).
 - Models: Black–Scholes, Merton, Kou, Variance Gamma, Normal Inverse Gaussian, Heston.
 - Payoffs: European and binary (digital) options, calls and puts, and their smiles (several strikes, one maturity), with every method. Options with different maturities are priced by broadcasting, `pricer.(model, zero_rate, method, options)`.
 - Non-constant zero rates and dividends.
-- Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl and TaylorSeries.jl (Zygote gradients of `CarrMadanMethod` and `CarrMadanLewisMethod` are not reliable, since the spline is excluded from differentiation; ReverseDiff.jl requires version 1.18 or later).
+- Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl and TaylorSeries.jl, see [Automatic differentiation](@ref) for the exceptions.
+- Float32 and BigFloat prices, see [Floating-point types](@ref).
 - GPU execution through CUDA.jl, see [GPU](@ref).
 
 ## Installation
@@ -58,6 +70,7 @@ pricer(model, zero_rate, CosMethod(2^12), smile, FinancialMonteCarlo.CudaMode())
 ```
 
 - `LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `DensityInverter` and `CosDensityMethod` run on the GPU, with the accuracy they have on the CPU. `CarrMadanMethod` ignores the mode and runs on the CPU.
+- `density(model, zero_rate, method, T, FinancialMonteCarlo.CudaMode())` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
 - The strikes of a smile must be on the device. A single option is given as on the CPU.
 - ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU, with the same limitations as on the CPU. ReverseDiff.jl and Mooncake.jl are not supported on the GPU.
 

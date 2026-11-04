@@ -28,6 +28,9 @@ end
 # The complex sqrt of Base bitcasts its argument, which Mooncake refuses to differentiate. The overlay is only seen by Mooncake.
 Mooncake.@mooncake_overlay FinancialFFT.sqrt_mod(z::Complex{<:IEEEFloat}) = sqrt(sqrt(abs2(z))) * cis(angle(z) / 2)
 
+# Mooncake ignores ChainRulesCore.@ignore_derivatives: the quantities that must stay constants go through this hook.
+Mooncake.@zero_derivative DefaultCtx Tuple{typeof(FinancialFFT.ignore_derivatives_mod), IEEEFloat}
+
 # fft is a primitive only for vectors.
 Mooncake.@mooncake_overlay FinancialFFT.fft_columns(M::AbstractMatrix{<:Complex{<:IEEEFloat}}) = FinancialFFT.fft_each_column(M)
 

@@ -29,15 +29,20 @@ using FFTW
 # The floor gets the type of the value from the value itself: the type of a TaylorN says neither its order nor its space.
 density_floor(y, eps_mod) = max(y, zero(y) + eps_mod)
 
-function density_y(mcProcess, r, N, A, opt, mode)
-    T = opt.T
+# Density of the log-moneyness log(S_T / K), one strike per column.
+density_y(mcProcess, r, N, A, opt, mode) = fft_density_values(mcProcess, r, N, A, (@. log(mcProcess.underlying.S0) - log($adapt_array(opt.K, mode))), opt.T, mode)
+
+# Density of log(S_T / S0) + shift on the 2^N points -A + 2A j / 2^N, j = 0, …, 2^N - 1, one column per shift: the
+# characteristic function is sampled on the frequencies π k / A, k = -2^(N-1), …, 2^(N-1) - 1, and the alternating
+# signs (-1)^k and (-1)^j center both grids. The sign (-1)^j is dropped with abs, and the values are floored at eps.
+function fft_density_values(mcProcess, r, N, A, shift, T, mode)
     n = ChainRulesCore.@ignore_derivatives 2^N
     vec_lin = ChainRulesCore.@ignore_derivatives 0:(n-1)
     vec = ChainRulesCore.@ignore_derivatives adapt_array(collect(-div(n, 2) .+ vec_lin), mode)            # Indices
     drift_rd = FinancialMonteCarlo.integral(r.r - mcProcess.underlying.d, T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(n, EvenOddPattern(Int8(1), Int8(-1)))
-    drift_rf = @. drift_rd + log(mcProcess.underlying.S0) - log($adapt_array(opt.K, mode)) - corr
+    drift_rf = @. drift_rd + shift - corr
     dt = pi / A # Step size, frequency space
     dt_im = dt * im
     drift_dt_im = strike_columns(drift_rf .* dt_im)

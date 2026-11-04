@@ -15,7 +15,10 @@ CosDensityMethod
 
 ```@docs
 density
+FinancialFFT.density_values
+FFTDensityInverter
 FinancialFFT.AbstractDensity
+FinancialFFT.FFTDensity
 FinancialFFT.CosDensity
 FinancialFFT.InvertedDensity
 ```
