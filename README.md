@@ -1,7 +1,6 @@
 # FinancialFFT.jl <img src="etc/logo.png" width="40">  
 
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rcalxrc08.github.io/FinancialFFT.jl/)
-[![pipeline status](https://gitlab.com/rcalxrc08/FinancialFFT.jl/badges/master/pipeline.svg)](https://gitlab.com/rcalxrc08/FinancialFFT.jl/commits/master) 
 [![codecov](https://codecov.io/gh/rcalxrc08/FinancialFFT.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/rcalxrc08/FinancialFFT.jl)
 [![CI](https://github.com/rcalxrc08/FinancialFFT.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/rcalxrc08/FinancialFFT.jl/actions/workflows/CI.yml)
 ##### This is a Julia package for pricing European options with Fourier methods. It extends [FinancialMonteCarlo.jl](https://github.com/rcalxrc08/FinancialMonteCarlo.jl) with new methods of `pricer`.
