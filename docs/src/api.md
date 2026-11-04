@@ -7,8 +7,8 @@ LewisMethod
 CosMethod
 CarrMadanLewisMethod
 CarrMadanMethod
-FinancialFFT.DensityInverter
 CosDensityMethod
+FFTDensityInverter
 ```
 
 ## Densities
@@ -16,7 +16,6 @@ CosDensityMethod
 ```@docs
 density
 FinancialFFT.density_values
-FFTDensityInverter
 FinancialFFT.AbstractDensity
 FinancialFFT.FFTDensity
 FinancialFFT.CosDensity

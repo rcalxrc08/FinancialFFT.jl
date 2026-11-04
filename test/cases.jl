@@ -20,7 +20,7 @@ const METHOD_CASES = [
     (name = "CosMethod", method = CosMethod(2^12), payoffs = Dict(kind => cos_tolerances for kind in PAYOFF_KINDS)),
     (name = "CarrMadanLewisMethod", method = CarrMadanLewisMethod(600.0, 16), payoffs = Dict(:european => cml_tolerances, :european_smile => cml_tolerances, :binary => cml_binary_tolerances, :binary_smile => cml_binary_tolerances)),
     (name = "CarrMadanMethod", method = CarrMadanMethod(400.0, 18), payoffs = Dict(:european => cm_tolerances, :european_smile => cm_tolerances, :binary => cm_binary_tolerances, :binary_smile => cm_binary_tolerances)),
-    (name = "DensityInverter", method = FinancialFFT.DensityInverter(), payoffs = Dict(kind => density_tolerances for kind in PAYOFF_KINDS)),
+    (name = "FFTDensityInverter", method = FFTDensityInverter(), payoffs = Dict(kind => density_tolerances for kind in PAYOFF_KINDS)),
     (name = "CosDensityMethod", method = CosDensityMethod(), payoffs = Dict(kind => cos_density_tolerances for kind in PAYOFF_KINDS)),
 ]
 

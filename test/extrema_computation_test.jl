@@ -9,18 +9,14 @@
         driftT = drift - FinancialFFT.characteristic_exponent_i(1, model) * T
         # P(X - driftT > x) ≤ exp(σ²Ts²/2 - sx), minimized over s and set equal to epss
         half_width = sigma * sqrt(-2 * T * log(epss))
-        a, b = FinancialFFT.compute_extrema_bisection_with_default(model, T, epss, drift)
+        a, b = FinancialFFT.compute_chernoff_extrema_bisection(model, T, epss, drift)
         @test abs(a - (driftT - half_width)) < 1e-8
         @test abs(b - (driftT + half_width)) < 1e-8
-        @test FinancialFFT.compute_positive_extrema_bisection(model, T, epss, drift) ≈ b
-        @test FinancialFFT.compute_negative_extrema_bisection(model, T, epss, drift) ≈ a
     end
     @testset "$name, T = $T" for (name, model) in model_cases(S0, d), T in (0.01, 0.05, 1.1)
         drift = (r - d) * T + log(S0 / K)
-        a, b = FinancialFFT.compute_extrema_bisection_with_default(model, T, epss, drift)
+        a, b = FinancialFFT.compute_chernoff_extrema_bisection(model, T, epss, drift)
         @test a < drift < b
-        @test FinancialFFT.compute_positive_extrema_bisection(model, T, epss, drift) ≈ b
-        @test FinancialFFT.compute_negative_extrema_bisection(model, T, epss, drift) ≈ a
         # the optimum is admissible (below the exponential moment bound) and matches a grid search over the admissible s
         @testset "mul = $mul" for mul in (-1, 1)
             log_epss = log(epss)
@@ -36,7 +32,7 @@
     @testset "Skewed models, $name" for (name, model) in ("VarianceGamma" => VarianceGammaProcess(0.12, -0.3, 0.5, Underlying(S0, d)), "Kou" => KouProcess(0.2, 5.0, 0.1, 50.0, 3.0, Underlying(S0, d)), "Heston" => HestonProcess(1.0, 0.2, 0.0, 1.5, -0.9, 0.04, Underlying(S0, d)))
         T = 1.0
         driftT = -FinancialFFT.characteristic_exponent_i(1, model, T)
-        a, b = FinancialFFT.compute_extrema_bisection_with_default(model, T, epss, 0.0)
+        a, b = FinancialFFT.compute_chernoff_extrema_bisection(model, T, epss, 0.0)
         @test driftT - a > b - driftT
         # each endpoint is the tightest of the bounds exp(T ψ(mul * s) - s * t) on its own tail, with mul = 1 the upper one
         for (mul, x) in ((-1, a), (1, b)), s in (0.1, 0.5, 0.99) .* min(FinancialFFT.exponential_moment_bound(model, mul, T), 1.0)

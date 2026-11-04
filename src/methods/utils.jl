@@ -1,15 +1,5 @@
 
-real_mod(x) = real(x)
-imag_mod(x) = imag(x)
-# Mooncake cannot differentiate the complex sqrt of Base: its extension overlays this hook.
-sqrt_mod(x) = sqrt(x)
-# Base defines cis for real numbers only: the TaylorSeries extension overloads this hook.
-cis_mod(x) = cis(x)
-# The abs of a Taylor series refuses a constant term of zero, which a density has at some nodes of its tails: the
-# TaylorSeries extension overloads this hook.
-abs_mod(x) = abs(x)
-# DualNumbers and HyperDualNumbers have no sincos: their extensions overload this hook.
-sincos_mod(x) = sincos(x)
+# Moves an array to the device of the mode (the CUDA extension handles the GPU modes).
 adapt_array(x, _) = x
 # The real floating-point type of the inputs, without their derivatives: grids, truncation ranges and the parameters of
 # the methods are built in it, so that Float32 or BigFloat inputs are not promoted to Float64.
@@ -119,18 +109,12 @@ function clenshaw_cos_sum(coefficients, θ)
     end
     return @muladd(first(coefficients) + γ * b + σ * d + g * b)
 end
-# Fft of each column. The AD back-ends overload the fft of a vector, hence the fallback; Mooncake sees plain complex
-# numbers, and reaches it through an overlay.
-fft_columns(x::AbstractVector) = fft_mod(x)
-fft_columns(M::AbstractMatrix) = fft_each_column(M)
-fft_columns(M::AbstractMatrix{<:Complex{<:Union{Float32, Float64}}}) = fft(M, 1)
-fft_each_column(M) = reduce(hcat, [fft_mod(M[:, j]) for j in axes(M, 2)])
 # One strike per column: the exponent does not depend on the strike.
 strike_columns(x::Number) = x
 strike_columns(x::AbstractVector) = reshape(x, 1, :)
-# Quantities that are constants for differentiation (truncation ranges, grids). ReverseDiff does not honor
-# ChainRulesCore.@ignore_derivatives, so its extension strips the tracking here.
-ignore_derivatives_mod(x) = x
+# Sum over the first dimension: a number for a vector, one value per strike (column) for a matrix.
+column_sums(terms::AbstractVector) = sum(terms)
+column_sums(terms::AbstractMatrix) = vec(sum(terms; dims = 1))
 # Moves an interpolation to the device of the points where it is evaluated (the CUDA extension handles CuArrays).
 function adapt_itp(itp, _)
     return itp
@@ -156,3 +140,12 @@ end
 function call_to_put(C, _, df, opt::BinaryEuropeanOptionSmile)
     return @. ifelse(opt.isCall, C, df - C)
 end
+
+# Put to call by parity, for the methods that price the put (COS and the density methods).
+put_to_option(P, S0_adj, df, opt::VanillaPayoff) = @. ifelse(opt.isCall, P + S0_adj - opt.K * df, P)
+put_to_option(P, _, df, opt::BinaryPayoff) = @. ifelse(opt.isCall, df - P, P)
+
+# Prices computed per unit of strike: vanilla options are scaled by the strike, binaries are not.
+adjust_price_adimensional(p, opt::EuropeanOption) = opt.K * p
+adjust_price_adimensional(p, opt::EuropeanOptionSmile) = opt.K .* p
+adjust_price_adimensional(V, ::BinaryPayoff) = V

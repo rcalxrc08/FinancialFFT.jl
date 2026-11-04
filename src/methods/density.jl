@@ -1,74 +1,44 @@
+# The interface of the densities: density computes one, and every AbstractDensity is evaluated at a point and at an
+# array of points in the same way. A density type implements, for its points inside [a, b]:
+#   density_value(f, y)               the value at a number y; it must not fail outside [a, b], where it is masked
+#   density_array(f, y[, mode])       the values at an array y, with its shape (default: density_value at each point);
+#                                     the mode lets the pricers choose a CPU or a GPU kernel
+
 """
-    DensityInverter(N = 14, M = 2^10)
+    AbstractDensity
 
-Prices by integrating the payoff against the density of [`FFTDensityInverter`](@ref)`(N)`: the characteristic
-function is inverted by a single FFT on `2^N` points of the range of `CosMethod`, and the put is integrated by
-Simpson's rule on `M` intervals of log-moneyness ending at the strike, so that the kink of the payoff is an endpoint;
-the call follows by parity, as in [`CosDensityMethod`](@ref). The range comes from the model, so no model needs a
-range parameter. Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles: the strikes of a smile share the
-density, and their prices are the ones of the single options.
-
-# Arguments
-- `N`: base-2 logarithm of the number of points of the density (`N > 2`).
-- `M`: number of Simpson intervals for each strike (even, `M > 2`).
-
-`DensityInverter(N, xmax)` is deprecated: the range of the density no longer depends on `xmax`.
+Density of the log-return `log(S_T / S_0)` returned by [`density`](@ref): `f(y)` evaluates it at a log-return `y`, on
+the CPU, and [`FinancialFFT.density_values`](@ref)`(f, y)` at an array of log-returns. It is zero outside
+`[f.a, f.b]`.
 """
-struct DensityInverter{num_1 <: Integer, num_2 <: Integer} <: AbstractIntegralMethod
-    N::num_1
-    M::num_2
-    function DensityInverter(N::num_1 = 14, M::num_2 = 2^10) where {num_1 <: Integer, num_2 <: Integer}
-        ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
-        ChainRulesCore.@ignore_derivatives @assert(M > 2 && iseven(M), "M must be even and greater than 2")
-        return new{num_1, num_2}(N, M)
-    end
-end
+abstract type AbstractDensity end
+Base.broadcastable(x::AbstractDensity) = Ref(x)
 
-function DensityInverter(N::Integer, ::AbstractFloat)
-    Base.depwarn("`DensityInverter(N, xmax)` is deprecated: the density spans the range of `CosMethod`, computed from the model, and `xmax` is ignored. Use `DensityInverter(N)`.", :DensityInverter)
-    return DensityInverter(N)
-end
+"""
+    density(mcProcess, zero_rate, method, T[, mode])
 
-# The floor gets the type of the value from the value itself: the type of a TaylorN says neither its order nor its space.
-density_floor(y, eps_mod) = max(y, zero(y) + eps_mod)
+Density of the log-return `log(S_T / S_0)` of `mcProcess` at the horizon `T`, under the risk-neutral measure of
+`zero_rate`, computed with `method` (`CosDensityMethod` or `FFTDensityInverter`). Returns an [`AbstractDensity`](@ref),
+to be evaluated at any number of points: the setup runs once.
 
-# Density of log(S_T / S0) + shift on the 2^N points -A + 2A j / 2^N, j = 0, …, 2^N - 1, one column per shift: the
-# characteristic function is sampled on the frequencies π k / A, k = -2^(N-1), …, 2^(N-1) - 1, and the alternating
-# signs (-1)^k and (-1)^j center both grids. The sign (-1)^j is dropped with abs, and the values are floored at eps.
-function fft_density_values(mcProcess, r, N, A, shift, T, mode)
-    n = ChainRulesCore.@ignore_derivatives 2^N
-    vec_lin = ChainRulesCore.@ignore_derivatives 0:(n-1)
-    vec = ChainRulesCore.@ignore_derivatives adapt_array(collect(-div(n, 2) .+ vec_lin), mode)            # Indices
-    drift_rd = FinancialMonteCarlo.integral(r.r - mcProcess.underlying.d, T)
-    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
-    one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(n, EvenOddPattern(Int8(1), Int8(-1)))
-    drift_rf = @. drift_rd + shift - corr
-    dt = pi / A # Step size, frequency space
-    dt_im = dt * im
-    drift_dt_im = strike_columns(drift_rf .* dt_im)
-    char_exp = characteristic_exponent_i.(vec .* dt_im, mcProcess, T)
-    Y_r = fft_columns(@. exp(char_exp + drift_dt_im * vec) * one_minus_one)
-    twice_A = 2 * A
-    eps_mod = ChainRulesCore.@ignore_derivatives eps(v_value_mod(zero(eltype(drift_rf))))
-    density_vals_adj = density_floor.(abs_mod.(FinancialFFT.real_mod.(Y_r)) ./ twice_A, eps_mod)
-    ChainRulesCore.@ignore_derivatives @assert !isnan(sum(density_vals_adj) * twice_A / n) "Returned result is NaN"
-    return density_vals_adj
-end
+It does not depend on `S_0`: the density of `log(S_T)` given `S_t` is `d(x - log(S_t))`, with the horizon of the step
+as `T` for a Lévy process. For Heston it is the marginal density, not the transition density given the variance. It
+is generic in the number type of the parameters of the model, so scores such as `∂θ log f(y)` come from automatic
+differentiation of `log(d(y))`; its range is a constant for differentiation. The evaluation of a point runs on the CPU.
+"""
+function density end
+export density
 
-function adjust_price_adimensional(p, euPayoff::EuropeanOption)
-    K = euPayoff.K
-    return K * p
-end
-adjust_price_adimensional(V, ::BinaryEuropeanOption) = V
-adjust_price_adimensional(p, opt::EuropeanOptionSmile) = opt.K .* p
-adjust_price_adimensional(V, ::BinaryEuropeanOptionSmile) = V
+(f::AbstractDensity)(y) = mask_outside_range(f, y, density_value(f, y))
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::DensityInverter, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
-    f = density(mcProcess, r, FFTDensityInverter(method.N), opt.T, mode)
-    return density_integral_price(mcProcess, r, f, method.M, opt, mode)
-end
+"""
+    FinancialFFT.density_values(f, y)
 
-function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::DensityInverter, T, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
-    Base.depwarn("`density` with `DensityInverter` is deprecated: use `FFTDensityInverter(N)`, which it now returns.", :density)
-    return density(mcProcess, zero_rate, FFTDensityInverter(method.N), T, mode)
-end
+Values of the density `f` (an [`FinancialFFT.AbstractDensity`](@ref)) at the array of log-returns `y`, with the shape
+of `y`. For `FFTDensity` and `CosDensity` it uses broadcasts, gathers and reductions only: it runs on the device of
+`y` and of the density, and Zygote differentiates it there too.
+"""
+density_values(f::AbstractDensity, y::AbstractArray) = mask_outside_range(f, y, density_array(f, y))
+
+density_array(f::AbstractDensity, y::AbstractArray) = map(y_j -> density_value(f, y_j), y)
+density_array(f::AbstractDensity, y::AbstractArray, ::FinancialMonteCarlo.BaseMode) = density_array(f, y)

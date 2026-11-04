@@ -23,7 +23,7 @@
     # the Clenshaw recurrence of a point and the broadcast of the pricer
     f = density(model(σ), ZeroRate(r), CosDensityMethod(), T)
     y = collect(range(-6σ, 6σ, length = 101))
-    @test maximum(abs.(f.(y) .- FinancialFFT.cos_density_values(f, y))) < 1e-13
+    @test maximum(abs.(f.(y) .- FinancialFFT.density_array(f, y))) < 1e-13
     @testset "$name integrates to one" for (name, process) in model_cases(S0, d)
         for f in (density(process, ZeroRate(r), CosDensityMethod(), T), density(process, ZeroRate(r), FFTDensityInverter(), T))
             y = range(f.a, f.b, length = 20001)
@@ -58,13 +58,7 @@
         @test gradient(score) ≈ exact rtol = 1e-10
         @test gradient(scores) ≈ exact_sum rtol = 1e-10
     end
-    # the density of DensityInverter is deprecated, and is the one of FFTDensityInverter
-    @testset "Deprecations" begin
-        f = @test_deprecated density(model(σ), ZeroRate(r), FinancialFFT.DensityInverter(13), T)
-        @test f isa FinancialFFT.FFTDensity
-        @test f(0.1) == density(model(σ), ZeroRate(r), FFTDensityInverter(13), T)(0.1)
-        method = @test_deprecated FinancialFFT.DensityInverter(14, 3.0)
-        @test method.N == 14 && method.M == FinancialFFT.DensityInverter().M
-    end
+    # FFTDensityInverter prices with the density it returns
+    @test pricer(model(σ), ZeroRate(r), FFTDensityInverter(), EuropeanOption(T, 105.0)) ≈ pricer(model(σ), ZeroRate(r), CosDensityMethod(), EuropeanOption(T, 105.0)) atol = 1e-9
     @test_throws MethodError density(model(σ), ZeroRate(r), LewisMethod(600.0, 20000), T)
 end

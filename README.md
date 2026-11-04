@@ -12,8 +12,8 @@ It currently contains the following capabilities:
     - COS
     - Carr-Madan
     - Carr-Madan-Lewis
-    - Density inversion
-    - COS density
+    - COS density (`CosDensityMethod`)
+    - FFT density inversion (`FFTDensityInverter`)
 - Densities of the log-return, for the likelihood ratio method and Vibrato (`density`):
     - FFT inversion of the characteristic function (`FFTDensityInverter`)
     - COS expansion (`CosDensityMethod`)

@@ -28,7 +28,7 @@ struct CarrMadanMethod{num <: Number, num_1 <: Integer, num_2 <: Number} <: Abst
 end
 export CarrMadanMethod;
 
-using DataInterpolations, FFTW;
+using Interpolations, FFTW
 # E[S^(1 + α)] must be finite: 1 + α stays at most halfway between 1 and the exponential moment bound of the upper tail.
 carr_madan_damping(mcProcess, T, α) = min(α, convert(typeof(α), (exponential_moment_bound(mcProcess, 1, v_value_mod(T)) - 1) / 2))
 # The binary call is minus the strike derivative of the call: α + iv leaves the denominator of the transform, and the

@@ -9,7 +9,7 @@ following back-ends, loaded with the corresponding package:
 | `CosMethod` | yes | yes | yes | yes | yes | yes | yes |
 | `CarrMadanLewisMethod` | yes | yes | yes | yes | yes | **no** | yes |
 | `CarrMadanMethod` | yes | yes | yes | yes | yes | **no** | yes |
-| `DensityInverter` | yes | yes | yes | yes | yes | yes | yes |
+| `FFTDensityInverter` | yes | yes | yes | yes | yes | yes | yes |
 | `CosDensityMethod` | yes | yes | yes | yes | yes | yes | yes |
 
 The test suite checks each entry against the closed formulas of Black and Scholes, for European and binary options and

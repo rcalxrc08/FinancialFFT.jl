@@ -22,7 +22,7 @@ pricer(model, zero_rate, CosMethod(2^12), option)                    # COS metho
 
 ## Features
 
-- Pricing methods: [`LewisMethod`](@ref), [`CosMethod`](@ref), [`CarrMadanLewisMethod`](@ref), [`CarrMadanMethod`](@ref), [`FinancialFFT.DensityInverter`](@ref) and [`CosDensityMethod`](@ref), compared in [Methods](methods.md).
+- Pricing methods: [`LewisMethod`](@ref), [`CosMethod`](@ref), [`CarrMadanLewisMethod`](@ref), [`CarrMadanMethod`](@ref), [`CosDensityMethod`](@ref) and [`FFTDensityInverter`](@ref), compared in [Methods](methods.md).
 - Densities of the log-return through [`density`](@ref), for the likelihood ratio method and Vibrato: [`CosDensityMethod`](@ref) and [`FFTDensityInverter`](@ref), see [Densities](methods.md#Densities).
 - Models: Black–Scholes, Merton, Kou, Variance Gamma, Normal Inverse Gaussian, Heston.
 - Payoffs: European and binary (digital) options, calls and puts, and their smiles (several strikes, one maturity), with every method. Options with different maturities are priced by broadcasting, `pricer.(model, zero_rate, method, options)`.
@@ -69,7 +69,7 @@ smile = FinancialMonteCarlo.EuropeanOptionSmile(T, CuArray([90.0, 100.0, 110.0])
 pricer(model, zero_rate, CosMethod(2^12), smile, FinancialMonteCarlo.CudaMode())
 ```
 
-- `LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `DensityInverter` and `CosDensityMethod` run on the GPU, with the accuracy they have on the CPU. `CarrMadanMethod` ignores the mode and runs on the CPU.
+- `LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CosDensityMethod` and `FFTDensityInverter` run on the GPU, with the accuracy they have on the CPU. `CarrMadanMethod` ignores the mode and runs on the CPU.
 - `density(model, zero_rate, method, T, FinancialMonteCarlo.CudaMode())` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
 - The strikes of a smile must be on the device. A single option is given as on the CPU.
 - ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU, with the same limitations as on the CPU. ReverseDiff.jl and Mooncake.jl are not supported on the GPU.

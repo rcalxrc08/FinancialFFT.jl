@@ -4,10 +4,6 @@ function compute_ts(s, model, T, log_epss, mul)
     return @muladd inv(s) * (FinancialFFT.characteristic_exponent_i(mul * s, model, T) - log_epss)
 end
 
-function v_value_mod(s::Real)
-    return s
-end
-
 complex_step(s, model) = eps(s)
 # Large imaginary parts cancel out in the Heston exponent when γ is imaginary: a step of the order of eps is lost in the rounding.
 complex_step(s, ::FinancialMonteCarlo.HestonProcess) = sqrt(eps(s))
@@ -114,7 +110,7 @@ function compute_chernoff_extrema_bisection_single(Model, T, log_epss, s_min, s_
     return driftT + mul * t_opt_bis
 end
 
-function compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min, s_max, x_toll_bisection)
+function compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min = 1.0, s_max = 50.0, x_toll_bisection = 1e-14)
     log_epss = log(epss)
     driftT = drift - FinancialFFT.characteristic_exponent_i(1, Model, T)
     mul_plus = 1
@@ -124,22 +120,16 @@ function compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min, s_max,
     return t_opt_bis_neg, t_opt_bis_plus
 end
 
-function compute_positive_extrema_bisection(Model, T, epss, drift, s_min = 1.0, s_max = 50.0, x_toll_bisection = 1e-14)
-    log_epss = log(epss)
-    mul = 1
-    driftT = drift - FinancialFFT.characteristic_exponent_i(1, Model, T)
-    t_plus = compute_chernoff_extrema_bisection_single(Model, T, log_epss, s_min, s_max, x_toll_bisection, mul, driftT)
-    return t_plus
-end
-function compute_negative_extrema_bisection(Model, T, epss, drift, s_min = 1.0, s_max = 50.0, x_toll_bisection = 1e-14)
-    log_epss = log(epss)
-    driftT = drift - FinancialFFT.characteristic_exponent_i(1, Model, T)
-    mul = -1
-    t_minus = compute_chernoff_extrema_bisection_single(Model, T, log_epss, s_min, s_max, x_toll_bisection, mul, driftT)
-    return t_minus
-end
-
-function compute_extrema_bisection_with_default(Model, T, epss, drift, s_min = 1.0, s_max = 50.0, x_toll_bisection = 1e-14)
-    res = compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min, s_max, x_toll_bisection)
-    return res
+# Truncation range [a, b] of log(S_T / S0), for the COS methods and the FFT density: a tail probability of 1e-14 in
+# Float64 on each side.
+function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
+    drift = rT - dT
+    FT = float_type(drift, T, Model.underlying.S0)
+    # the tail is weighted by the scores in the derivatives: the error of the second one in σ is about 2500 ε (1e-14
+    # in Float64, scaled by the machine epsilon of the other types)
+    epss = scaled_tolerance(FT, 1e-14)
+    s_min = one(FT)
+    s_max = FT(50)
+    x_toll_bisection = max(FT(1e-14), 8 * eps(FT))
+    compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min, s_max, x_toll_bisection)
 end

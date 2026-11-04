@@ -31,7 +31,4 @@ Mooncake.@mooncake_overlay FinancialFFT.sqrt_mod(z::Complex{<:IEEEFloat}) = sqrt
 # Mooncake ignores ChainRulesCore.@ignore_derivatives: the quantities that must stay constants go through this hook.
 Mooncake.@zero_derivative DefaultCtx Tuple{typeof(FinancialFFT.ignore_derivatives_mod), IEEEFloat}
 
-# fft is a primitive only for vectors.
-Mooncake.@mooncake_overlay FinancialFFT.fft_columns(M::AbstractMatrix{<:Complex{<:IEEEFloat}}) = FinancialFFT.fft_each_column(M)
-
 end

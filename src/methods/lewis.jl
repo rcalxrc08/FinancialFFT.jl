@@ -19,8 +19,6 @@ struct LewisMethod{num <: Number, num_1 <: Integer} <: AbstractIntegralMethod
     end
 end
 export LewisMethod;
-#Equivalent to real(exp(z)) but more efficient
-exp_mod(x) = exp(real_mod(x)) * cos(imag_mod(x))
 
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.EuropeanOption)
     corr_h = corr_adj / 2
@@ -160,7 +158,7 @@ end
     pricer(mcProcess, zero_rate, method, payoff[, mode])
 
 Prices `payoff` under `mcProcess` with the Fourier method `method`
-(`LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CarrMadanMethod` or `DensityInverter`).
+(`LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CarrMadanMethod`, `CosDensityMethod` or `FFTDensityInverter`).
 
 # Arguments
 - `mcProcess`: a `FinancialMonteCarlo.BaseProcess`, e.g. `BlackScholesProcess(σ, Underlying(S0, d))`.

@@ -11,7 +11,7 @@ their smiles.
 - `N`: number of cosine terms of the density (`N > 2`).
 - `M`: number of Simpson intervals for each strike (even, `M > 2`); the density does not use it.
 """
-struct CosDensityMethod{num_1 <: Integer, num_2 <: Integer} <: AbstractIntegralMethod
+struct CosDensityMethod{num_1 <: Integer, num_2 <: Integer} <: AbstractDensityMethod
     N::num_1
     M::num_2
     function CosDensityMethod(N::num_1 = 128, M::num_2 = 2^10) where {num_1 <: Integer, num_2 <: Integer}
@@ -57,65 +57,15 @@ function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financia
 end
 
 # Clenshaw recurrence of Σ c_k cos(k θ), in Reinsch's form (the ends of the range are θ = 0 and π): one sincos per
-# point instead of one cos per term.
-function (f::CosDensity)(y)
-    value = clenshaw_cos_sum(f.coefficients, (y - f.a) * (pi / (f.b - f.a)))
-    # beyond the range the series is periodic, while the density is below ε
-    is_inside = f.a <= v_value_mod(y) <= f.b
-    return ifelse(is_inside, value, zero(value))
-end
+# point instead of one cos per term. Beyond the range the series is periodic: the interface masks it.
+density_value(f::CosDensity, y) = clenshaw_cos_sum(f.coefficients, (y - f.a) * (pi / (f.b - f.a)))
 
-# The density at an array of points inside the range, with broadcasts and a reduction only: the coefficients are
-# arguments of the broadcast, not captured, for ReverseDiff, and the kernels run on the GPU.
-function cos_density_values(f::CosDensity, y::AbstractArray)
+# At an array of points, with broadcasts and a reduction only: the coefficients are arguments of the broadcast, not
+# captured, for ReverseDiff, and the kernels run on the GPU.
+function density_array(f::CosDensity, y::AbstractArray)
     y_vec = vec(y)
     values = sum(@. f.coefficients' * cos(f.u' * (y_vec - f.a)); dims = 2)
     return reshape(values, size(y))
 end
-cos_density_values(f::CosDensity, y::AbstractArray, ::FinancialMonteCarlo.BaseMode) = cos_density_values(f, y)
 # On the CPU, the Clenshaw recurrence at each point (map, for ReverseDiff: the coefficients may be tracked).
-function cos_density_values(f::CosDensity, y::AbstractArray, ::FinancialMonteCarlo.SerialMode)
-    c = f.coefficients
-    scale = pi / (f.b - f.a)
-    return map(y_j -> clenshaw_cos_sum(c, (y_j - f.a) * scale), y)
-end
-
-# Put payoff at a log-moneyness z <= 0, per unit of strike for vanilla options.
-density_put_payoff(::VanillaPayoff) = z -> 1 - exp(z)
-density_put_payoff(::BinaryPayoff) = z -> one(z)
-
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosDensityMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
-    f = density(mcProcess, r, method, opt.T, mode)
-    return density_integral_price(mcProcess, r, f, method.M, opt, mode)
-end
-
-# The density at the Simpson nodes, which are inside its range.
-pricing_density_values(f::CosDensity, y, mode) = cos_density_values(f, y, mode)
-
-# Price of opt from a density f of the log-return (CosDensityMethod, DensityInverter): Simpson's rule on M intervals
-# for the put, call by parity.
-function density_integral_price(mcProcess, r, f, M, opt, mode)
-    T = opt.T
-    S0 = mcProcess.underlying.S0
-    rT = FinancialMonteCarlo.integral(r.r, T)
-    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
-    K = adapt_array(opt.K, mode)
-    log_K_S0 = strike_columns(@. log(K / S0))
-    # log-moneyness z = log(S_T / K) from the left end of the range to the strike, one strike per column; the grid is
-    # a constant for differentiation (Mooncake ignores @ignore_derivatives, hence the hook), and the density is ~ε at
-    # its left end
-    z, payoff = ChainRulesCore.@ignore_derivatives begin
-        log_K_S0_val = ignore_derivatives_mod.(v_value_mod.(log_K_S0))
-        z_min = @. f.a - log_K_S0_val
-        z_max = @. max(z_min, min(0, f.b - log_K_S0_val))
-        t = adapt_array(collect((0:M) ./ convert(typeof(f.a), M)), mode)
-        z_grid = @. z_min + (z_max - z_min) * t
-        simpson = PatternVector(M + 1, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
-        put_payoff = density_put_payoff(opt)
-        z_grid, @. simpson * put_payoff(z_grid) * (z_max - z_min) / (3 * M)
-    end
-    f_z = pricing_density_values(f, z .+ log_K_S0, mode)
-    df = exp(-rT)
-    put_price = adjust_price_adimensional(cos_series(payoff .* f_z), opt) .* df
-    return put_to_option(put_price, S0 * exp(-dT), df, opt)
-end
+density_array(f::CosDensity, y::AbstractArray, ::FinancialMonteCarlo.SerialMode) = map(y_j -> density_value(f, y_j), y)

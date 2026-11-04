@@ -32,12 +32,6 @@ end
 cos_payoff_integral(::VanillaPayoff) = cos_put_integral
 cos_payoff_integral(::BinaryPayoff) = cos_binary_put_integral
 
-put_to_option(P, S0_adj, df, opt::VanillaPayoff) = @. ifelse(opt.isCall, P + S0_adj - opt.K * df, P)
-put_to_option(P, _, df, opt::BinaryPayoff) = @. ifelse(opt.isCall, df - P, P)
-
-cos_series(terms::AbstractVector) = sum(terms)
-cos_series(terms::AbstractMatrix) = vec(sum(terms; dims = 1))
-
 # Σ_k coefficient_k cos(u_k x + phase_k) for each x (a number or a vector, one per strike).
 # On the CPU it is the real part of Σ_k C_k exp(i k θ), with C_k = coefficient_k exp(i phase_k) and θ = π x / (b - a): the
 # Clenshaw recurrence costs a sincos per strike instead of a cos per term and strike, and the phases (which
@@ -51,23 +45,12 @@ function cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.Seria
 end
 function cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.BaseMode)
     x_columns = strike_columns(x)
-    return cos_series(@. coefficient * cos(u * x_columns + phase))
+    return column_sums(@. coefficient * cos(u * x_columns + phase))
 end
 
 # Re Σ_k (c_re_k + i c_im_k) exp(i k θ) = Σ_k c_re_k cos(k θ) - c_im_k sin(k θ).
 cos_clenshaw(c_re, c_im, θ) = clenshaw_exp_sum(c_re, c_im, θ, Val(true))
 
-function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
-    drift = rT - dT
-    FT = float_type(drift, T, Model.underlying.S0)
-    # the tail is weighted by the scores in the derivatives: the error of the second one in σ is about 2500 ε (1e-14
-    # in Float64, scaled by the machine epsilon of the other types)
-    epss = scaled_tolerance(FT, 1e-14)
-    s_min = one(FT)
-    s_max = FT(50)
-    x_toll_bisection = max(FT(1e-14), 8 * eps(FT))
-    compute_chernoff_extrema_bisection(Model, T, epss, drift, s_min, s_max, x_toll_bisection)
-end
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     T = opt.T
     N = method.N

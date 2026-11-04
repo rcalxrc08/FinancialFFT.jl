@@ -1,21 +1,29 @@
 """
-    FFTDensityInverter(N = 14)
+    FFTDensityInverter(N = 14, M = 2^10)
 
 Density of the log-return `log(S_T / S_0)` recovered by inverting the characteristic function with a single FFT on
-`2^N` points, see [`density`](@ref). The grid spans the range of `CosMethod`, from a Chernoff bound on the tails, so,
-it needs no range parameter for any model, and it narrows with the
-horizon: the short steps of a Vibrato or likelihood ratio estimator keep the resolution of long ones. Between the
-nodes the density is interpolated by cubic Lagrange polynomials, written with broadcasts and gathers only, so that
-every AD back-end, Zygote included, differentiates it, on the CPU and on the GPU.
+`2^N` points, see [`density`](@ref). The grid spans the range of `CosMethod`, from a Chernoff bound on the tails, so it
+needs no range parameter for any model, and it narrows with the horizon: the short steps of a Vibrato or likelihood
+ratio estimator keep the resolution of long ones. Between the nodes the density is interpolated by cubic Lagrange
+polynomials, written with broadcasts and gathers only, so that every AD back-end, Zygote included, differentiates it,
+on the CPU and on the GPU.
+
+As a pricer, it integrates the put against this density by Simpson's rule on `M` intervals of log-moneyness ending at
+the strike, so that the kink of the payoff is an endpoint, and recovers the call by parity, as
+[`CosDensityMethod`](@ref) does. Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles: the strikes of a
+smile share the density, and their prices are the ones of the single options.
 
 # Arguments
 - `N`: base-2 logarithm of the number of grid points (`N > 2`).
+- `M`: number of Simpson intervals for each strike (even, `M > 2`); the density does not use it.
 """
-struct FFTDensityInverter{num_1 <: Integer} <: AbstractIntegralMethod
+struct FFTDensityInverter{num_1 <: Integer, num_2 <: Integer} <: AbstractDensityMethod
     N::num_1
-    function FFTDensityInverter(N::num_1 = 14) where {num_1 <: Integer}
+    M::num_2
+    function FFTDensityInverter(N::num_1 = 14, M::num_2 = 2^10) where {num_1 <: Integer, num_2 <: Integer}
         ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
-        return new{num_1}(N)
+        ChainRulesCore.@ignore_derivatives @assert(M > 2 && iseven(M), "M must be even and greater than 2")
+        return new{num_1, num_2}(N, M)
     end
 end
 export FFTDensityInverter
@@ -54,6 +62,30 @@ function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financia
     return FFTDensity(values, a, a + (n - 1) * dx, dx)
 end
 
+# Density of log(S_T / S0) + shift on the 2^N points -A + 2A j / 2^N, j = 0, …, 2^N - 1: the characteristic function
+# is sampled on the frequencies π k / A, k = -2^(N-1), …, 2^(N-1) - 1, and the alternating signs (-1)^k and (-1)^j
+# center both grids. The sign (-1)^j is dropped with abs, and the values are floored at eps.
+function fft_density_values(mcProcess, r, N, A, shift, T, mode)
+    n = ChainRulesCore.@ignore_derivatives 2^N
+    vec = ChainRulesCore.@ignore_derivatives adapt_array(collect(-div(n, 2) .+ (0:(n-1))), mode)
+    drift_rd = FinancialMonteCarlo.integral(r.r - mcProcess.underlying.d, T)
+    corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
+    one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(n, EvenOddPattern(Int8(1), Int8(-1)))
+    dt_im = (pi / A) * im # step in frequency space
+    drift_shift = drift_rd + shift - corr
+    drift_dt_im = drift_shift * dt_im
+    char_exp = characteristic_exponent_i.(vec .* dt_im, mcProcess, T)
+    Y_r = fft_mod(@. exp(char_exp + drift_dt_im * vec) * one_minus_one)
+    twice_A = 2 * A
+    eps_mod = eps(float_type(drift_shift))
+    density_vals_adj = density_floor.(abs_mod.(FinancialFFT.real_mod.(Y_r)) ./ twice_A, eps_mod)
+    ChainRulesCore.@ignore_derivatives @assert !isnan(sum(density_vals_adj) * twice_A / n) "Returned result is NaN"
+    return density_vals_adj
+end
+
+# The floor gets the type of the value from the value itself: the type of a TaylorN says neither its order nor its space.
+density_floor(y, eps_mod) = max(y, zero(y) + eps_mod)
+
 # Lagrange polynomial through (-1, v_m1), (0, v_0), (1, v_1), (2, v_2), at t in [0, 1].
 @muladd function lagrange_cubic(t, v_m1, v_0, v_1, v_2)
     tp1, tm1, tm2 = t + 1, t - 1, t - 2
@@ -68,41 +100,21 @@ function interpolate_density(t, v_m1, v_0, v_1, v_2)
     return density_floor(value, eps(float_type(value)))
 end
 
-function (f::FFTDensity)(y)
+function density_value(f::FFTDensity, y)
     v = f.values
     s = (clamp(y, f.a, f.b) - f.a) / f.dx
     i = ChainRulesCore.@ignore_derivatives stencil_index(s, length(v))
     # 1-based: the node i (0-based) is v[i + 1]
-    value = interpolate_density(s - i, v[i], v[i+1], v[i+2], v[i+3])
-    is_inside = f.a <= v_value_mod(y) <= f.b
-    return ifelse(is_inside, value, zero(value))
+    return interpolate_density(s - i, v[i], v[i+1], v[i+2], v[i+3])
 end
 
-"""
-    FinancialFFT.density_values(f, y)
-
-Values of the density `f` (an [`FinancialFFT.AbstractDensity`](@ref)) at the array of log-returns `y`, with the shape
-of `y`. For `FFTDensity` and `CosDensity` it uses broadcasts, gathers and reductions only: it runs on the device of
-`y` and of the density, and Zygote differentiates it there too.
-"""
-function density_values(f::FFTDensity, y::AbstractArray)
+# Gathers: indexing with arrays of indices runs on the device, and its pullback is a scatter.
+function density_array(f::FFTDensity, y::AbstractArray)
     v = f.values
-    a = f.a
-    s = @. (clamp(y, a, f.b) - a) / f.dx
+    s = @. (clamp(y, f.a, f.b) - f.a) / f.dx
     i, i_1, i_2, i_3 = ChainRulesCore.@ignore_derivatives begin
         i = stencil_index.(s, length(v))
         i, i .+ 1, i .+ 2, i .+ 3
     end
-    is_inside = ChainRulesCore.@ignore_derivatives @. a <= v_value_mod(y) <= f.b
-    # gathers: indexing with arrays of indices runs on the device, and its pullback is a scatter
-    value = interpolate_density.(s .- i, v[i], v[i_1], v[i_2], v[i_3])
-    return @. ifelse(is_inside, value, zero(value))
+    return interpolate_density.(s .- i, v[i], v[i_1], v[i_2], v[i_3])
 end
-# beyond the range the cosine series is periodic: it is masked, as in the callable
-function density_values(f::CosDensity, y::AbstractArray)
-    is_inside = ChainRulesCore.@ignore_derivatives @. f.a <= v_value_mod(y) <= f.b
-    value = cos_density_values(f, y)
-    return @. ifelse(is_inside, value, zero(value))
-end
-density_values(f::AbstractDensity, y::AbstractArray) = map(f, y)
-pricing_density_values(f::FFTDensity, y, _) = density_values(f, y)
