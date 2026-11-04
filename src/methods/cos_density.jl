@@ -85,18 +85,27 @@ density_put_payoff(::VanillaPayoff) = z -> 1 - exp(z)
 density_put_payoff(::BinaryPayoff) = z -> one(z)
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosDensityMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+    f = density(mcProcess, r, method, opt.T, mode)
+    return density_integral_price(mcProcess, r, f, method.M, opt, mode)
+end
+
+# The density at the Simpson nodes, which are inside its range.
+pricing_density_values(f::CosDensity, y, mode) = cos_density_values(f, y, mode)
+
+# Price of opt from a density f of the log-return (CosDensityMethod, DensityInverter): Simpson's rule on M intervals
+# for the put, call by parity.
+function density_integral_price(mcProcess, r, f, M, opt, mode)
     T = opt.T
-    M = method.M
     S0 = mcProcess.underlying.S0
     rT = FinancialMonteCarlo.integral(r.r, T)
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
-    f = density(mcProcess, r, method, T, mode)
     K = adapt_array(opt.K, mode)
     log_K_S0 = strike_columns(@. log(K / S0))
     # log-moneyness z = log(S_T / K) from the left end of the range to the strike, one strike per column; the grid is
-    # a constant for differentiation, and the density is ~ε at its left end
+    # a constant for differentiation (Mooncake ignores @ignore_derivatives, hence the hook), and the density is ~ε at
+    # its left end
     z, payoff = ChainRulesCore.@ignore_derivatives begin
-        log_K_S0_val = v_value_mod.(log_K_S0)
+        log_K_S0_val = ignore_derivatives_mod.(v_value_mod.(log_K_S0))
         z_min = @. f.a - log_K_S0_val
         z_max = @. max(z_min, min(0, f.b - log_K_S0_val))
         t = adapt_array(collect((0:M) ./ convert(typeof(f.a), M)), mode)
@@ -105,7 +114,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCar
         put_payoff = density_put_payoff(opt)
         z_grid, @. simpson * put_payoff(z_grid) * (z_max - z_min) / (3 * M)
     end
-    f_z = cos_density_values(f, z .+ log_K_S0, mode)
+    f_z = pricing_density_values(f, z .+ log_K_S0, mode)
     df = exp(-rT)
     put_price = adjust_price_adimensional(cos_series(payoff .* f_z), opt) .* df
     return put_to_option(put_price, S0 * exp(-dT), df, opt)

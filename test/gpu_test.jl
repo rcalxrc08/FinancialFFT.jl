@@ -50,8 +50,7 @@ end
         @testset "Other models, GPU vs CPU" begin
             S0, r, d, T, K = 100.0, 0.02, 0.01, 1.0, 105.0
             for (model_name, model) in model_cases(S0, d), case in gpu_cases, kind in keys(case.payoffs)
-                # outside Black Scholes, DensityInverter needs the truncation of the density, as in other_models_test.jl
-                method = case.method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 3.0) : case.method
+                method = case.method
                 @testset "$model_name $(case.name) $kind" begin
                     gpu_price = sum(pricer(model, ZeroRate(r), method, gpu_payoff(kind, T, K, true), FinancialMonteCarlo.CudaMode()))
                     cpu_price = sum(pricer(model, ZeroRate(r), method, build_payoff(kind, T, K, true)))
@@ -91,7 +90,7 @@ end
             Ks = [80.0, 90.0, 100.0, 110.0, 120.0]
             calls = [true, false, true, false, true]
             @testset "Smiles, $(case.name)" for case in filter(case -> haskey(case.payoffs, :european_smile), gpu_cases)
-                method = case.method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 3.0) : case.method
+                method = case.method
                 smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, CuArray(Ks), CuArray(calls))
                 @test max_abs_diff(Array(pricer(model, zero_rate, method, smile, FinancialMonteCarlo.CudaMode())), pricer(model, zero_rate, method, FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls))) < 1e-10
             end

@@ -3,7 +3,7 @@
 
 Density of the log-return `log(S_T / S_0)` recovered by inverting the characteristic function with a single FFT on
 `2^N` points, see [`density`](@ref). The grid spans the range of `CosMethod`, from a Chernoff bound on the tails, so,
-unlike [`FinancialFFT.DensityInverter`](@ref), it needs no range parameter for any model, and it narrows with the
+it needs no range parameter for any model, and it narrows with the
 horizon: the short steps of a Vibrato or likelihood ratio estimator keep the resolution of long ones. Between the
 nodes the density is interpolated by cubic Lagrange polynomials, written with broadcasts and gathers only, so that
 every AD back-end, Zygote included, differentiates it, on the CPU and on the GPU.
@@ -105,3 +105,4 @@ function density_values(f::CosDensity, y::AbstractArray)
     return @. ifelse(is_inside, value, zero(value))
 end
 density_values(f::AbstractDensity, y::AbstractArray) = map(f, y)
+pricing_density_values(f::FFTDensity, y, _) = density_values(f, y)

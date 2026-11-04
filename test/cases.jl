@@ -12,8 +12,7 @@ const cml_tolerances = tolerances(price = 1e-5, taylor = 1e-4, zygote = Broken()
 const cml_binary_tolerances = tolerances(price = 1e-7, dual = 1e-6, hyper = 1e-5, zygote = Broken())
 const cm_tolerances = tolerances(price = 1e-5, hyper = 1e-4, zygote = Broken(1e-5))
 const cm_binary_tolerances = tolerances(price = 1e-7, dual = 1e-6, hyper = 1e-5, zygote = Broken())
-const density_tolerances = tolerances(price = 1e-7)
-const density_binary_tolerances = tolerances(price = 1e-4, taylorn = 1e-3, hessian = 1e-3)
+const density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6)
 const cos_density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6)
 
 const METHOD_CASES = [
@@ -21,7 +20,7 @@ const METHOD_CASES = [
     (name = "CosMethod", method = CosMethod(2^12), payoffs = Dict(kind => cos_tolerances for kind in PAYOFF_KINDS)),
     (name = "CarrMadanLewisMethod", method = CarrMadanLewisMethod(600.0, 16), payoffs = Dict(:european => cml_tolerances, :european_smile => cml_tolerances, :binary => cml_binary_tolerances, :binary_smile => cml_binary_tolerances)),
     (name = "CarrMadanMethod", method = CarrMadanMethod(400.0, 18), payoffs = Dict(:european => cm_tolerances, :european_smile => cm_tolerances, :binary => cm_binary_tolerances, :binary_smile => cm_binary_tolerances)),
-    (name = "DensityInverter", method = FinancialFFT.DensityInverter(18), payoffs = Dict(:european => density_tolerances, :european_smile => density_tolerances, :binary => density_binary_tolerances, :binary_smile => density_binary_tolerances)),
+    (name = "DensityInverter", method = FinancialFFT.DensityInverter(), payoffs = Dict(kind => density_tolerances for kind in PAYOFF_KINDS)),
     (name = "CosDensityMethod", method = CosDensityMethod(), payoffs = Dict(kind => cos_density_tolerances for kind in PAYOFF_KINDS)),
 ]
 

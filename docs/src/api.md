@@ -20,7 +20,6 @@ FFTDensityInverter
 FinancialFFT.AbstractDensity
 FinancialFFT.FFTDensity
 FinancialFFT.CosDensity
-FinancialFFT.InvertedDensity
 ```
 
 ## Pricing

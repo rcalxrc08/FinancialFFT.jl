@@ -8,7 +8,7 @@
         "CosMethod" => (CosMethod(2^12), 1e-5, 1e-5),
         "CarrMadanLewisMethod" => (CarrMadanLewisMethod(600.0, 16), 1e-7, 1e-7),
         "CarrMadanMethod" => (CarrMadanMethod(400.0, 18), 1e-5, 1e-7),
-        "DensityInverter" => (FinancialFFT.DensityInverter(18, 3.0), 1e-7, 1e-4),
+        "DensityInverter" => (FinancialFFT.DensityInverter(), 1e-6, 1e-6),
         "CosDensityMethod" => (CosDensityMethod(), 1e-6, 1e-6),
     ]
     for (model_name, model) in model_cases(S0, d), (method_name, (method, toll_eu, toll_bin)) in methods
@@ -16,9 +16,7 @@
             for K in (90.0, 100.0, 110.0)
                 for (opt, toll) in ((EuropeanOption(T, K), toll_eu), (EuropeanOption(T, K, false), toll_eu), (BinaryEuropeanOption(T, K), toll_bin), (BinaryEuropeanOption(T, K, false), toll_bin))
                     reference = pricer(model, ZeroRate(r), reference_method, opt)
-                    # the left tail of Heston goes beyond the default truncation of the density
-                    model_method = model isa HestonProcess && method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 5.0) : method
-                    test_within(() -> abs(pricer(model, ZeroRate(r), model_method, opt) - reference), toll)
+                    test_within(() -> abs(pricer(model, ZeroRate(r), method, opt) - reference), toll)
                 end
             end
         end
@@ -29,8 +27,7 @@
     @testset "TaylorN $(first(case)) $method_name" for (i, case) in enumerate(model_cases(S0, d)), (method_name, (method, _, _)) in methods
         model = last(model_cases(S0 + δS0, d)[i])
         reference = pricer(model, ZeroRate(r + δr), reference_method, opt)
-        model_method = model isa HestonProcess && method isa FinancialFFT.DensityInverter ? FinancialFFT.DensityInverter(18, 5.0) : method
-        @test max_abs_diff(pricer(model, ZeroRate(r + δr), model_method, opt), reference) < 1e-3
+        @test max_abs_diff(pricer(model, ZeroRate(r + δr), method, opt), reference) < 1e-3
     end
 end
 
@@ -145,18 +142,18 @@ end
     @testset "Zygote Kou parameters, CosMethod" begin
         test_within(() -> max_abs_diff(collect(Zygote.gradient(kou_price(CosMethod(2^12)), kou_params...)), collect(reference)), 1e-5)
     end
-    @testset "ForwardDiff Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(18, 3.0), 1e-5))
+    @testset "ForwardDiff Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(), 1e-5))
         test_within(() -> max_abs_diff(ForwardDiff.gradient(x -> kou_price(method)(x...), kou_params), collect(reference)), toll)
     end
-    @testset "Mooncake Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(18, 3.0), 1e-5))
+    @testset "Mooncake Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(), 1e-5))
         test_within(() -> max_abs_diff(mooncake_gradient(x -> kou_price(method)(x...), kou_params), collect(reference)), toll)
     end
-    @testset "ReverseDiff Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(18, 3.0), 1e-5))
+    @testset "ReverseDiff Kou parameters, $method_name" for (method_name, method, toll) in (("LewisMethod", reference_method, 1e-8), ("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(), 1e-5))
         test_within(() -> max_abs_diff(ReverseDiff.gradient(x -> kou_price(method)(x...), kou_params), collect(reference)), toll)
     end
     # a recorded tape replayed at new inputs recomputes the fft in its forward pass
     @testset "ReverseDiff replayed tape, DensityInverter" begin
-        f = x -> kou_price(FinancialFFT.DensityInverter(12, 3.0))(x...)
+        f = x -> kou_price(FinancialFFT.DensityInverter(12))(x...)
         tape = ReverseDiff.GradientTape(f, kou_params)
         new_params = kou_params .* 1.1
         @test ReverseDiff.gradient!(tape, new_params) ≈ ReverseDiff.gradient(f, new_params)
@@ -167,7 +164,7 @@ end
     @testset "Zygote Heston parameters, CosMethod" begin
         test_within(() -> max_abs_diff(Zygote.gradient(heston_price(CosMethod(2^12)), heston_params)[1], heston_reference), 1e-5)
     end
-    @testset "Heston parameters, $method_name" for (method_name, method, toll) in (("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(16, 3.0), 1e-4))
+    @testset "Heston parameters, $method_name" for (method_name, method, toll) in (("CosMethod", CosMethod(2^12), 1e-5), ("CarrMadanLewisMethod", CarrMadanLewisMethod(600.0, 16), 1e-5), ("DensityInverter", FinancialFFT.DensityInverter(), 1e-5))
         f = heston_price(method)
         @testset "ForwardDiff" begin
             test_within(() -> max_abs_diff(ForwardDiff.gradient(f, heston_params), heston_reference), toll)

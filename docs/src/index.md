@@ -23,7 +23,7 @@ pricer(model, zero_rate, CosMethod(2^12), option)                    # COS metho
 ## Features
 
 - Pricing methods: [`LewisMethod`](@ref), [`CosMethod`](@ref), [`CarrMadanLewisMethod`](@ref), [`CarrMadanMethod`](@ref), [`FinancialFFT.DensityInverter`](@ref) and [`CosDensityMethod`](@ref), compared in [Methods](methods.md).
-- Densities of the log-return through [`density`](@ref), for the likelihood ratio method and Vibrato: [`CosDensityMethod`](@ref), [`FFTDensityInverter`](@ref) and [`FinancialFFT.DensityInverter`](@ref), see [Densities](methods.md#Densities).
+- Densities of the log-return through [`density`](@ref), for the likelihood ratio method and Vibrato: [`CosDensityMethod`](@ref) and [`FFTDensityInverter`](@ref), see [Densities](methods.md#Densities).
 - Models: Black–Scholes, Merton, Kou, Variance Gamma, Normal Inverse Gaussian, Heston.
 - Payoffs: European and binary (digital) options, calls and puts, and their smiles (several strikes, one maturity), with every method. Options with different maturities are priced by broadcasting, `pricer.(model, zero_rate, method, options)`.
 - Non-constant zero rates and dividends.

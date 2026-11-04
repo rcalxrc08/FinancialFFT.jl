@@ -5,7 +5,7 @@
     lognormal(y, σ) = exp(-(y - (r - d - σ^2 / 2) * T)^2 / (2 * σ^2 * T)) / (σ * sqrt(2 * pi * T))
     model(σ) = BlackScholesProcess(σ, Underlying(S0, d))
     # the cubic interpolation of FFTDensityInverter errs by O(dx⁴) on the values, O(dx³) on the derivative in y
-    @testset "$name" for (name, method, toll, rtol_dy) in (("CosDensityMethod", CosDensityMethod(), 1e-13, 1e-10), ("DensityInverter", FinancialFFT.DensityInverter(14), 1e-13, 1e-10), ("FFTDensityInverter", FFTDensityInverter(), 2e-13, 1e-9))
+    @testset "$name" for (name, method, toll, rtol_dy) in (("CosDensityMethod", CosDensityMethod(), 1e-13, 1e-10), ("FFTDensityInverter", FFTDensityInverter(), 2e-13, 1e-9))
         f = density(model(σ), ZeroRate(r), method, T)
         @test f isa FinancialFFT.AbstractDensity
         y = collect(range(-6σ, 6σ, length = 101))
@@ -25,7 +25,7 @@
     y = collect(range(-6σ, 6σ, length = 101))
     @test maximum(abs.(f.(y) .- FinancialFFT.cos_density_values(f, y))) < 1e-13
     @testset "$name integrates to one" for (name, process) in model_cases(S0, d)
-        for f in (density(process, ZeroRate(r), CosDensityMethod(), T), density(process, ZeroRate(r), FinancialFFT.DensityInverter(14, 5.0), T), density(process, ZeroRate(r), FFTDensityInverter(), T))
+        for f in (density(process, ZeroRate(r), CosDensityMethod(), T), density(process, ZeroRate(r), FFTDensityInverter(), T))
             y = range(f.a, f.b, length = 20001)
             @test sum(f.(y)) * step(y) ≈ 1 atol = 1e-8
         end
@@ -40,7 +40,7 @@
         y = range(f.a, f.b, length = 2001)
         @test maximum(abs.(f.(y) .- g.(y))) < (has_cusp ? 1e-3 : 1e-9) * maximum(g.(y))
     end
-    @testset "density_values of $name" for (name, method) in ("CosDensityMethod" => CosDensityMethod(), "DensityInverter" => FinancialFFT.DensityInverter(14), "FFTDensityInverter" => FFTDensityInverter())
+    @testset "density_values of $name" for (name, method) in ("CosDensityMethod" => CosDensityMethod(), "FFTDensityInverter" => FFTDensityInverter())
         f = density(model(σ), ZeroRate(r), method, T)
         y = [f.a - 0.1, -0.3, 0.0, 0.1, 0.25, f.b + 0.1]
         @test maximum(abs.(FinancialFFT.density_values(f, y) .- f.(y))) < 1e-12
@@ -57,6 +57,14 @@
         gradient = Dict("DualNumbers" => h -> DualNumbers.epsilon(h([Dual(σ, 1.0)])), "HyperDualNumbers" => h -> HyperDualNumbers.eps1(h([hyper(σ, 1.0, 1.0, 0.0)])), "TaylorSeries" => h -> TaylorSeries.getcoeff(h([σ + Taylor1(1)]), 1), "ForwardDiff" => h -> ForwardDiff.gradient(h, [σ])[1], "ReverseDiff" => h -> ReverseDiff.gradient(h, [σ])[1], "Zygote" => h -> Zygote.gradient(h, [σ])[1][1], "Mooncake" => h -> mooncake_gradient(h, [σ])[1])[backend]
         @test gradient(score) ≈ exact rtol = 1e-10
         @test gradient(scores) ≈ exact_sum rtol = 1e-10
+    end
+    # the density of DensityInverter is deprecated, and is the one of FFTDensityInverter
+    @testset "Deprecations" begin
+        f = @test_deprecated density(model(σ), ZeroRate(r), FinancialFFT.DensityInverter(13), T)
+        @test f isa FinancialFFT.FFTDensity
+        @test f(0.1) == density(model(σ), ZeroRate(r), FFTDensityInverter(13), T)(0.1)
+        method = @test_deprecated FinancialFFT.DensityInverter(14, 3.0)
+        @test method.N == 14 && method.M == FinancialFFT.DensityInverter().M
     end
     @test_throws MethodError density(model(σ), ZeroRate(r), LewisMethod(600.0, 20000), T)
 end

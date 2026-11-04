@@ -61,7 +61,7 @@ function convergence_figure(theme)
         "CosMethod(N)" => [(n + 1, CosMethod(n)) for n in 2 .^ (3:12)],
         "CarrMadanLewisMethod(600, n)" => [(2^n, CarrMadanLewisMethod(600.0, n)) for n = 8:20],
         "CarrMadanMethod(400, n)" => [(2^n, CarrMadanMethod(400.0, n)) for n = 8:20],
-        "DensityInverter(n)" => [(2^n, FinancialFFT.DensityInverter(n)) for n = 6:20],
+        "DensityInverter(n, 2¹⁰)" => [(2^n, FinancialFFT.DensityInverter(n)) for n = 6:18],
         "CosDensityMethod(N, 2¹⁰)" => [(n + 1, CosDensityMethod(n)) for n in 2 .^ (3:10)]
     ]
     p = base_plot(theme; title = "Error of a call (K = 105, T = 1) against Black and Scholes", xlabel = "evaluations of the characteristic exponent", ylabel = "absolute error", xscale = :log10, yscale = :log10, legend = :outerright, size = (900, 430), yticks = 10.0 .^ (-16:2:0), xticks = 10.0 .^ (1:6), ylims = (1e-16, 1e1))

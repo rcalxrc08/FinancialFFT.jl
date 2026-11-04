@@ -38,7 +38,6 @@ Densities are differentiated in the same way, through `log(f(y))` (see [Densitie
 |:--|:--|:--|:--|:--|:--|:--|:--|
 | `FFTDensityInverter` | yes | yes | yes | yes | yes | yes | yes |
 | `CosDensityMethod` | yes | yes | yes | yes | yes | yes | yes |
-| `DensityInverter` | yes | yes | yes | yes | yes | **no** | yes |
 
 ## Known limitations
 
