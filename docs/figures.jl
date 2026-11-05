@@ -9,7 +9,7 @@ const FIGURES = mkpath(joinpath(@__DIR__, "src", "assets", "figures"))
 
 # Categorical slots in fixed order (validated for colour vision deficiencies on adjacent pairs, in both modes), and
 # the ink of the text, of the axes and of the grid.
-const THEMES = (light = (series = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"], text = "#0b0b0b", muted = "#52514e", axis = "#a8a7a2", grid = "#e7e6e2"), dark = (series = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"], text = "#f0efec", muted = "#c3c2b7", axis = "#6b6a66", grid = "#343432"))
+const THEMES = (light = (series = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"], text = "#1f2328", muted = "#5b6470", axis = "#b9b4ab", grid = "#e6e3de"), dark = (series = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"], text = "#e6e8eb", muted = "#9aa3ad", axis = "#4a525c", grid = "#2a2f36"))
 # The secondary encoding of the series: the light slots 3-5 are below 3:1 contrast on the surface.
 const MARKERS = [:circle, :rect, :utriangle, :diamond, :dtriangle, :star5]
 

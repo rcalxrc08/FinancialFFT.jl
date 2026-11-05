@@ -10,7 +10,7 @@ module DocumentationFigures
 include(joinpath(@__DIR__, "figures.jl"))
 end
 makedocs(
-    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico", "assets/figures.css"], edit_link = "master"),
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico", "assets/figures.css", "assets/style.css"], edit_link = "master"),
     repo = Remotes.GitHub("rcalxrc08", "FinancialFFT.jl"),
     sitename = "FinancialFFT.jl",
     modules = [FinancialFFT],
