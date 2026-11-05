@@ -26,10 +26,6 @@ function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCa
     return @. FinancialFFT.exp_mod(corr_h + v * corr_im + char_exp_v) / (1 // 4 + v^2)
 end
 
-function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::EuropeanOptionSmile)
-    return @. FinancialFFT.exp_mod((1 // 2 + v * im) * corr_adj' + char_exp_v) / (1 // 4 + v^2)
-end
-
 function evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, re1, im1)
     re_term = corr_adj / 2 + re1
     term_im = corr_adj * v + im1
@@ -43,11 +39,6 @@ end
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOption)
     re_char_exp, im_char_exp = real_mod.(char_exp_v), imag_mod.(char_exp_v)
     return @. evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, re_char_exp, im_char_exp)
-end
-
-function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOptionSmile)
-    re_char_exp, im_char_exp = real_mod.(char_exp_v), imag_mod.(char_exp_v)
-    return @. evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj', re_char_exp, im_char_exp)
 end
 
 # function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOption)
@@ -103,19 +94,20 @@ function lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
 end
 
-function lw_integrate(char_exp_v_r, abstractPayoff::EuropeanOptionSmile, df, dT, dx_adj, S0, rT_corr)
+# A smile outside SerialMode (on the GPU), as one broadcast over nodes and strikes. With c_k the log-moneyness term of
+# strike k, the integrand is exp(c_k / 2) times a_j cos(v_j c_k + b_j), so exp(c_k / 2) leaves the sum over the nodes and
+# each term costs one cos (issue #46):
+# - vanilla: exp_mod((1/2 + iv) c + ψ) / (1/4 + v²) = exp(c / 2) exp(Re ψ) cos(v c + Im ψ) / (1/4 + v²);
+# - binary: exp(c / 2 + Re ψ) (cos θ / 2 + v sin θ) / (1/4 + v²), θ = v c + Im ψ, and
+#   cos θ / 2 + v sin θ = sqrt(1/4 + v²) cos(θ - atan(2v)).
+# Everything is real: no tuples in the broadcast (Zygote on the GPU), and no arrays mixing real and complex numbers.
+lewis_amplitudes_phases(v, char_exp_v, weights, ::VanillaPayoff) = (@. weights * exp(real_mod(char_exp_v)) / (1 // 4 + v^2)), imag_mod.(char_exp_v)
+lewis_amplitudes_phases(v, char_exp_v, weights, ::BinaryPayoff) = (@. weights * exp(real_mod(char_exp_v)) / sqrt(1 // 4 + v^2)), (@. imag_mod(char_exp_v) - atan(2 * v))
+function lw_integrate(char_exp_v_r, abstractPayoff::SmilePayoff, df, dT, dx_adj, S0, rT_corr)
     corr_adj = @. log(S0 / abstractPayoff.K) + rT_corr + dT
-    char_exp_v = char_exp_v_r.char_exp_v
-    v_im_adj = char_exp_v_r.v_im_adj
-    total_sum_lewis = vec(sum(char_exp_v_r.weights .* evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff); dims = 1))
-    return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
-end
-
-function lw_integrate(char_exp_v_r, abstractPayoff::BinaryEuropeanOptionSmile, df, dT, dx_adj, S0, rT_corr)
-    corr_adj = @. log(S0 / abstractPayoff.K) + rT_corr + dT
-    char_exp_v = char_exp_v_r.char_exp_v
-    v_im_adj = char_exp_v_r.v_im_adj
-    total_sum_lewis = vec(sum(char_exp_v_r.weights .* evaluate_integrand_lewis_v2(v_im_adj, corr_adj, char_exp_v, abstractPayoff); dims = 1))
+    v = char_exp_v_r.v_im_adj
+    a, b = lewis_amplitudes_phases(v, char_exp_v_r.char_exp_v, char_exp_v_r.weights, abstractPayoff)
+    total_sum_lewis = exp.(corr_adj ./ 2) .* phased_cos_sum(a, b, v, corr_adj)
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
 end
 
@@ -186,8 +178,9 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
         j = (N-n_half):(N-1)
         adapt_array(collect(@. (2 * j - (N - 1)) * (A / (N - 1))), mode), PatternVector(n_half, InitialValuePattern(Int8(isodd(N) ? 1 : 2), Int8(2)))
     end
-    one_half = 1 // 2
-    char_exp_v = @. FinancialFFT.characteristic_exponent_i(one_half + v * im, mcProcess, T)
+    # a float one_half: a Rational added to a complex number in a lazy argument slows the vectorised exponent down
+    one_half = one(FT) / 2
+    char_exp_v = @. FinancialFFT.characteristic_exponent_i(complex(one_half, v), mcProcess, T)
     lw_result = LewisMethodResult(char_exp_v, v, weights)
     dx_adj = A / (N - 1)
     df = exp(-rT)

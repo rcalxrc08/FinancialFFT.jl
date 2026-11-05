@@ -115,6 +115,9 @@ strike_columns(x::AbstractVector) = reshape(x, 1, :)
 # Sum over the first dimension: a number for a vector, one value per strike (column) for a matrix.
 column_sums(terms::AbstractVector) = sum(terms)
 column_sums(terms::AbstractMatrix) = vec(sum(terms; dims = 1))
+# Σ_j coefficient_j cos(u_j x + phase_j) for each x (a number or a vector, one per strike), as one broadcast over terms and
+# strikes: the series of COS and of Lewis smiles outside SerialMode, where the coefficients cannot be indexed (GPU).
+phased_cos_sum(coefficient, phase, u, x) = column_sums(@. coefficient * cos(u * $strike_columns(x) + phase))
 
 # Lagrange polynomial through the nodes -2, …, 3 at t in [0, 1]: interpolation of order h⁶ on a uniform grid of step h.
 # The six terms are paired around t = 1/2, where the products of t + 2, …, t - 3 are symmetric.

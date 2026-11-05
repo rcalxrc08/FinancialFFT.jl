@@ -43,10 +43,7 @@ function cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.Seria
     θ = x .* (last(u) / (length(u) - 1))
     return map(θ_j -> cos_clenshaw(c_re, c_im, θ_j), θ)
 end
-function cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.BaseMode)
-    x_columns = strike_columns(x)
-    return column_sums(@. coefficient * cos(u * x_columns + phase))
-end
+cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.BaseMode) = phased_cos_sum(coefficient, phase, u, x)
 
 # Re Σ_k (c_re_k + i c_im_k) exp(i k θ) = Σ_k c_re_k cos(k θ) - c_im_k sin(k θ).
 cos_clenshaw(c_re, c_im, θ) = clenshaw_exp_sum(c_re, c_im, θ, Val(true))

@@ -19,6 +19,15 @@
         @test max_abs_diff(pricer(model, zero_rate, method, binary_smile), scalar_prices(method, BinaryEuropeanOption.(1.0, Ks, calls))) < 1e-12
     end
 
+    # Outside SerialMode the smiles of LewisMethod and CosMethod are one broadcast over terms and strikes (the path of the
+    # GPU, #46) instead of the Clenshaw recurrence: MultiThreading takes it on the CPU.
+    @testset "Smiles outside SerialMode, $name, N = $N" for (name, method_N) in ("LewisMethod" => N -> LewisMethod(600.0, N), "CosMethod" => N -> CosMethod(N)), N in (4096, 4097)
+        method = method_N(N)
+        for smile in (FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls), FinancialMonteCarlo.BinaryEuropeanOptionSmile(1.0, Ks, calls))
+            @test max_abs_diff(pricer(model, zero_rate, method, smile, FinancialMonteCarlo.MultiThreading()), pricer(model, zero_rate, method, smile)) < 1e-12
+        end
+    end
+
     # A payoff without a formula must not fall back on the vanilla one.
     @test_throws MethodError pricer(model, zero_rate, CarrMadanLewisMethod(600.0, 16), BarrierOptionUpOut(1.0, 100.0, 120.0))
 
