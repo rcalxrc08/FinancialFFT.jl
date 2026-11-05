@@ -4,7 +4,14 @@ using FinancialFFT, HyperDualNumbers, FFTW
 import FFTW: fft!, fft
 import FinancialFFT: v_value_mod, real_mod, imag_mod, sincos_mod
 
-sincos_mod(x::Hyper) = (sin(x), cos(x))
+# HyperDualNumbers has no sincos. f(x) = f(v) + f'(v) (ε₁ + ε₂ + ε₁₂) + f''(v) ε₁ε₂, and the first two derivatives of
+# sin and cos are again ±sin and ±cos of the value: one sincos of the value gives the two.
+function sincos_mod(x::Hyper)
+    s, c = sincos(x.value)
+    ε₁, ε₂, ε₁₂ = x.epsilon1, x.epsilon2, x.epsilon12
+    ε₁ε₂ = ε₁ * ε₂
+    return hyper(s, c * ε₁, c * ε₂, c * ε₁₂ - s * ε₁ε₂), hyper(c, -s * ε₁, -s * ε₂, -s * ε₁₂ - c * ε₁ε₂)
+end
 
 function fft!(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex{num}} where {num <: Number}
     Xcomplex, Xder1, Xder2, Xder12 = HyperDualNumbers.value.(x), HyperDualNumbers.epsilon1.(x), HyperDualNumbers.epsilon2.(x), HyperDualNumbers.epsilon12.(x)

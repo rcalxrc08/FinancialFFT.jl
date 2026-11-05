@@ -4,7 +4,12 @@ using FinancialFFT, DualNumbers, FFTW
 import FFTW: fft!, fft
 import FinancialFFT: v_value_mod, sincos_mod
 
-sincos_mod(x::Dual) = (sin(x), cos(x))
+# DualNumbers has no sincos. sin and cos of a dual each need both sin and cos of its value (one for the value, the other
+# for the derivative): one sincos of the value gives the two.
+function sincos_mod(x::Dual)
+    s, c = sincos(x.value)
+    return Dual(s, c * x.epsilon), Dual(c, -s * x.epsilon)
+end
 
 function v_value_mod(s::Dual)
     return s.value
