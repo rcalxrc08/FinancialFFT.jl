@@ -69,6 +69,13 @@ html:root #documenter .docs-sidebar .docs-package-name a:hover {
   color: var(--text);
 }
 
+/* Documenter fits the name to the sidebar with the width of its own font, not of this monospace one: a fixed size
+   keeps names up to about 22 characters (FinancialMonteCarlo.jl) on one line */
+html:root #documenter .docs-sidebar .docs-package-name .docs-autofit {
+  font-size: 1.2rem !important;
+  white-space: nowrap;
+}
+
 html:root #documenter .docs-sidebar ul.docs-menu {
   border-top: 1px solid var(--border);
 }
@@ -330,7 +337,7 @@ html:root #documenter .docs-main .docs-footer a {
 
 /* ---------- The hero of the home page, as on the landing pages ---------- */
 
-html:root .content .ffft-hero-logo {
+html:root .content .pkg-hero-logo {
   display: block;
   width: 96px;
   height: 96px;
@@ -338,31 +345,31 @@ html:root .content .ffft-hero-logo {
   margin: 24px 0 20px;
 }
 
-/* the title of the home page is the one of the hero */
-html:root .content:has(.ffft-hero-logo) > h1:first-of-type {
+/* the title of the home page is the one of the hero (the classes are pkg-…: the stylesheet is shared by the packages) */
+html:root .content:has(.pkg-hero-logo) > h1:first-of-type {
   margin-top: 0;
   font-size: clamp(2rem, 6vw, 3.2rem);
   line-height: 1.1;
 }
 
-html:root .content .ffft-roles {
+html:root .content .pkg-roles {
   margin: 4px 0 20px;
   font-size: 1.15rem;
   color: var(--muted);
 }
 
-html:root .content .ffft-roles b {
+html:root .content .pkg-roles b {
   color: var(--text);
   font-weight: 600;
 }
 
-html:root .content .ffft-intro {
+html:root .content .pkg-intro {
   max-width: 680px;
   margin: 0 0 24px;
   font-size: 1.08rem;
 }
 
-html:root .content .ffft-links {
+html:root .content .pkg-links {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -371,8 +378,8 @@ html:root .content .ffft-links {
   border-bottom: 1px solid var(--border);
 }
 
-html:root .content .ffft-links a.ffft-btn,
-html:root .content .ffft-links a.ffft-btn:visited {
+html:root .content .pkg-links a.pkg-btn,
+html:root .content .pkg-links a.pkg-btn:visited {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -387,13 +394,13 @@ html:root .content .ffft-links a.ffft-btn:visited {
   transition: border-color .15s, transform .15s;
 }
 
-html:root .content .ffft-links a.ffft-btn:hover {
+html:root .content .pkg-links a.pkg-btn:hover {
   text-decoration: none;
   border-color: var(--muted);
   transform: translateY(-1px);
 }
 
-html:root .content .ffft-links a.ffft-btn svg {
+html:root .content .pkg-links a.pkg-btn svg {
   width: 18px;
   height: 18px;
   fill: currentColor;
