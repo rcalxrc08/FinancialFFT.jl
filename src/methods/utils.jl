@@ -109,6 +109,67 @@ function clenshaw_cos_sum(coefficients, θ)
     end
     return @muladd(first(coefficients) + γ * b + σ * d + g * b)
 end
+
+# Reverse rules of the two recurrences (issue #47). Zygote differentiates the element reads of their loops by building a
+# dense cotangent of the full length for each one, O(N²) per call; these rules are O(N), with one pass over k. With
+# S = Σ_k c_k e^{ikθ} and cotangent (ā, b̄) on (Re S, Im S):
+# - coefficients: c̄_re_k + i c̄_im_k = (ā + i b̄) e^{-ikθ};
+# - θ: θ̄ = ā Re S' + b̄ Im S', S' = Σ_k i k c_k e^{ikθ}, so Re S' = -Σ_k k (c_re_k sin kθ + c_im_k cos kθ) and
+#   Im S' = Σ_k k (c_re_k cos kθ - c_im_k sin kθ): plain sums, without the cancellation of the recurrence near θ = 0.
+# cos kθ and sin kθ come by rotation, refreshed with an exact sincos every 32 terms. Only Zygote uses these rules: the
+# other back-ends differentiate the loops in linear time.
+clenshaw_cotangent(x) = ChainRulesCore.unthunk(x)
+clenshaw_cotangent(::ChainRulesCore.AbstractZero) = false
+# c_im = nothing for a real series (clenshaw_cos_sum): no imaginary coefficients, and no cotangent for them.
+imaginary_coefficient(::Nothing, i) = false
+imaginary_coefficient(c_im, i) = c_im[i]
+imaginary_cotangent(::Nothing, T) = nothing
+imaginary_cotangent(c_im, T) = similar(c_im, T)
+set_imaginary_cotangent!(::Nothing, i, x) = nothing
+set_imaginary_cotangent!(c̄_im, i, x) = (c̄_im[i] = x)
+function clenshaw_exp_sum_pullback(c_re, c_im, θ, ā, b̄)
+    n = length(c_re)
+    T = typeof(float(θ * first(c_re) * ā))
+    c̄_re, c̄_im = similar(c_re, T), imaginary_cotangent(c_im, T)
+    s_1, c_1 = sincos(θ)
+    co, si = one(T), zero(T)
+    d_re = d_im = zero(T)
+    for (i, k) in zip(eachindex(c_re), 0:(n-1))
+        if k % 32 == 0
+            si, co = sincos(k * θ)
+        end
+        a_k, b_k = c_re[i], imaginary_coefficient(c_im, i)
+        c̄_re[i] = ā * co + b̄ * si
+        set_imaginary_cotangent!(c̄_im, i, b̄ * co - ā * si)
+        d_re -= k * (a_k * si + b_k * co)
+        d_im += k * (a_k * co - b_k * si)
+        co, si = co * c_1 - si * s_1, si * c_1 + co * s_1
+    end
+    return c̄_re, c̄_im, ā * d_re + b̄ * d_im
+end
+function ChainRulesCore.rrule(::typeof(clenshaw_exp_sum), c_re, c_im, θ, only::Val{only_real}) where {only_real}
+    y = clenshaw_exp_sum(c_re, c_im, θ, only)
+    function clenshaw_exp_sum_back(ȳ)
+        ā, b̄ = only_real ? (clenshaw_cotangent(ȳ), false) : (clenshaw_cotangent(ȳ[1]), clenshaw_cotangent(ȳ[2]))
+        c̄_re, c̄_im, θ̄ = clenshaw_exp_sum_pullback(c_re, c_im, θ, ā, b̄)
+        return ChainRulesCore.NoTangent(), c̄_re, c̄_im, θ̄, ChainRulesCore.NoTangent()
+    end
+    return y, clenshaw_exp_sum_back
+end
+function ChainRulesCore.rrule(::typeof(clenshaw_exp_sum), c_re, c_im, θ)
+    y, back = ChainRulesCore.rrule(clenshaw_exp_sum, c_re, c_im, θ, Val(false))
+    return y, ȳ -> back(ȳ)[1:4]
+end
+function ChainRulesCore.rrule(::typeof(clenshaw_cos_sum), coefficients, θ)
+    y = clenshaw_cos_sum(coefficients, θ)
+    function clenshaw_cos_sum_back(ȳ)
+        ā = clenshaw_cotangent(ȳ)
+        # the real coefficients are c_re, without imaginary ones: the cotangent of c_re and θ̄ = ā Re S'
+        c̄, _, θ̄ = clenshaw_exp_sum_pullback(coefficients, nothing, θ, ā, false)
+        return ChainRulesCore.NoTangent(), c̄, θ̄
+    end
+    return y, clenshaw_cos_sum_back
+end
 # One strike per column: the exponent does not depend on the strike.
 strike_columns(x::Number) = x
 strike_columns(x::AbstractVector) = reshape(x, 1, :)

@@ -27,18 +27,13 @@ const METHODS = [string(name) => constructor() for (name, constructor) in method
 const PARTS = vcat(["Black Scholes / " * name for (name, _) in METHODS], ["Models", "Densities"])
 const PAYOFFS = ["option" => EuropeanOption(T, 105.0), "smile of 101" => FinancialMonteCarlo.EuropeanOptionSmile(T, Ks, Ks .>= S0)]
 
-# Zygote gradients through the Clenshaw recurrences, which Zygote differentiates in O(N²) per strike (issue #47): from
-# 0.26 s and 271 MiB for a COS option to more than 13 minutes and 10 GB for a CosDensityMethod smile. Skipped until #47
-# is fixed.
-const ZYGOTE_SKIPPED = [("LewisMethod", "smile of 101"), ("CosMethod", "option"), ("CosMethod", "smile of 101"), ("CosDensityMethod", "option"), ("CosDensityMethod", "smile of 101")]
-
 # The price, summed over the strikes of a smile, as a function of (S0, r, σ).
-function add_black_scholes!(group, method, payoff, skip_zygote)
+function add_black_scholes!(group, method, payoff)
     price = x -> sum(pricer(BlackScholesProcess(x[3], Underlying(x[1], d)), ZeroRate(x[2]), method, payoff))
     x = [S0, r, σ]
     group["price"] = @benchmarkable $price($x)
     group["ForwardDiff"] = @benchmarkable ForwardDiff.gradient($price, $x)
-    skip_zygote || (group["Zygote"] = @benchmarkable Zygote.gradient($price, $x))
+    group["Zygote"] = @benchmarkable Zygote.gradient($price, $x)
     cache = Mooncake.prepare_gradient_cache(price, x)
     group["Mooncake"] = @benchmarkable Mooncake.value_and_gradient!!($cache, $price, $x)
     return group
@@ -59,7 +54,7 @@ function suite(part)
         method_name = chopprefix(part, "Black Scholes / ")
         method = Dict(METHODS)[method_name]
         for (payoff_name, payoff) in PAYOFFS
-            add_black_scholes!(group!(SUITE, "Black Scholes", method_name, payoff_name), method, payoff, (method_name, payoff_name) in ZYGOTE_SKIPPED)
+            add_black_scholes!(group!(SUITE, "Black Scholes", method_name, payoff_name), method, payoff)
         end
     elseif part == "Models"
         for (model_name, model) in MODELS, (method_name, method) in METHODS

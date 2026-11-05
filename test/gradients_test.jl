@@ -25,3 +25,16 @@
         end
     end
 end
+
+# Zygote through the Clenshaw recurrences of the smiles (SerialMode) goes through their reverse rules (#47): against
+# ForwardDiff, on smiles of several strikes, vanilla and binary, odd and even N.
+@testset "Zygote through the Clenshaw recurrences, $name" for (name, method) in ("LewisMethod" => LewisMethod(600.0, 20000), "LewisMethod, odd N" => LewisMethod(600.0, 20001), "CosMethod" => CosMethod(2^12), "CosDensityMethod" => CosDensityMethod())
+    Ks = collect(range(70.0, 140.0, length = 8))
+    iscall = [isodd(i) for i in eachindex(Ks)]
+    params = [100.0, 0.02, 0.2, 5.0, 0.03, 0.02]
+    merton(x) = MertonProcess(x[3], x[4], x[5], x[6], Underlying(x[1], 0.01))
+    for smile in (FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, iscall), FinancialMonteCarlo.BinaryEuropeanOptionSmile(1.0, Ks, iscall))
+        price = x -> sum(pricer(merton(x), ZeroRate(x[2]), method, smile))
+        @test max_abs_diff(only(Zygote.gradient(price, params)), ForwardDiff.gradient(price, params)) < 1e-9
+    end
+end
