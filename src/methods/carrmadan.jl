@@ -63,6 +63,18 @@ carr_madan_factor(::VanillaPayoff) = identity
 carr_madan_factor(::BinaryPayoff) = one
 carr_madan_call(price, ::VanillaPayoff) = price
 carr_madan_call(price, opt::BinaryPayoff) = @. price / opt.K
+# 1 / z as conj(z) / |z|², with one real division: z is a denominator of the transforms, far from 0 and from overflow.
+inv_denominator(z) = conj(z) * inv(abs2(z))
+# The constant weights of the Carr-Madan transform on the nodes v: signs (-1)^j, Simpson weights, dx / 3 and
+# 1 / ((α + iv) (1 + α + iv)), with α + iv dropped by den = one for a binary. In a loop of their own, which vectorises:
+# faster, as measured, than computing them in the broadcast of the exponential.
+function carr_madan_weights(v, alfa, dx, den)
+    N = length(v)
+    one_minus_one = PatternVector(N, EvenOddPattern(Int8(1), Int8(-1)))
+    simpson = PatternVector(N, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
+    dx_3 = dx / 3
+    return @. one_minus_one * simpson * dx_3 * inv_denominator(den(v * im + alfa) * (alfa + 1 + v * im))
+end
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     T = opt.T
@@ -78,26 +90,25 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     real_vec = 0:(N-1)
     v = ChainRulesCore.@ignore_derivatives adapt_array(collect(real_vec * dx), mode)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
-    one_adj = ChainRulesCore.@ignore_derivatives Int8(1)
-    minus_one_adj = ChainRulesCore.@ignore_derivatives Int8(-1)
-    one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(N, EvenOddPattern(one_adj, minus_one_adj))
-    two_adj = ChainRulesCore.@ignore_derivatives Int8(2)
-    four_adj = ChainRulesCore.@ignore_derivatives Int8(4)
-    weights_ = ChainRulesCore.@ignore_derivatives PatternVector(N, PaddedEvenOddPattern(one_adj, four_adj, two_adj, one_adj))
     dk = twoπ / A
     # not pi * N / A: an irrational times an integer is a Float64
     b = N * (pi / A)
     drift_rd = rT - dT
-    v_im = @. v * im
     alfa = ChainRulesCore.@ignore_derivatives carr_madan_damping(mcProcess, T, to_float_type(FT, method.α))
-    den = carr_madan_factor(opt)
-    # transform of exp(α k) C(k): E[exp((1 + α + iv) X)] / ((α + iv) (1 + α + iv)), i.e. the exponent evaluated in 1 + α + iv
-    complex_vec_z_k = @. one_minus_one * cis_mod(drift_rd * v) * exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess, T) - (v_im + 1 + alfa) * corr) / (den(v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
+    # transform of exp(α k) C(k): E[exp((1 + α + iv) X)] / ((α + iv) (1 + α + iv)), i.e. the exponent evaluated in
+    # 1 + α + iv. The factors that do not depend on the model are constant weights (the signs (-1)^j that centre the strike
+    # grid, the Simpson weights, dx / 3, the inverse of the denominator with one real division), on floats even when the
+    # exponent is a dual.
+    weights = ChainRulesCore.@ignore_derivatives carr_madan_weights(v, alfa, dx, carr_madan_factor(opt))
+    # exponent ψ(1 + α + iv) - (1 + α + iv) corr + i v drift: its real constant -(1 + α) corr leaves the FFT (which is
+    # linear) and joins the factor of the prices
+    drift_corr = drift_rd - corr
+    complex_vec_z_k = @. weights * exp(FinancialFFT.characteristic_exponent_i(v * im + (1 + alfa), mcProcess, T) + v * im * drift_corr)
     y = fft_mod(complex_vec_z_k)
     z_T = @. real_mod(y) * invπ
 
     # prices on the log-strike grid -b + dk j, j = 0, …, N - 1
     k_interp = @. log(opt.K / S0)
-    prices = @. S0 * exp(-dT - alfa * (k_interp - drift_rd)) * $grid_interpolate(z_T, -b, dk, k_interp)
+    prices = @. S0 * exp(-dT - (1 + alfa) * corr - alfa * (k_interp - drift_rd)) * $grid_interpolate(z_T, -b, dk, k_interp)
     return call_to_put(carr_madan_call(prices, opt), S0 * exp(-dT), exp(-rT), opt)
 end

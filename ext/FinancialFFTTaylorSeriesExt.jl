@@ -3,7 +3,7 @@ module FinancialFFTTaylorSeriesExt
 using FinancialFFT, TaylorSeries, FFTW
 import FFTW: fft!, fft
 using TaylorSeries: AbstractSeries, constant_term
-import FinancialFFT: v_value_mod, cis_mod, abs_mod
+import FinancialFFT: v_value_mod, abs_mod
 
 series_order(x) = length(x.coeffs) - 1
 
@@ -11,7 +11,6 @@ function v_value_mod(s::Union{Taylor1, TaylorN})
     return v_value_mod(constant_term(s))
 end
 
-cis_mod(x::Union{Taylor1, TaylorN}) = exp(im * x)
 abs_mod(x::Union{Taylor1, TaylorN}) = signbit(v_value_mod(x)) ? -x : x
 
 # Position of each coefficient: its degree in a Taylor1, the degree and the monomial in a TaylorN.
