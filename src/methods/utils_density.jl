@@ -30,7 +30,7 @@ function density_integral_price(mcProcess, r, f, M, opt, mode)
     # a constant for differentiation (Mooncake ignores @ignore_derivatives, hence the hook), and the density is ~ε at
     # its left end
     z, payoff = ChainRulesCore.@ignore_derivatives begin
-        log_K_S0_val = ignore_derivatives_mod.(v_value_mod.(log_K_S0))
+        log_K_S0_val = ignore_derivatives_mod.(log_K_S0)
         z_min = @. f.a - log_K_S0_val
         z_max = @. max(z_min, min(0, f.b - log_K_S0_val))
         t = adapt_array(collect((0:M) ./ convert(typeof(f.a), M)), mode)

@@ -2,14 +2,11 @@ module FinancialFFTReverseDiffExt
 
 using FinancialFFT, ReverseDiff, FFTW
 import FFTW: fft
-import FinancialFFT: v_value_mod, ignore_derivatives_mod
+import FinancialFFT: v_value_mod
 
 function v_value_mod(s::ReverseDiff.TrackedReal)
     return ReverseDiff.value(s)
 end
-
-# ReverseDiff tracks everything, including the quantities wrapped in ChainRulesCore.@ignore_derivatives.
-ignore_derivatives_mod(x::ReverseDiff.TrackedReal) = ReverseDiff.value(x)
 
 # ReverseDiff tracks real numbers only, so the input of the fft is a vector of complex numbers with tracked parts,
 # that FFTW cannot plan. The fft is recorded as a single instruction of the tape, on the real and imaginary parts;

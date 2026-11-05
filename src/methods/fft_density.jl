@@ -53,7 +53,7 @@ function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financia
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     # the range is a constant for differentiation: a grid moving with the parameters would add the derivative of the
     # interpolation error to the scores (Mooncake ignores @ignore_derivatives, hence the hook)
-    a, b = ChainRulesCore.@ignore_derivatives ignore_derivatives_mod.(v_value_mod.(compute_chernorff_limits(mcProcess, rT, dT, T)))
+    a, b = ChainRulesCore.@ignore_derivatives ignore_derivatives_mod.(compute_chernorff_limits(mcProcess, rT, dT, T))
     n = ChainRulesCore.@ignore_derivatives 2^N
     A = (b - a) / 2
     # the grid of fft_density_values is centred at zero: the shift moves the centre of the range there
