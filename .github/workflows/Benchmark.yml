@@ -17,6 +17,10 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    # this commit and the base, each part of the suite in its own process (benchmark/run.jl)
+    timeout-minutes: 120
+    env:
+      BENCHMARK_HEAP_SIZE_HINT: 4G
     steps:
       - uses: actions/checkout@v7
         with:
