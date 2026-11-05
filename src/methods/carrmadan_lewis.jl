@@ -1,25 +1,25 @@
 """
     CarrMadanLewisMethod(A, Npow)
+    CarrMadanLewisMethod(ε; Npow_max = 23)
 
 FFT evaluation of the Lewis (2001) formula: the integrand along the line `Im(u) = 1/2` is sampled
 on `[0, A)` with `2^Npow` nodes and Simpson weights, a single FFT returns the integral on a log-strike grid,
 and prices at the requested strikes are interpolated on it with six-point Lagrange polynomials.
 Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles.
 
+With a tolerance `ε`, `A` and `Npow` are chosen at pricing time so that the error of the prices is below `ε`, as for
+[`CarrMadanMethod`](@ref).
+
 # Arguments
 - `A`: upper bound of the frequency integration domain (`A > 0`).
 - `Npow`: base-2 logarithm of the number of FFT nodes (`2 < Npow < 24`).
+- `ε`: tolerance on the prices (`ε > 0`); `Npow_max`: the largest `Npow` allowed.
 """
-struct CarrMadanLewisMethod{num <: Number, num_1 <: Integer} <: AbstractFFTMethod
-    A::num
-    Npow::num_1
-    function CarrMadanLewisMethod(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
-        ChainRulesCore.@ignore_derivatives @assert(A > 0.0, "A must be positive")
-        ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
-        ChainRulesCore.@ignore_derivatives @assert(N < 24, "N will cause overflow")
-        return new{num, num_1}(A, N)
-    end
+struct CarrMadanLewisMethod{G <: Union{FFTGrid, FFTTolerance}} <: AbstractFFTMethod
+    grid::G
 end
+CarrMadanLewisMethod(A::Number, Npow::Integer) = CarrMadanLewisMethod(FFTGrid(A, Npow))
+CarrMadanLewisMethod(ε::Real; Npow_max::Integer = 23) = CarrMadanLewisMethod(FFTTolerance(ε, Npow_max))
 
 export CarrMadanLewisMethod;
 # The binary call is minus the strike derivative of the Lewis formula: abs2(x_im) becomes x_im, and sqrt(S0 * K) becomes sqrt(S0 / K).
@@ -30,12 +30,12 @@ carr_madan_lewis_call(integral, S0, _, opt::BinaryPayoff) = @. sqrt(S0 / opt.K) 
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     T = opt.T
-    Npow = method.Npow
+    A_grid, Npow = ChainRulesCore.@ignore_derivatives fft_grid(method.grid, method, mcProcess, zero_rate, opt)
     N = ChainRulesCore.@ignore_derivatives 2^Npow
     S0 = mcProcess.underlying.S0
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
-    A = to_float_type(float_type(S0, rT, dT, T), method.A)
+    A = to_float_type(float_type(S0, rT, dT, T), A_grid)
     correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     idx = ChainRulesCore.@ignore_derivatives 0:(N-1)
     # one_minus_one = ChainRulesCore.@ignore_derivatives AlternateVector(Int8(1), Int8(-1), N)

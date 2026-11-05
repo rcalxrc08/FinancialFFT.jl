@@ -1,29 +1,58 @@
+# The grid of the Carr-Madan methods: given (A, Npow), or computed at pricing time from a price tolerance, when the model
+# and the strikes are known (fft_parameters.jl). fft_grid returns (A, Npow).
+struct FFTGrid{num <: Number, num_1 <: Integer}
+    A::num
+    Npow::num_1
+    function FFTGrid(A::num, Npow::num_1) where {num <: Number, num_1 <: Integer}
+        ChainRulesCore.@ignore_derivatives @assert(A > 0.0, "A must be positive")
+        ChainRulesCore.@ignore_derivatives @assert(Npow > 2, "Npow must be greater than 2")
+        ChainRulesCore.@ignore_derivatives @assert(Npow < 24, "Npow will cause overflow")
+        return new{num, num_1}(A, Npow)
+    end
+end
+struct FFTTolerance{num <: Real, num_1 <: Integer}
+    ε::num
+    Npow_max::num_1
+    function FFTTolerance(ε::num, Npow_max::num_1) where {num <: Real, num_1 <: Integer}
+        ChainRulesCore.@ignore_derivatives @assert(ε > 0, "the tolerance must be positive")
+        ChainRulesCore.@ignore_derivatives @assert(2 < Npow_max < 24, "Npow_max must be between 3 and 23")
+        return new{num, num_1}(ε, Npow_max)
+    end
+end
+fft_grid(grid::FFTGrid, method, mcProcess, zero_rate, opt) = (grid.A, grid.Npow)
+
 """
     CarrMadanMethod(A, Npow, α = 0.75)
+    CarrMadanMethod(ε; α = 0.75, Npow_max = 23)
 
 Carr–Madan (1999) FFT method. The damped call transform is integrated with Simpson weights
 on the frequency grid `v ∈ [0, A)` with `2^Npow` nodes, a single FFT returns call prices on a
 log-strike grid, and prices at the requested strikes are interpolated on it with six-point Lagrange polynomials.
 Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles.
 
+With a tolerance `ε`, `A` and `Npow` are chosen at pricing time, for the model and the strikes of the payoff, so that the
+error of the prices is below `ε`: from bounds on the interpolation, truncation and aliasing errors, computed in the float
+type of the inputs. The bounds do not cover rounding (`ε` must be above the rounding floor of that type), the
+parameters are constants for differentiation, and pricing throws an `ArgumentError` when more than `2^Npow_max` nodes are
+needed. Choosing them costs about one price: for a model priced many times, compute them once and pass `(A, Npow)`.
+
 # Arguments
 - `A`: upper bound of the frequency integration domain (`A > 0`). The strike grid has step `2π / A`.
 - `Npow`: base-2 logarithm of the number of FFT nodes (`2 < Npow < 24`).
 - `α`: damping exponent (`α > 0`). It needs `E[S^(1 + α)]` to be finite, so it is capped halfway between 1 and the
   exponential moment bound of the model. The frequency step `A / 2^Npow` must be small with respect to the capped value.
+- `ε`: tolerance on the prices (`ε > 0`); `Npow_max`: the largest `Npow` allowed.
 """
-struct CarrMadanMethod{num <: Number, num_1 <: Integer, num_2 <: Number} <: AbstractFFTMethod
-    A::num
-    Npow::num_1
+struct CarrMadanMethod{G <: Union{FFTGrid, FFTTolerance}, num_2 <: Number} <: AbstractFFTMethod
+    grid::G
     α::num_2
-    function CarrMadanMethod(A::num, N::num_1, α::num_2 = 0.75) where {num <: Number, num_1 <: Integer, num_2 <: Number}
-        ChainRulesCore.@ignore_derivatives @assert(A > 0.0, "A must be positive")
-        ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
-        ChainRulesCore.@ignore_derivatives @assert(N < 24, "N will cause overflow")
+    function CarrMadanMethod(grid::G, α::num_2) where {G <: Union{FFTGrid, FFTTolerance}, num_2 <: Number}
         ChainRulesCore.@ignore_derivatives @assert(α > 0.0, "α must be positive")
-        return new{num, num_1, num_2}(A, N, α)
+        return new{G, num_2}(grid, α)
     end
 end
+CarrMadanMethod(A::Number, Npow::Integer, α::Number = 0.75) = CarrMadanMethod(FFTGrid(A, Npow), α)
+CarrMadanMethod(ε::Real; α::Number = 0.75, Npow_max::Integer = 23) = CarrMadanMethod(FFTTolerance(ε, Npow_max), α)
 export CarrMadanMethod;
 
 # E[S^(1 + α)] must be finite: 1 + α stays at most halfway between 1 and the exponential moment bound of the upper tail.
@@ -37,13 +66,13 @@ carr_madan_call(price, opt::BinaryPayoff) = @. price / opt.K
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
     T = opt.T
-    Npow = method.Npow
+    A_grid, Npow = ChainRulesCore.@ignore_derivatives fft_grid(method.grid, method, mcProcess, zero_rate, opt)
     N = 2^Npow
     S0 = mcProcess.underlying.S0
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     FT = float_type(S0, rT, dT, T)
-    A = to_float_type(FT, method.A)
+    A = to_float_type(FT, A_grid)
     #* v-> compute integral as a summation
     dx = A / N
     real_vec = 0:(N-1)

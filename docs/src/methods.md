@@ -51,8 +51,9 @@ pricer(model, zero_rate, FFTDensityInverter(), option) - pricer(model, zero_rate
 
 ## Carr-Madan parameters from a tolerance
 
-`CarrMadanMethod(model, zero_rate, payoff, ε)` and `CarrMadanLewisMethod(model, zero_rate, payoff, ε)` return the method
-whose error on the prices of `payoff`, an option or a smile, is below `ε`. They bound the three errors of the FFT methods:
+`CarrMadanMethod(ε)` and `CarrMadanLewisMethod(ε)` choose `A` and `Npow` at pricing time, for the model and the strikes
+of the payoff (an option or a smile), so that the error of the prices is below `ε`. They bound the three errors of the
+FFT methods:
 
 - **Interpolation and truncation:** the FFT samples the integral up to the frequency `A` on a strike grid of step
   `2π / A`, and the six-point Lagrange interpolation errs on a frequency `v` by at most `L₆ (2π v / A)⁶`. Weighting the
@@ -68,11 +69,12 @@ characteristic function, and their error is typically a quarter to a half of `ε
 ```@example methods
 model = BlackScholesProcess(σ, Underlying(S0, d))
 smile = FinancialMonteCarlo.EuropeanOptionSmile(T, collect(50.0:5.0:200.0), fill(true, 31))
-method = CarrMadanMethod(model, zero_rate, smile, 1e-8)
-(method.A, method.Npow), maximum(abs.(pricer(model, zero_rate, method, smile) .- blsprice.(S0, smile.K, r, T, σ, d)))
+maximum(abs.(pricer(model, zero_rate, CarrMadanMethod(1e-8), smile) .- blsprice.(S0, smile.K, r, T, σ, d)))
 ```
 
-The parameters are constants for differentiation, so the method can be built inside a differentiated function.
+The parameters are constants for differentiation. Choosing them costs about one price, at every price: when the same
+model and strikes are priced many times (a calibration), compute `A` and `Npow` once with the tolerance and pass them to
+`CarrMadanMethod(A, Npow)`.
 
 ## Floating-point types
 
