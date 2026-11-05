@@ -1,13 +1,21 @@
 name: Build and Deploy
+# Builds the documentation and publishes it with GitHub Pages, whose source is "GitHub Actions": the build is uploaded as
+# the Pages artifact and deployed by actions/deploy-pages, with no gh-pages branch and no separate Pages build.
 on:
   push:
     branches:
       - master
   workflow_dispatch:
 permissions:
-  contents: write # the deploy action pushes to gh-pages
+  contents: read
+  pages: write    # the deployment
+  id-token: write # the token of the deployment
+# one deployment at a time; a newer push does not cancel a deployment in progress
+concurrency:
+  group: pages
+  cancel-in-progress: false
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -20,9 +28,17 @@ jobs:
             import Pkg; Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/rcalxrc08/LocalRegistry.git"));
             Pkg.Registry.add("General"); Pkg.instantiate()'
     - run: julia --project=docs --color=yes docs/make.jl
-    - run: touch docs/build/.nojekyll
-    - name: Deploy 🚀
-      uses: JamesIves/github-pages-deploy-action@releases/v4
+    - uses: actions/configure-pages@v6
+    - uses: actions/upload-pages-artifact@v5
       with:
-        BRANCH: gh-pages
-        FOLDER: docs/build
+        path: docs/build
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy 🚀
+      id: deployment
+      uses: actions/deploy-pages@v5
