@@ -1,0 +1,57 @@
+name: Benchmark
+# The suite of benchmark/benchmarks.jl. On a pull request it also measures the base branch with the same suite and
+# compares the two (report in the job summary and in a comment of the pull request); on master and on demand it
+# reports the timings alone. Results are kept as artifacts.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  pull-requests: write # the comment with the report
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@v3
+      - run: julia -e '
+            import Pkg; Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/rcalxrc08/LocalRegistry.git"));
+            Pkg.Registry.add("General");'
+      - name: Benchmark this commit
+        run: julia benchmark/run.jl head.json
+      - name: Benchmark the base of the pull request
+        if: github.event_name == 'pull_request'
+        # the base may predate parts of the suite: the report then shows this commit alone
+        continue-on-error: true
+        run: |
+          git worktree add ../base ${{ github.event.pull_request.base.sha }}
+          julia benchmark/run.jl base.json ../base
+      - name: Report
+        run: |
+          julia benchmark/compare.jl head.json base.json > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: benchmarks
+          path: |
+            head.json
+            base.json
+            report.md
+          if-no-files-found: ignore
+      - name: Comment on the pull request
+        # pull requests from forks get a read-only token
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file report.md --edit-last --create-if-none
