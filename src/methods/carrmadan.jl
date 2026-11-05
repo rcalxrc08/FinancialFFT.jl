@@ -55,7 +55,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     two_adj = ChainRulesCore.@ignore_derivatives Int8(2)
     four_adj = ChainRulesCore.@ignore_derivatives Int8(4)
     weights_ = ChainRulesCore.@ignore_derivatives PatternVector(N, PaddedEvenOddPattern(one_adj, four_adj, two_adj, one_adj))
-    dk = 2 / A * pi
+    dk = twoπ / A
     # not pi * N / A: an irrational times an integer is a Float64
     b = N * (pi / A)
     drift_rd = rT - dT
@@ -65,7 +65,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     # transform of exp(α k) C(k): E[exp((1 + α + iv) X)] / ((α + iv) (1 + α + iv)), i.e. the exponent evaluated in 1 + α + iv
     complex_vec_z_k = @. one_minus_one * cis_mod(drift_rd * v) * exp(FinancialFFT.characteristic_exponent_i(v_im + (1 + alfa), mcProcess, T) - (v_im + 1 + alfa) * corr) / (den(v_im + alfa) * (alfa + 1 + v_im)) * dx * weights_ / 3
     y = fft_mod(complex_vec_z_k)
-    z_T = @. real_mod(y) / pi
+    z_T = @. real_mod(y) * invπ
 
     # prices on the log-strike grid -b + dk j, j = 0, …, N - 1
     k_interp = @. log(opt.K / S0)

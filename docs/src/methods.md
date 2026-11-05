@@ -40,7 +40,7 @@ density methods at the error of Simpson's rule on `M` intervals:
 - `CosMethod` has no range parameter: its range comes from the tails of the model and covers the forward of every strike. A smile shares one range, so all of its strikes reuse the same coefficients, at the price of a larger `N` when the strikes are many standard deviations apart. It expands the put and recovers the call by parity, so calls stay accurate on models with a heavy right tail. On the CPU the strikes of a smile share the phases of the characteristic function, and each strike sums the series with a Clenshaw recurrence, at the cost of one `sincos` instead of one `cos` per term: in Black Scholes with `N = 2^12`, a smile of 100 strikes costs about 3.5 times a single option, rather than about 18. On the GPU the series stays one broadcast over terms and strikes.
 - `LewisMethod` evaluates the characteristic function on the nodes in `[0, A]` only, since the integrand is even. It prices the strikes of a smile from one set of these evaluations: on the CPU each strike sums the quadrature with a Clenshaw recurrence (in Reinsch's form, which stays accurate at the money), at the cost of one `sincos` per strike instead of an `exp` and a `cos` per node, about 6 times faster for smiles of 100-500 strikes with `N = 20000`.
 - `CarrMadanLewisMethod` and `CarrMadanMethod` run one FFT for all strikes, so their cost does not grow with the number of strikes; prices between the nodes of the strike grid come from Lagrange polynomials on six nodes, of order `h⁶` in the step `h = 2π / A` of the grid, which is what limits their accuracy. The interpolant is continuous but its derivatives in the strike jump at the nodes, by about 1e-8 for `CarrMadanLewisMethod(600, 16)`.
-- `CarrMadanMethod` needs `A / 2^Npow` to be small with respect to the damping, which is capped by the exponential moments of the model.
+- `CarrMadanMethod` needs `A / 2^Npow` to be small with respect to the damping, which is capped by the exponential moments of the model. Both Carr-Madan methods can choose `A` and `Npow` from a price tolerance, see [below](#Carr-Madan-parameters-from-a-tolerance).
 - `CosDensityMethod` and `FFTDensityInverter` price with their [`density`](@ref), the cosine expansion and the FFT inversion: they need no range parameter, and the strikes of a smile share the density, so a smile costs one density and one Simpson's rule per strike. Their error is the one of Simpson's rule on `M` intervals (about `1e-9` with the default `M = 2^10`), and they are slower than `CosMethod`, which integrates the payoff exactly against the cosine expansion: their purpose is to price with the densities that other estimators use.
 
 ```@example methods
@@ -48,6 +48,31 @@ model = MertonProcess(σ, 5.0, 0.03, 0.02, Underlying(S0, d))
 pricer(model, zero_rate, FFTDensityInverter(), option) - pricer(model, zero_rate, LewisMethod(600.0, 20000), option)
 ```
 
+
+## Carr-Madan parameters from a tolerance
+
+`CarrMadanMethod(model, zero_rate, payoff, ε)` and `CarrMadanLewisMethod(model, zero_rate, payoff, ε)` return the method
+whose error on the prices of `payoff`, an option or a smile, is below `ε`. They bound the three errors of the FFT methods:
+
+- **Interpolation and truncation:** the FFT samples the integral up to the frequency `A` on a strike grid of step
+  `2π / A`, and the six-point Lagrange interpolation errs on a frequency `v` by at most `L₆ (2π v / A)⁶`. Weighting the
+  modulus of the integrand with this error (with a cap, and with 1 beyond `A`) gives a bound decreasing in `A`, solved for `A`.
+- **Aliasing:** the result is periodic in the log-strike. Simpson's weights also add copies at half the period, which
+  is the half-width `b = π 2^Npow / A` of the strike grid, so `b` must reach the distance at which the damped price is below
+  `ε`. It is a closed form on one side, and on the other, where the price can have a heavy tail, a Chernoff bound minimised
+  as for the range of `CosMethod`.
+
+`2^Npow` is the smallest power of two with both, and the spare nodes go to `A`. The bounds are model-free apart from the
+characteristic function, and their error is typically a quarter to a half of `ε`:
+
+```@example methods
+model = BlackScholesProcess(σ, Underlying(S0, d))
+smile = FinancialMonteCarlo.EuropeanOptionSmile(T, collect(50.0:5.0:200.0), fill(true, 31))
+method = CarrMadanMethod(model, zero_rate, smile, 1e-8)
+(method.A, method.Npow), maximum(abs.(pricer(model, zero_rate, method, smile) .- blsprice.(S0, smile.K, r, T, σ, d)))
+```
+
+The parameters are constants for differentiation, so the method can be built inside a differentiated function.
 
 ## Floating-point types
 

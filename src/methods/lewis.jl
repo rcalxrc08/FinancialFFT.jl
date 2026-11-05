@@ -69,18 +69,18 @@ end
 function convert_integral_result_to_price_interf(dx_adj, discounted_sum, S0, dT, df, opt::EuropeanOptionSmile)
     S0_adj = S0 * exp(dT) / df
     zero_typed = zero(S0_adj + zero(eltype(opt.K)))
-    return @. df * (ifelse(opt.isCall, S0_adj - opt.K, zero_typed) + opt.K * (1 - dx_adj * discounted_sum / pi))
+    return @. df * (ifelse(opt.isCall, S0_adj - opt.K, zero_typed) + opt.K * (1 - dx_adj * discounted_sum * invπ))
 end
 
 function convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, opt::BinaryEuropeanOptionSmile)
     #simplify the following
-    discounted_sum = @. dx_adj * total_sum_lewis / π
+    discounted_sum = @. dx_adj * total_sum_lewis * invπ
     return @. df * ifelse(opt.isCall, discounted_sum, 1 - discounted_sum)
 end
 
 function convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, opt)
     #simplify the following
-    discounted_sum = dx_adj * total_sum_lewis / π
+    discounted_sum = dx_adj * total_sum_lewis * invπ
     convert_integral_result_to_price(discounted_sum, S0, dT, df, opt)
 end
 
@@ -125,12 +125,12 @@ lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr, ::Financ
 # exp(ψ_j) / (1/4 + v_j²) for vanilla options, exp(ψ_j) / (1/2 + i v_j) for binary ones.
 function lewis_coefficients(v, char_exp_v, ::VanillaPayoff)
     w = @. exp(real_mod(char_exp_v)) / (1 // 4 + v^2)
-    sin_cos = sincos_mod.(imag_mod.(char_exp_v))
+    sin_cos = @. sincos_mod(imag_mod(char_exp_v))
     return (@. w * last(sin_cos)), (@. w * first(sin_cos))
 end
 function lewis_coefficients(v, char_exp_v, ::BinaryPayoff)
     w = @. exp(real_mod(char_exp_v)) / (1 // 4 + v^2)
-    sin_cos = sincos_mod.(imag_mod.(char_exp_v))
+    sin_cos = @. sincos_mod(imag_mod(char_exp_v))
     return (@. w * (last(sin_cos) / 2 + v * first(sin_cos))), (@. w * (first(sin_cos) / 2 - v * last(sin_cos)))
 end
 

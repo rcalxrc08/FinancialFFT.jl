@@ -1,17 +1,29 @@
 using FinancialMonteCarlo, MuladdMacro, ChainRulesCore
 
-function compute_ts(s, model, T, log_epss, mul)
-    return @muladd inv(s) * (FinancialFFT.characteristic_exponent_i(mul * s, model, T) - log_epss)
+# The exponent of a Chernoff bound, s -> log E[exp(mul s X_T)]: P(mul (X_T - E) > t) <= exp(exponent(s) - s t) for every
+# admissible s > 0. Other bounds (the aliasing of the Carr-Madan methods, fft_parameters.jl) define their own exponent,
+# with complex_step and exponential_moment_bound methods.
+struct TailExponent{M, TT, I}
+    model::M
+    T::TT
+    mul::I
 end
+(e::TailExponent)(s) = FinancialFFT.characteristic_exponent_i(e.mul * s, e.model, e.T)
+exponential_moment_bound(e::TailExponent) = exponential_moment_bound(e.model, e.mul, e.T)
+
+# t(s) = (exponent(s) - log ε) / s: the tail beyond t(s) has probability at most ε.
+compute_ts(s, exponent, log_epss) = @muladd inv(s) * (exponent(s) - log_epss)
+compute_ts(s, model, T, log_epss, mul) = compute_ts(s, TailExponent(model, T, mul), log_epss)
 
 complex_step(s, model) = eps(s)
 # Large imaginary parts cancel out in the Heston exponent when γ is imaginary: a step of the order of eps is lost in the rounding.
 complex_step(s, ::FinancialMonteCarlo.HestonProcess) = sqrt(eps(s))
+complex_step(s, e::TailExponent) = complex_step(s, e.model)
 
-function compute_ts_derivative_full_complex(s, model, T, log_epss, mul)
-    h = complex_step(s, model)
+function compute_ts_derivative_full_complex(s, exponent, log_epss)
+    h = complex_step(s, exponent)
     s_complex = @muladd s + im * h
-    t_s_complex = compute_ts(s_complex, model, T, log_epss, mul)
+    t_s_complex = compute_ts(s_complex, exponent, log_epss)
     t_s_epsilon = v_value_mod(FinancialFFT.imag_mod(t_s_complex)) / h
     return t_s_epsilon
 end
@@ -19,18 +31,18 @@ end
 # t(s) = (T ψ(s) - log ε) / s has t'(s) = (T (s ψ'(s) - ψ(s)) + log ε) / s², whose numerator is increasing for a convex ψ:
 # t' changes sign at most once, from negative to positive, so the only stationary point is the minimum and
 # the bracket [a, b] keeps t'(a) < 0 ≤ t'(b).
-function optimize_ts_with_bisection(Model, T, log_epss, toll_, mul, a, b, f_a = compute_ts_derivative_full_complex(a, Model, T, log_epss, mul), f_b = compute_ts_derivative_full_complex(b, Model, T, log_epss, mul))
+function optimize_ts_with_bisection(exponent, log_epss, toll_, a, b, f_a = compute_ts_derivative_full_complex(a, exponent, log_epss), f_b = compute_ts_derivative_full_complex(b, exponent, log_epss))
     @assert (b > a && signbit(f_a) && !signbit(f_b)) "not possible"
     x_half = (a + b) / 2
     # relative tolerance: for short maturities the optimum is large and the absolute one is below the float spacing
     if b - a < toll_ * max(one(b), b)
         return x_half
     end
-    f_x_half = compute_ts_derivative_full_complex(x_half, Model, T, log_epss, mul)
+    f_x_half = compute_ts_derivative_full_complex(x_half, exponent, log_epss)
     if signbit(f_x_half)
-        return optimize_ts_with_bisection(Model, T, log_epss, toll_, mul, x_half, b, f_x_half, f_b)
+        return optimize_ts_with_bisection(exponent, log_epss, toll_, x_half, b, f_x_half, f_b)
     end
-    return optimize_ts_with_bisection(Model, T, log_epss, toll_, mul, a, x_half, f_a, f_x_half)
+    return optimize_ts_with_bisection(exponent, log_epss, toll_, a, x_half, f_a, f_x_half)
 end
 
 # Supremum of the s > 0 such that E[exp(mul * s * X)] is finite, i.e. characteristic_exponent_i(mul * s, model) is defined:
@@ -81,11 +93,11 @@ end
 # The optimal s grows as the maturity shrinks (s* = sqrt(-2 log(eps) / (σ² T)) in Black Scholes),
 # so the upper end of the bracket is doubled until it contains the minimum, without crossing the exponential moment bound.
 # Returns the bracket and whether it contains the minimum; when it does not, the upper end is the best admissible s.
-function widen_bisection_bracket(Model, T, log_epss, mul, s_min, s_max, max_doublings = 30)
-    s_bound = convert(typeof(s_max), (1 - 1e-8) * exponential_moment_bound(Model, mul, T))
+function widen_bisection_bracket(exponent, log_epss, s_min, s_max, max_doublings = 30)
+    s_bound = convert(typeof(s_max), (1 - 1e-8) * exponential_moment_bound(exponent))
     s_max = min(s_max, s_bound)
     s_min = min(s_min, s_max / 2)
-    is_increasing(s) = !signbit(compute_ts_derivative_full_complex(s, Model, T, log_epss, mul))
+    is_increasing(s) = !signbit(compute_ts_derivative_full_complex(s, exponent, log_epss))
     # the minimum is below s_min (very long maturities or large volatilities): t(s_min) is still a valid, wider, bound
     is_increasing(s_min) && return s_min, s_min, false
     n = 0
@@ -96,15 +108,16 @@ function widen_bisection_bracket(Model, T, log_epss, mul, s_min, s_max, max_doub
     return s_min, s_max, is_increasing(s_max)
 end
 
+# The s minimising t(s), a constant for differentiation (exponent and log_epss without derivatives).
+function chernoff_optimum(exponent, log_epss, s_min, s_max, x_toll_bisection)
+    s_min_adj, s_max_adj, is_bracketed = widen_bisection_bracket(exponent, log_epss, s_min, s_max)
+    # if the bound is still decreasing at the exponential moment bound, the best admissible s is the bound itself;
+    # if it is already increasing at s_min, it is s_min
+    return is_bracketed ? optimize_ts_with_bisection(exponent, log_epss, x_toll_bisection, s_min_adj, s_max_adj) : s_max_adj
+end
+
 function compute_chernoff_extrema_bisection_single(Model, T, log_epss, s_min, s_max, x_toll_bisection, mul, driftT)
-    s_opt = ChainRulesCore.@ignore_derivatives begin
-        T_val = v_value_mod(T)
-        log_epss_val = v_value_mod(log_epss)
-        s_min_adj, s_max_adj, is_bracketed = widen_bisection_bracket(Model, T_val, log_epss_val, mul, s_min, s_max)
-        # if the bound is still decreasing at the exponential moment bound, the best admissible s is the bound itself;
-        # if it is already increasing at s_min, it is s_min
-        is_bracketed ? optimize_ts_with_bisection(Model, T_val, log_epss_val, x_toll_bisection, mul, s_min_adj, s_max_adj) : s_max_adj
-    end
+    s_opt = ChainRulesCore.@ignore_derivatives chernoff_optimum(TailExponent(Model, v_value_mod(T), mul), v_value_mod(log_epss), s_min, s_max, x_toll_bisection)
     t_opt_bis = compute_ts(s_opt, Model, T, log_epss, mul)
     # mul = 1 is the upper tail: the bound on E[exp(s X)] limits how far X goes above driftT
     return driftT + mul * t_opt_bis

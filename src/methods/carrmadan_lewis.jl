@@ -51,6 +51,6 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     integral_value = @. real_mod(Y)
     # the integral on the log-strike grid -N π / A + 2 π j / A, j = 0, …, N - 1
     pi_over_A = pi / A
-    integral = @. exp(-rT) / pi * dx / 3 * $grid_interpolate(integral_value, -N * pi_over_A, 2 * pi_over_A, log(opt.K / S0))
+    integral = @. exp(-rT) * invπ * dx / 3 * $grid_interpolate(integral_value, -N * pi_over_A, twoπ / A, log(opt.K / S0))
     return call_to_put(carr_madan_lewis_call(integral, S0, dT, opt), S0 * exp(dT), exp(-rT), opt)
 end
