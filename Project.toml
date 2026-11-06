@@ -1,6 +1,6 @@
 name = "FinancialFFT"
 uuid = "ccc4acef-1676-4a84-946d-4093fe376f06"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Nicola <nicola.scaramuzzino@yandex.com> and contributors"]
 
 [deps]
