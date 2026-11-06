@@ -10,7 +10,7 @@ FinancialMonteCarlo.jl. All of them price every payoff and model of the package.
 | [`CarrMadanLewisMethod`](@ref) | `CarrMadanLewisMethod(A, Npow)` | One FFT of the Lewis integrand on `2^Npow` nodes, then Lagrange interpolation on six nodes at the strikes |
 | [`CarrMadanMethod`](@ref) | `CarrMadanMethod(A, Npow, α = 0.75)` | One FFT of the damped call transform on `2^Npow` nodes, then Lagrange interpolation on six nodes at the strikes |
 | [`CosDensityMethod`](@ref) | `CosDensityMethod(N = 128, M = 2^10)` | Cosine expansion of the density with `N` terms, then Simpson's rule for the put on `M` intervals |
-| [`FFTDensityInverter`](@ref) | `FFTDensityInverter(N = 14, M = 2^10)` | FFT of the characteristic function on `2^N` points for the density, then Simpson's rule for the put on `M` intervals |
+| [`FFTDensityInverter`](@ref) | `FFTDensityInverter(N = 14, M = 2^10)` | One complex-to-real FFT on `2^N` points for the density, from the characteristic function on `2^(N-1) + 1` frequencies, then Simpson's rule for the put on `M` intervals |
 
 All of them agree with the closed formula of Black and Scholes:
 
@@ -36,7 +36,7 @@ density methods at the error of Simpson's rule on `M` intervals:
 
 ## Choosing a method
 
-- `LewisMethod` and `CosMethod` are the most accurate, and with `CosDensityMethod` and `FFTDensityInverter` the only ones whose Zygote gradients can be relied upon, see [Automatic differentiation](@ref).
+- `LewisMethod` and `CosMethod` are the most accurate. Every method is differentiable with every back-end, Zygote included, see [Automatic differentiation](@ref).
 - `CosMethod` has no range parameter: its range comes from the tails of the model and covers the forward of every strike. A smile shares one range, so all of its strikes reuse the same coefficients, at the price of a larger `N` when the strikes are many standard deviations apart. It expands the put and recovers the call by parity, so calls stay accurate on models with a heavy right tail. On the CPU the strikes of a smile share the phases of the characteristic function, and each strike sums the series with a Clenshaw recurrence, at the cost of one `sincos` instead of one `cos` per term: in Black Scholes with `N = 2^12`, a smile of 100 strikes costs about 3.5 times a single option, rather than about 18. On the GPU the series stays one broadcast over terms and strikes.
 - `LewisMethod` evaluates the characteristic function on the nodes in `[0, A]` only, since the integrand is even. It prices the strikes of a smile from one set of these evaluations: on the CPU each strike sums the quadrature with a Clenshaw recurrence (in Reinsch's form, which stays accurate at the money), at the cost of one `sincos` per strike instead of an `exp` and a `cos` per node, about 6 times faster for smiles of 100-500 strikes with `N = 20000`.
 - `CarrMadanLewisMethod` and `CarrMadanMethod` run one FFT for all strikes, so their cost does not grow with the number of strikes; prices between the nodes of the strike grid come from Lagrange polynomials on six nodes, of order `h⁶` in the step `h = 2π / A` of the grid, which is what limits their accuracy. The interpolant is continuous but its derivatives in the strike jump at the nodes, by about 1e-8 for `CarrMadanLewisMethod(600, 16)`.
@@ -78,7 +78,7 @@ model and strikes are priced many times (a calibration), compute `A` and `Npow` 
 
 ## Floating-point types
 
-Prices have the floating-point type of the model, the rates and the payoff: the grids, the truncation ranges and the parameters of the method (`A`, `α`, given in Float64 in the examples) are converted to it, so Float32 inputs give Float32 prices and BigFloat inputs BigFloat prices. FFTW transforms Float32 and Float64 only: in other types the FFT methods use a radix-2 FFT of the package, slower but in their precision. The truncation range of the COS methods comes from a tail probability of `1e-14` in Float64, scaled by the machine epsilon in other types: in BigFloat the range is wider, so reaching its precision needs a larger `N` (and `M` for `CosDensityMethod`).
+Prices have the floating-point type of the model, the rates and the payoff: the grids, the truncation ranges and the parameters of the method (`A`, `α`, given in Float64 in the examples) are converted to it, so Float32 inputs give Float32 prices and BigFloat inputs BigFloat prices. FFTW transforms Float32 and Float64 only: in other types (BigFloat, DoubleFloats, …) the FFT methods use [FFTA.jl](https://github.com/dannys4/FFTA.jl), slower than FFTW but in their precision, and DualNumbers, HyperDualNumbers, TaylorSeries, ForwardDiff and Zygote differentiate them in these types too. The truncation range of the COS methods comes from a tail probability of `1e-14` in Float64, scaled by the machine epsilon in other types: in BigFloat the range is wider, so reaching its precision needs a larger `N` (and `M` for `CosDensityMethod`).
 
 ```julia
 setprecision(BigFloat, 128) do
@@ -94,7 +94,7 @@ formula, such as the likelihood ratio method or Vibrato. Like `pricer`, it dispa
 
 | Method | Density | Range | Cost |
 |:--|:--|:--|:--|
-| [`FFTDensityInverter`](@ref) | one FFT on `2^N` points, cubic interpolation between them | the range of `CosMethod`, from the model | an FFT to set up, about 30 ns a point |
+| [`FFTDensityInverter`](@ref) | one complex-to-real FFT on `2^N` points (the characteristic function on `2^(N-1) + 1` frequencies), cubic interpolation between them | the range of `CosMethod`, from the model | an FFT to set up, about 30 ns a point |
 | [`CosDensityMethod`](@ref) | cosine expansion on `N + 1` terms | the range of `CosMethod`, from the model | `N` exponents to set up, about 300 ns a point (`N = 128`) |
 
 The setup runs once, then the density is evaluated at any number of points: `f(y)` at a point, on the CPU, and
@@ -125,9 +125,10 @@ score(0.1)
   gather of four values. Its error is of order `dx⁴` (about `1e-13` with the default `N = 14` in Black and Scholes),
   and the grid narrows with the horizon, so short steps keep their resolution. Every AD back-end differentiates it, Zygote
   included, on the CPU and on the GPU.
-- `CosDensityMethod` converges exponentially on smooth densities, and is the most accurate of the three there; it
+- `CosDensityMethod` converges exponentially on smooth densities, and is the more accurate of the two there; it
   struggles where the density is not smooth, as Variance Gamma over a short step, whose density has a cusp at its mode
-  (2% off with 512 terms, against `6e-6` for `FFTDensityInverter(16)`).
+  (with 512 terms 3% of the maximum off at the cusp and 2e-3 away from it, against 3e-4 and below 1e-7 for
+  `FFTDensityInverter(16)`).
 
 All errors are absolute: far in the tails, where the density is close to the floor of the machine epsilon, the relative
 error, which is the one of a score, grows.

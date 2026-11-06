@@ -43,7 +43,7 @@ pricer(model, zero_rate, CosMethod(2^12), option)                    # COS metho
 - Payoffs: European and binary (digital) options, calls and puts, and their smiles (several strikes, one maturity), with every method. Options with different maturities are priced by broadcasting, `pricer.(model, zero_rate, method, options)`.
 - Non-constant zero rates and dividends.
 - Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl and TaylorSeries.jl, see [Automatic differentiation](@ref) for the exceptions.
-- Float32 and BigFloat prices, see [Floating-point types](@ref).
+- Float32, BigFloat and other floating-point types (DoubleFloats, …), see [Floating-point types](@ref).
 - GPU execution through CUDA.jl, see [GPU](@ref).
 
 ## Installation

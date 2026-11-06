@@ -24,7 +24,7 @@ It currently contains the following capabilities:
     - Merton
     - Normal Inverse Gaussian
     - Variance Gamma
-- Support for non costant zero rates and dividends
+- Support for non constant zero rates and dividends
 - Support for the following Option families:
     - European Options
     - Binary European Options

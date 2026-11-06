@@ -1,8 +1,9 @@
 """
     FFTDensityInverter(N = 14, M = 2^10)
 
-Density of the log-return `log(S_T / S_0)` recovered by inverting the characteristic function with a single FFT on
-`2^N` points, see [`density`](@ref). The grid spans the range of `CosMethod`, from a Chernoff bound on the tails, so it
+Density of the log-return `log(S_T / S_0)` recovered by inverting the characteristic function with a single
+complex-to-real FFT on `2^N` points, see [`density`](@ref): the density is real, so the characteristic function is
+evaluated on the `2^(N-1) + 1` non-negative frequencies only. The grid spans the range of `CosMethod`, from a Chernoff bound on the tails, so it
 needs no range parameter for any model, and it narrows with the horizon: the short steps of a Vibrato or likelihood
 ratio estimator keep the resolution of long ones. Between the nodes the density is interpolated by cubic Lagrange
 polynomials, written with broadcasts and gathers only, so that every AD back-end, Zygote included, differentiates it,
