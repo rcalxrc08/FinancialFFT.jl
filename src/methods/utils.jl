@@ -9,59 +9,28 @@ to_float_type(FT, x) = ChainRulesCore.@ignore_derivatives convert(FT, v_value_mo
 # Relative tolerance of a computation in FT that has 1e-14 in Float64: scaled by the machine epsilon.
 scaled_tolerance(FT, toll) = FT(toll) * (eps(FT) / FT(eps(Float64)))
 
-# FFTW transforms Float32 and Float64 only: other floating-point types (BigFloat) use a radix-2 FFT (all the grids
-# have 2^N points), with the twiddle factors computed in their precision.
-fft_mod(x) = fft(x)
-fft_mod(x::AbstractVector{Complex{T}}) where {T <: AbstractFloat} = T <: Union{Float32, Float64} ? fft(x) : generic_fft(x)
-function generic_fft(x::AbstractVector{Complex{T}}) where {T}
-    n = length(x)
-    @assert ispow2(n) "the generic FFT needs 2^N points"
-    y = collect(x)
-    # bit reversal
-    j = 0
-    for i in 0:(n-2)
-        if i < j
-            y[i+1], y[j+1] = y[j+1], y[i+1]
-        end
-        m = n >> 1
-        while m >= 1 && j & m != 0
-            j ⊻= m
-            m >>= 1
-        end
-        j |= m
-    end
-    half = 1
-    while half < n
-        for k in 0:(half-1)
-            w = cispi(-T(k) / half)
-            for i in (k+1):(2*half):n
-                t = w * y[i+half]
-                y[i+half] = y[i] - t
-                y[i] += t
-            end
-        end
-        half *= 2
-    end
-    return y
-end
+# FFTW transforms Float32 and Float64 only: the transforms of other floating-point types (BigFloat, Float16, DoubleFloats)
+# are FFTA's, through the same AbstractFFTs functions and plans (fft, brfft, rfft, plan_brfft, …), on any length.
 
 # The unnormalised inverse DFT y_j = Σ_k h_k exp(2πi jk / n) of the Hermitian vector h (h_{n-k} = conj(h_k)) given by
-# its first n/2 + 1 entries x, which is real: brfft of FFTW, which ignores the imaginary parts of x_0 and x_{n/2}.
-# Other floating-point types (BigFloat) take the real part of the generic FFT of conj(h), which is conj(x) followed by
-# x_{n/2-1}, …, x_1. The extensions of the AD back-ends add methods, the CUDA one through brfft of CUFFT.
+# its first n/2 + 1 entries x, which is real: brfft, which ignores the imaginary parts of x_0 and x_{n/2}. A function of
+# its own, for the methods of the extensions of the AD back-ends (the CUDA one through brfft of CUFFT) and the rrule.
 brfft_mod(x, n, region = 1) = brfft(x, n, region)
-brfft_mod(x::AbstractVector{Complex{T}}, n) where {T <: AbstractFloat} = T <: Union{Float32, Float64} ? brfft(x, n) : real.(generic_fft(vcat(conj.(x), view(x, div(n, 2):-1:2))))
 
-# A plan of brfft_mod(·, n) for vectors like x, applied with *, so that the transforms of several components share one
-# planning: FFTW's (CUFFT's on the device), whose planning costs 38-114 μs for 2^10-2^18 points (as much as a transform
-# of 2^14); brfft_mod itself for other floats.
-struct BrfftModPlan{I <: Integer}
-    n::I
+# An in-place FFT: FFTW's plan_fft! (CUFFT's on the device). FFTA has no in-place plans: for other floats its
+# out-of-place plan, whose transform is copied into the argument. The AD element types keep the fft! of the extensions.
+struct InPlaceFFTPlan{P}
+    plan::P
 end
-Base.:*(p::BrfftModPlan, x) = brfft_mod(x, p.n)
-FFTW.mul!(y, p::BrfftModPlan, x) = copyto!(y, p * x)
-plan_brfft_mod(x::AbstractVector{Complex{T}}, n) where {T <: Union{Float32, Float64}} = plan_brfft(x, n)
-plan_brfft_mod(x, n) = BrfftModPlan(n)
+Base.:*(p::InPlaceFFTPlan, x) = copyto!(x, p.plan * x)
+plan_fft_mod!(x::AbstractArray{<:Union{ComplexF32, ComplexF64}}, region...) = plan_fft!(x, region...)
+plan_fft_mod!(x::AbstractArray{<:Complex{<:AbstractFloat}}, region...) = InPlaceFFTPlan(plan_fft(x, region...))
+fft_mod!(x, region...) = fft!(x, region...)
+fft_mod!(x::AbstractArray{<:Complex{<:AbstractFloat}}, region...) = plan_fft_mod!(x, region...) * x
+
+# y = plan * x, written in y: FFTW's mul!; FFTA has no mul! for its real transforms, hence the copy of the product.
+mul_mod!(y, plan, x) = copyto!(y, plan * x)
+mul_mod!(y, plan::FFTW.FFTWPlan, x) = FFTW.mul!(y, plan, x)
 
 # The adjoint of brfft_mod(·, n), for the derivatives ∂L/∂Re x + i ∂L/∂Im x of a real cotangent ȳ: the entries
 # 1, …, n/2 - 1 of x stand for two entries of h, hence the weight 2; x_0 and x_{n/2} get the real values of rfft there,

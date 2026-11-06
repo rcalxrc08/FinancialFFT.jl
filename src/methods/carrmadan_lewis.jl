@@ -54,7 +54,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     dx_3 = dx / 3
     one_half = one(dx) / 2
     # correction (1/2 + ix) + ψ(1/2 + ix): the real constant correction / 2 leaves the FFT and joins the factor of the integral
-    Y = fft_mod(@. one_minus_one * simpson * dx_3 * inverse_denominator(x) * exp(FinancialFFT.characteristic_exponent_i(complex(one_half, x), mcProcess, T) + x * im * correction))
+    Y = fft(@. one_minus_one * simpson * dx_3 * inverse_denominator(x) * exp(FinancialFFT.characteristic_exponent_i(complex(one_half, x), mcProcess, T) + x * im * correction))
     integral_value = @. real_mod(Y)
     # the integral on the log-strike grid -N π / A + 2 π j / A, j = 0, …, N - 1
     pi_over_A = pi / A

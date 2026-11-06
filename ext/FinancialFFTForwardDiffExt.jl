@@ -20,7 +20,7 @@ component_indices(x::AbstractArray, N) = reshape(0:N, ntuple(_ -> 1, ndims(x))..
 function fft!(x::AbstractArray{Complex{ForwardDiff.Dual{Tg, T, N}}}, region = 1:ndims(x)) where {Tg, T <: Real, N}
     components = component_indices(x, N)
     M = @. complex(dual_component(real(x), components), dual_component(imag(x), components))
-    fft!(M, region)
+    FinancialFFT.fft_mod!(M, region)
     to_dual(value, partials...) = complex(ForwardDiff.Dual{Tg}(real(value), real.(partials)), ForwardDiff.Dual{Tg}(imag(value), imag.(partials)))
     x .= to_dual.(ntuple(k -> selectdim(M, ndims(M), k), Val(N + 1))...)
     return x

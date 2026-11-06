@@ -104,7 +104,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     # linear) and joins the factor of the prices
     drift_corr = drift_rd - corr
     complex_vec_z_k = @. weights * exp(FinancialFFT.characteristic_exponent_i(v * im + (1 + alfa), mcProcess, T) + v * im * drift_corr)
-    y = fft_mod(complex_vec_z_k)
+    y = fft(complex_vec_z_k)
     z_T = @. real_mod(y) * invπ
 
     # prices on the log-strike grid -b + dk j, j = 0, …, N - 1

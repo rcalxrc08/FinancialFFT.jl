@@ -1,5 +1,5 @@
 # Prices keep the floating-point type of the inputs: no Float64 constant of a method promotes Float32 or BigFloat.
-# The FFT methods transform BigFloat with the generic radix-2 FFT. In BigFloat the truncation range of the COS methods
+# The FFT methods transform BigFloat with FFTA. In BigFloat the truncation range of the COS methods
 # is wider (its tail probability is scaled by the machine epsilon), so CosDensityMethod has a larger Simpson error.
 @testset "Floating-point types" begin
     type_methods = ["LewisMethod" => LewisMethod(600.0, 2000), "CosMethod" => CosMethod(2^8), "CarrMadanLewisMethod" => CarrMadanLewisMethod(600.0, 12), "CarrMadanMethod" => CarrMadanMethod(400.0, 12), "FFTDensityInverter" => FFTDensityInverter(12, 2^8), "CosDensityMethod" => CosDensityMethod(64, 2^8)]
@@ -16,6 +16,15 @@
                 @test max_abs_diff(price32, price64) < 1e-3
                 @test max_abs_diff(pricebig, price64) < (name in ("CosDensityMethod", "FFTDensityInverter") ? 1e-6 : 1e-11)
             end
+        end
+        # BigFloat derivatives through the FFTs of FFTA, out of place (the extensions of the forward back-ends wrap its plan
+        # for their fft!), against Float64: the delta.
+        @testset "$name, BigFloat derivatives, $backend" for (name, method) in type_methods[3:5], backend in ("ForwardDiff", "DualNumbers", "HyperDualNumbers", "TaylorSeries", "Zygote")
+            price(s, Tn) = pricer(MertonProcess(Tn(0.2), Tn(5), Tn(0.03), Tn(0.02), Underlying(s, Tn(0.01))), ZeroRate(Tn(0.02)), method, EuropeanOption(Tn(1), Tn(100)))
+            derivative = Dict("ForwardDiff" => (f, s) -> ForwardDiff.derivative(f, s), "DualNumbers" => (f, s) -> DualNumbers.epsilon(f(Dual(s, one(s)))), "HyperDualNumbers" => (f, s) -> HyperDualNumbers.eps1(f(hyper(s, one(s), one(s), zero(s)))), "TaylorSeries" => (f, s) -> TaylorSeries.getcoeff(f(s + Taylor1(typeof(s), 1)), 1), "Zygote" => (f, s) -> Zygote.gradient(f, s)[1])[backend]
+            deltabig = derivative(s -> price(s, BigFloat), BigFloat(100))
+            @test deltabig isa BigFloat
+            @test abs(deltabig - derivative(s -> price(s, Float64), 100.0)) < 1e-9
         end
     end
 end

@@ -3,7 +3,7 @@ module FinancialFFTTaylorSeriesExt
 using FinancialFFT, TaylorSeries, FFTW
 import FFTW: fft!, fft
 using TaylorSeries: AbstractSeries, constant_term
-import FinancialFFT: v_value_mod, abs_mod, brfft_mod, plan_brfft_mod
+import FinancialFFT: v_value_mod, abs_mod, brfft_mod
 
 series_order(x) = length(x.coeffs) - 1
 
@@ -28,7 +28,7 @@ function fft_coefficients(x)
     y = zero.(x)
     indices = coefficient_indices(first(x))
     buffer = [get_coefficient(el, first(indices)) for el in x]
-    planned_fft = plan_fft!(buffer)
+    planned_fft = FinancialFFT.plan_fft_mod!(buffer)
     for idx in indices
         map!(el -> get_coefficient(el, idx), buffer, x)
         planned_fft * buffer
@@ -52,11 +52,11 @@ function brfft_mod(x::AbstractVector{T}, n::Integer) where {T <: AbstractSeries{
     y = [zero(real(first(x))) for _ in 1:n]
     indices = coefficient_indices(first(x))
     buffer = [get_coefficient(el, first(indices)) for el in x]
-    plan = plan_brfft_mod(buffer, n)
+    plan = plan_brfft(buffer, n)
     coeffs = similar(buffer, real(eltype(buffer)), n)
     for idx in indices
         map!(el -> get_coefficient(el, idx), buffer, x)
-        FFTW.mul!(coeffs, plan, buffer)
+        FinancialFFT.mul_mod!(coeffs, plan, buffer)
         for i in eachindex(y)
             set_coefficient!(y[i], coeffs[i], idx)
         end

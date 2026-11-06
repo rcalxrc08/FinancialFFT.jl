@@ -1,4 +1,5 @@
 module FinancialFFT
+import FFTA
 using FFTW, PatternVectors, MuladdMacro, ChainRulesCore, FinancialMonteCarlo, Adapt
 import FinancialMonteCarlo: BinaryEuropeanOptionSmile, EuropeanOptionSmile
 using IrrationalConstants: twoπ, invπ
