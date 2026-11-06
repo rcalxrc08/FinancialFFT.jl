@@ -40,6 +40,14 @@
         y = range(f.a, f.b, length = 2001)
         @test maximum(abs.(f.(y) .- g.(y))) < (has_cusp ? 1e-3 : 1e-9) * maximum(g.(y))
     end
+    # the transform of fft_density_values: FFTW's brfft, and the generic FFT for other floats
+    @testset "brfft_mod, $FT, n = $n" for FT in (Float32, Float64, BigFloat), n in (8, 64, 1024)
+        x = Complex{FT}.(randn(ComplexF64, div(n, 2) + 1))
+        y = FinancialFFT.brfft_mod(x, n)
+        @test eltype(y) == FT
+        # FFTW in Float64 as the reference: its rounding bounds the error for BigFloat
+        @test maximum(abs.(y .- FinancialFFT.brfft(ComplexF64.(x), n))) < 2 * max(eps(FT), eps(Float64)) * sum(abs.(x))
+    end
     @testset "density_values of $name" for (name, method) in ("CosDensityMethod" => CosDensityMethod(), "FFTDensityInverter" => FFTDensityInverter())
         f = density(model(σ), ZeroRate(r), method, T)
         y = [f.a - 0.1, -0.3, 0.0, 0.1, 0.25, f.b + 0.1]

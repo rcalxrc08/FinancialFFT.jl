@@ -3,7 +3,7 @@ module FinancialFFTTaylorSeriesExt
 using FinancialFFT, TaylorSeries, FFTW
 import FFTW: fft!, fft
 using TaylorSeries: AbstractSeries, constant_term
-import FinancialFFT: v_value_mod, abs_mod
+import FinancialFFT: v_value_mod, abs_mod, brfft_mod, plan_brfft_mod
 
 series_order(x) = length(x.coeffs) - 1
 
@@ -21,25 +21,46 @@ get_coefficient(x::TaylorN, (k, j)) = x[k][j]
 set_coefficient!(x::Taylor1, c, k) = (x[k] = c)
 set_coefficient!(x::TaylorN, c, (k, j)) = (x[k][j] = c)
 
-# The fft is linear, so it maps each coefficient separately. They are written in zeros of the elements, and not in new
-# series, since a TaylorN carries its JetSpace.
-function fft!(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <: Complex{num}} where {num <: Number}
+# The fft is linear, so it maps each coefficient separately: one buffer for the coefficients of every degree, transformed
+# in place with one plan. They are written in zeros of the elements, and not in new series, since a TaylorN carries its
+# JetSpace; nor in the elements of x, which may be shared (by fill, or by the shallow copy of fft).
+function fft_coefficients(x)
     y = zero.(x)
-    planned_fft = plan_fft!(similar(x, cpx))
-    for idx in coefficient_indices(first(x))
-        coeffs = [get_coefficient(el, idx) for el in x]
-        planned_fft * coeffs
+    indices = coefficient_indices(first(x))
+    buffer = [get_coefficient(el, first(indices)) for el in x]
+    planned_fft = plan_fft!(buffer)
+    for idx in indices
+        map!(el -> get_coefficient(el, idx), buffer, x)
+        planned_fft * buffer
+        for i in eachindex(y)
+            set_coefficient!(y[i], buffer[i], idx)
+        end
+    end
+    return y
+end
+
+function fft!(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <: Complex{num}} where {num <: Number}
+    x .= fft_coefficients(x)
+    nothing
+end
+
+fft(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <: Complex{num}} where {num <: Number} = fft_coefficients(x)
+
+# brfft is linear too, coefficient by coefficient, with one plan and one buffer for the input and one for the output;
+# its output has n real series, built as zeros of the real part of an element so that they keep its order (and JetSpace).
+function brfft_mod(x::AbstractVector{T}, n::Integer) where {T <: AbstractSeries{<:Complex}}
+    y = [zero(real(first(x))) for _ in 1:n]
+    indices = coefficient_indices(first(x))
+    buffer = [get_coefficient(el, first(indices)) for el in x]
+    plan = plan_brfft_mod(buffer, n)
+    coeffs = similar(buffer, real(eltype(buffer)), n)
+    for idx in indices
+        map!(el -> get_coefficient(el, idx), buffer, x)
+        FFTW.mul!(coeffs, plan, buffer)
         for i in eachindex(y)
             set_coefficient!(y[i], coeffs[i], idx)
         end
     end
-    x .= y
-    nothing
-end
-
-function fft(x::AbstractArray{T}) where {T <: AbstractSeries{cpx}} where {cpx <: Complex{num}} where {num <: Number}
-    y = copy(x)
-    fft!(y)
     return y
 end
 

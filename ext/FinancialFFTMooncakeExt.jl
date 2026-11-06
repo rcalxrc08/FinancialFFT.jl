@@ -10,7 +10,9 @@ const ComplexVector = Vector{<:Complex{<:IEEEFloat}}
 
 Mooncake.@is_primitive DefaultCtx ForwardMode Tuple{typeof(fft), ComplexVector}
 function Mooncake.frule!!(::Dual{typeof(fft)}, x::Dual{<:ComplexVector})
-    return Dual(fft(primal(x)), fft(tangent(x)))
+    # one plan for the two transforms
+    plan = plan_fft(primal(x))
+    return Dual(plan * primal(x), plan * tangent(x))
 end
 
 Mooncake.@is_primitive DefaultCtx ReverseMode Tuple{typeof(fft), ComplexVector}
@@ -23,6 +25,25 @@ function Mooncake.rrule!!(::CoDual{typeof(fft)}, x::CoDual{<:ComplexVector})
         return NoRData(), NoRData()
     end
     return CoDual(y, dy), fft_pullback!!
+end
+
+# brfft_mod as well: the tangent is brfft of the tangent, the adjoint brfft_adjoint (the output is real).
+Mooncake.@is_primitive DefaultCtx ForwardMode Tuple{typeof(FinancialFFT.brfft_mod), ComplexVector, Int}
+function Mooncake.frule!!(::Dual{typeof(FinancialFFT.brfft_mod)}, x::Dual{<:ComplexVector}, n::Dual{Int})
+    plan = plan_brfft(primal(x), primal(n))
+    return Dual(plan * primal(x), plan * tangent(x))
+end
+
+Mooncake.@is_primitive DefaultCtx ReverseMode Tuple{typeof(FinancialFFT.brfft_mod), ComplexVector, Int}
+function Mooncake.rrule!!(::CoDual{typeof(FinancialFFT.brfft_mod)}, x::CoDual{<:ComplexVector}, n::CoDual{Int})
+    y = brfft(primal(x), primal(n))
+    dy = zero(y)
+    dx = tangent(x)
+    function brfft_pullback!!(::NoRData)
+        dx .+= FinancialFFT.brfft_adjoint(dy, primal(n))
+        return NoRData(), NoRData(), NoRData()
+    end
+    return CoDual(y, dy), brfft_pullback!!
 end
 
 # The complex sqrt of Base bitcasts its argument, which Mooncake refuses to differentiate. The overlay is only seen by Mooncake.

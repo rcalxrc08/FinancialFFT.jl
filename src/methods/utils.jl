@@ -45,6 +45,40 @@ function generic_fft(x::AbstractVector{Complex{T}}) where {T}
     return y
 end
 
+# The unnormalised inverse DFT y_j = Σ_k h_k exp(2πi jk / n) of the Hermitian vector h (h_{n-k} = conj(h_k)) given by
+# its first n/2 + 1 entries x, which is real: brfft of FFTW, which ignores the imaginary parts of x_0 and x_{n/2}.
+# Other floating-point types (BigFloat) take the real part of the generic FFT of conj(h), which is conj(x) followed by
+# x_{n/2-1}, …, x_1. The extensions of the AD back-ends add methods, the CUDA one through brfft of CUFFT.
+brfft_mod(x, n, region = 1) = brfft(x, n, region)
+brfft_mod(x::AbstractVector{Complex{T}}, n) where {T <: AbstractFloat} = T <: Union{Float32, Float64} ? brfft(x, n) : real.(generic_fft(vcat(conj.(x), view(x, div(n, 2):-1:2))))
+
+# A plan of brfft_mod(·, n) for vectors like x, applied with *, so that the transforms of several components share one
+# planning: FFTW's (CUFFT's on the device), whose planning costs 38-114 μs for 2^10-2^18 points (as much as a transform
+# of 2^14); brfft_mod itself for other floats.
+struct BrfftModPlan{I <: Integer}
+    n::I
+end
+Base.:*(p::BrfftModPlan, x) = brfft_mod(x, p.n)
+FFTW.mul!(y, p::BrfftModPlan, x) = copyto!(y, p * x)
+plan_brfft_mod(x::AbstractVector{Complex{T}}, n) where {T <: Union{Float32, Float64}} = plan_brfft(x, n)
+plan_brfft_mod(x, n) = BrfftModPlan(n)
+
+# The adjoint of brfft_mod(·, n), for the derivatives ∂L/∂Re x + i ∂L/∂Im x of a real cotangent ȳ: the entries
+# 1, …, n/2 - 1 of x stand for two entries of h, hence the weight 2; x_0 and x_{n/2} get the real values of rfft there,
+# since their imaginary parts are ignored (an odd n has no x_{n/2}: the last weight is 2). The weights are a PatternVector,
+# broadcast with the transform on the device too. A plan of rfft can be passed, to be reused.
+function brfft_adjoint(ȳ, n, plan = plan_rfft(ȳ))
+    r = plan * ȳ
+    weights = ChainRulesCore.@ignore_derivatives iseven(n) ? PatternVector(length(r), PaddedFillPattern(Int8(1), Int8(2), Int8(1))) : PatternVector(length(r), InitialValuePattern(Int8(1), Int8(2)))
+    return weights .* r
+end
+# Zygote (the rule of AbstractFFTs builds its weights on the CPU, which fails on the device).
+function ChainRulesCore.rrule(::typeof(brfft_mod), x::AbstractVector, n::Integer)
+    project_x = ChainRulesCore.ProjectTo(x)
+    brfft_mod_pullback(ȳ) = ChainRulesCore.NoTangent(), project_x(brfft_adjoint(real(ChainRulesCore.unthunk(ȳ)), n)), ChainRulesCore.NoTangent()
+    return brfft_mod(x, n), brfft_mod_pullback
+end
+
 # Σ_k (c_re_k + i c_im_k) exp(i k θ), k = 0, 1, …, as (real part, imaginary part), by the Clenshaw recurrence
 # b_k = C_k + 2 cos(θ) b_{k+1} - b_{k+2}, S = b_0 - exp(-iθ) b_1. Near θ = 0 (or π) the b_k grow like the number of
 # terms and S cancels, so there it runs in Reinsch's form, on d_k = b_k - σ b_{k+1} with σ = 1 (or -1), and with

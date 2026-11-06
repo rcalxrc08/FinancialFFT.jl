@@ -56,30 +56,31 @@ function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financia
     a, b = ChainRulesCore.@ignore_derivatives ignore_derivatives_mod.(compute_chernorff_limits(mcProcess, rT, dT, T))
     n = ChainRulesCore.@ignore_derivatives 2^N
     A = (b - a) / 2
-    # the grid of fft_density_values is centred at zero: the shift moves the centre of the range there
-    values = fft_density_values(mcProcess, zero_rate, N, A, -(a + b) / 2, T, mode)
+    values = fft_density_values(mcProcess, zero_rate, N, A, a, T, mode)
     dx = 2 * A / n
     return FFTDensity(values, a, a + (n - 1) * dx, dx)
 end
 
-# Density of log(S_T / S0) + shift on the 2^N points -A + 2A j / 2^N, j = 0, …, 2^N - 1: the characteristic function
-# is sampled on the frequencies π k / A, k = -2^(N-1), …, 2^(N-1) - 1, and the alternating signs (-1)^k and (-1)^j
-# center both grids. The sign (-1)^j is dropped with abs, and the values are floored at eps.
-function fft_density_values(mcProcess, r, N, A, shift, T, mode)
-    n = ChainRulesCore.@ignore_derivatives 2^N
-    vec = ChainRulesCore.@ignore_derivatives adapt_array(collect(-div(n, 2) .+ (0:(n-1))), mode)
+# Density of log(S_T / S0) on the 2^N points y_j = a + 2A j / 2^N, j = 0, …, 2^N - 1: with the frequencies
+# u_k = π k / A, k = -2^(N-1), …, 2^(N-1) - 1, f(y_j) ≈ Σ_k φ(-u_k) exp(i u_k a) exp(2πi jk / 2^N) / (2A), where
+# exp(i u_k a) anchors the grid at its left end. The input of this transform is Hermitian (φ(u) = conj φ(-u)), and the
+# result is real: the characteristic exponent is evaluated on k = 0, …, 2^(N-1) only, and transformed by brfft (the
+# node -2^(N-1) through the real part of 2^(N-1), at the rounding level on the range of COS). The values are floored at
+# eps.
+function fft_density_values(mcProcess, r, N, A, a, T, mode)
+    n2 = ChainRulesCore.@ignore_derivatives 2^(N - 1)
+    FT = float_type(A)
+    # -i u_k, a constant for differentiation: A comes from the range. A vector, not a range: Mooncake, which ignores
+    # @ignore_derivatives, fails on the TwicePrecision of a float range.
+    u_im = ChainRulesCore.@ignore_derivatives adapt_array([complex(zero(FT), -k * (π / A)) for k in 0:n2], mode)
     drift_rd = FinancialMonteCarlo.integral(r.r - mcProcess.underlying.d, T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
-    one_minus_one = ChainRulesCore.@ignore_derivatives PatternVector(n, EvenOddPattern(Int8(1), Int8(-1)))
-    dt_im = (pi / A) * im # step in frequency space
-    drift_shift = drift_rd + shift - corr
-    drift_dt_im = drift_shift * dt_im
-    char_exp = characteristic_exponent_i.(vec .* dt_im, mcProcess, T)
-    Y_r = fft_mod(@. exp(char_exp + drift_dt_im * vec) * one_minus_one)
+    phase = drift_rd - corr - a
+    char_exp = characteristic_exponent_i.(u_im, mcProcess, T)
+    Y_r = brfft_mod((@. exp(char_exp + phase * u_im)), 2 * n2)
     twice_A = 2 * A
-    eps_mod = eps(float_type(drift_shift))
-    density_vals_adj = density_floor.(abs_mod.(FinancialFFT.real_mod.(Y_r)) ./ twice_A, eps_mod)
-    ChainRulesCore.@ignore_derivatives @assert !isnan(sum(density_vals_adj) * twice_A / n) "Returned result is NaN"
+    density_vals_adj = density_floor.(Y_r ./ twice_A, eps(FT))
+    ChainRulesCore.@ignore_derivatives @assert !isnan(sum(density_vals_adj) * twice_A / (2 * n2)) "Returned result is NaN"
     return density_vals_adj
 end
 

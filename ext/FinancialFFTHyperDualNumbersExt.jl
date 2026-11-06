@@ -2,7 +2,7 @@ module FinancialFFTHyperDualNumbersExt
 
 using FinancialFFT, HyperDualNumbers, FFTW
 import FFTW: fft!, fft
-import FinancialFFT: v_value_mod, real_mod, imag_mod, sincos_mod
+import FinancialFFT: v_value_mod, real_mod, imag_mod, sincos_mod, brfft_mod, plan_brfft_mod
 
 # HyperDualNumbers has no sincos. f(x) = f(v) + f'(v) (ε₁ + ε₂ + ε₁₂) + f''(v) ε₁ε₂, and the first two derivatives of
 # sin and cos are again ±sin and ±cos of the value: one sincos of the value gives the two.
@@ -28,6 +28,13 @@ function fft(x::AbstractArray{T}) where {T <: Hyper{cpx}} where {cpx <: Complex{
     y = copy(x)
     fft!(y)
     return y
+end
+
+# brfft is linear: one transform per component, with one plan, whose output is real.
+function brfft_mod(x::AbstractVector{T}, n::Integer) where {T <: Hyper{<:Complex}}
+    value = HyperDualNumbers.value.(x)
+    plan = plan_brfft_mod(value, n)
+    return hyper.(plan * value, plan * HyperDualNumbers.epsilon1.(x), plan * HyperDualNumbers.epsilon2.(x), plan * HyperDualNumbers.epsilon12.(x))
 end
 
 function v_value_mod(s::Hyper)

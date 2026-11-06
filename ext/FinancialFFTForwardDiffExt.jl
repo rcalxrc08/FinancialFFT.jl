@@ -2,7 +2,7 @@ module FinancialFFTForwardDiffExt
 
 using FinancialFFT, ForwardDiff, FFTW
 import FFTW: fft!, fft
-import FinancialFFT: v_value_mod
+import FinancialFFT: v_value_mod, brfft_mod
 
 # Nested duals (Hessians): the value is the one of the innermost dual.
 function v_value_mod(s::ForwardDiff.Dual)
@@ -28,6 +28,16 @@ end
 
 function fft(x::AbstractArray{Complex{ForwardDiff.Dual{Tg, T, N}}}, region = 1:ndims(x)) where {Tg, T <: Real, N}
     return fft!(copy(x), region)
+end
+
+# brfft is linear too: the components are stacked along a new last dimension and transformed by one batched brfft
+# along the first; its output is real. Nested duals recurse as in fft!.
+function brfft_mod(x::AbstractArray{Complex{ForwardDiff.Dual{Tg, T, N}}}, n::Integer, region = 1) where {Tg, T <: Real, N}
+    components = component_indices(x, N)
+    M = @. complex(dual_component(real(x), components), dual_component(imag(x), components))
+    Y = brfft_mod(M, n, region)
+    to_dual(value, partials...) = ForwardDiff.Dual{Tg}(value, partials)
+    return to_dual.(ntuple(k -> selectdim(Y, ndims(Y), k), Val(N + 1))...)
 end
 
 end
