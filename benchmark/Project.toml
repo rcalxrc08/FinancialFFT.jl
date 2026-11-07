@@ -6,11 +6,12 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[sources]
-FinancialFFT = {path = ".."}
+[sources.FinancialFFT]
+path = ".."
 
 [compat]
 BenchmarkTools = "1"
+FinancialFFT = "0.4"
 FinancialMonteCarlo = "0.5.2"
 ForwardDiff = "0.10, 1"
 Mooncake = "0.5"
