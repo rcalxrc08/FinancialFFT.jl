@@ -1,6 +1,6 @@
 """
-    CarrMadanLewisMethod(A, Npow)
-    CarrMadanLewisMethod(ε; Npow_max = 23)
+    CarrMadanLewisMethod(A, Npow; mode = SerialMode())
+    CarrMadanLewisMethod(ε; Npow_max = 23, mode = SerialMode())
 
 FFT evaluation of the Lewis (2001) formula: the integrand along the line `Im(u) = 1/2` is sampled
 on `[0, A)` with `2^Npow` nodes and Simpson weights, a single FFT returns the integral on a log-strike grid,
@@ -14,12 +14,14 @@ With a tolerance `ε`, `A` and `Npow` are chosen at pricing time so that the err
 - `A`: upper bound of the frequency integration domain (`A > 0`).
 - `Npow`: base-2 logarithm of the number of FFT nodes (`2 < Npow < 24`).
 - `ε`: tolerance on the prices (`ε > 0`); `Npow_max`: the largest `Npow` allowed.
+- `mode` (keyword): the execution mode, `FinancialMonteCarlo.SerialMode()` (default) or `FinancialMonteCarlo.CudaMode()` with CUDA.jl loaded; `FinancialMonteCarlo.with_mode(method, mode)` changes it.
 """
-struct CarrMadanLewisMethod{G <: Union{FFTGrid, FFTTolerance}} <: AbstractFFTMethod
+struct CarrMadanLewisMethod{G <: Union{FFTGrid, FFTTolerance}, modeType <: FinancialMonteCarlo.AbstractMode} <: AbstractFFTMethod
     grid::G
+    mode::modeType
 end
-CarrMadanLewisMethod(A::Number, Npow::Integer) = CarrMadanLewisMethod(FFTGrid(A, Npow))
-CarrMadanLewisMethod(ε::Real; Npow_max::Integer = 23) = CarrMadanLewisMethod(FFTTolerance(ε, Npow_max))
+CarrMadanLewisMethod(A::Number, Npow::Integer; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = CarrMadanLewisMethod(FFTGrid(A, Npow), mode)
+CarrMadanLewisMethod(ε::Real; Npow_max::Integer = 23, mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = CarrMadanLewisMethod(FFTTolerance(ε, Npow_max), mode)
 
 export CarrMadanLewisMethod;
 # The binary call is minus the strike derivative of the Lewis formula: abs2(x_im) becomes x_im, and sqrt(S0 * K) becomes sqrt(S0 / K).
@@ -34,7 +36,9 @@ binary_lewis_inverse_denominator(x) = inv_denominator(1 // 2 + x * im)
 lewis_inverse_denominator(::VanillaPayoff) = vanilla_lewis_inverse_denominator
 lewis_inverse_denominator(::BinaryPayoff) = binary_lewis_inverse_denominator
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, opt_::FourierPayoff)
+    mode = FinancialMonteCarlo.execution_mode(method)
+    opt = FinancialMonteCarlo.to_mode(opt_, mode)
     T = opt.T
     A_grid, Npow = ChainRulesCore.@ignore_derivatives fft_grid(method.grid, method, mcProcess, zero_rate, opt)
     N = ChainRulesCore.@ignore_derivatives 2^Npow

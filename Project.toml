@@ -1,6 +1,6 @@
 name = "FinancialFFT"
 uuid = "ccc4acef-1676-4a84-946d-4093fe376f06"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Nicola <nicola.scaramuzzino@yandex.com> and contributors"]
 
 [deps]
@@ -38,7 +38,7 @@ ChainRulesCore = "1"
 DualNumbers = "0.6"
 FFTA = "0.3"
 FFTW = "1"
-FinancialMonteCarlo = "0.5.2"
+FinancialMonteCarlo = "0.6"
 ForwardDiff = "0.10, 1"
 HyperDualNumbers = "2, 3, 4"
 IrrationalConstants = "0.2"
@@ -47,6 +47,7 @@ MuladdMacro = "0.2"
 PatternVectors = "0.1.7"
 ReverseDiff = "1.18"
 TaylorSeries = "0.15 - 0.23"
+Test = "1"
 julia = "1.10"
 
 [extras]

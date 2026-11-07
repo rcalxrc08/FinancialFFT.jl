@@ -75,18 +75,19 @@ pricer(model, zero_rate, CosMethod(2^12), option)
 
 ## GPU
 
-With CUDA.jl loaded, passing `FinancialMonteCarlo.CudaMode()` as the last argument of `pricer` evaluates the
-characteristic function and the integrals on the GPU:
+The execution mode is part of the method, as in FinancialMonteCarlo.jl: with CUDA.jl loaded, a method built with
+`mode = FinancialMonteCarlo.CudaMode()` evaluates the characteristic function and the integrals on the GPU, and
+`FinancialMonteCarlo.with_mode(method, mode)` gives a copy of a method in another mode:
 
 ```julia
 using CUDA
-smile = FinancialMonteCarlo.EuropeanOptionSmile(T, CuArray([90.0, 100.0, 110.0]), CuArray([true, true, false]))
-pricer(model, zero_rate, CosMethod(2^12), smile, FinancialMonteCarlo.CudaMode())
+smile = FinancialMonteCarlo.EuropeanOptionSmile(T, [90.0, 100.0, 110.0], [true, true, false])
+pricer(model, zero_rate, CosMethod(2^12; mode = FinancialMonteCarlo.CudaMode()), smile)
 ```
 
 - Every method runs on the GPU, with the accuracy it has on the CPU.
-- `density(model, zero_rate, method, T, FinancialMonteCarlo.CudaMode())` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
-- The strikes of a smile must be on the device. A single option is given as on the CPU.
+- `density(model, zero_rate, FFTDensityInverter(; mode = FinancialMonteCarlo.CudaMode()), T)` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
+- The strikes of a smile are moved to the device of the mode, wherever they are; the prices of a smile stay on the GPU.
 - ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU. ReverseDiff.jl and Mooncake.jl are not supported on the GPU.
 
 ## Testing

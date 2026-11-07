@@ -74,6 +74,14 @@ Model=BlackScholesProcess(σ,underlying);
 @show EuPrice=pricer(Model,zeroRate,method_cm,EU_payoff);
 ```
 
+## Execution modes
+The execution mode is part of the method, as in FinancialMonteCarlo.jl (`mode` keyword of every constructor, default `SerialMode()`); with CUDA.jl loaded the same call runs on the GPU:
+```julia
+using CUDA
+pricer(Model, zeroRate, CarrMadanMethod(A, N; mode = FinancialMonteCarlo.CudaMode()), EU_payoff)
+```
+`FinancialMonteCarlo.with_mode(method, mode)` gives a copy of a method in another mode.
+
 ## Curve Support
 Non constant zero rates and dividend are managed.
 An implied curve is built at time zero, such implied curve is able to return the right implied zero/dividend at a given time,

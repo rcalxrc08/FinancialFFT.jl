@@ -1,6 +1,7 @@
 
-# Moves an array to the device of the mode (the CUDA extension handles the GPU modes).
-adapt_array(x, _) = x
+# Moves an array to the device of the mode: FinancialMonteCarlo.to_mode, whose CUDA extension makes CuArrays keeping the
+# element type in an AbstractCudaMode.
+adapt_array(x, mode) = FinancialMonteCarlo.to_mode(x, mode)
 # The real floating-point type of the inputs, without their derivatives: grids, truncation ranges and the parameters of
 # the methods are built in it, so that Float32 or BigFloat inputs are not promoted to Float64.
 float_type(x...) = ChainRulesCore.@ignore_derivatives typeof(float(v_value_mod(sum(x))))
@@ -22,7 +23,7 @@ brfft_mod(x, n, region = 1) = brfft(x, n, region)
 struct InPlaceFFTPlan{P}
     plan::P
 end
-Base.:*(p::InPlaceFFTPlan, x) = copyto!(x, p.plan * x)
+Base.:*(p::InPlaceFFTPlan, x::AbstractArray) = copyto!(x, p.plan * x)
 plan_fft_mod!(x::AbstractArray{<:Union{ComplexF32, ComplexF64}}, region...) = plan_fft!(x, region...)
 plan_fft_mod!(x::AbstractArray{<:Complex{<:AbstractFloat}}, region...) = InPlaceFFTPlan(plan_fft(x, region...))
 fft_mod!(x, region...) = fft!(x, region...)
@@ -204,9 +205,10 @@ function grid_interpolate(v, x0, h, k::Number)
 end
 function grid_interpolate(v, x0, h, k::AbstractArray)
     s = @. (k - x0) / h
+    # a name of its own inside the closure: assigning i there too would box it (Core.Box) and hide every type below
     i, i_m1, i_1, i_2, i_3, i_4 = ChainRulesCore.@ignore_derivatives begin
-        i = lagrange_stencil.(s, length(v))
-        i, i .- 1, i .+ 1, i .+ 2, i .+ 3, i .+ 4
+        idx = lagrange_stencil.(s, length(v))
+        idx, idx .- 1, idx .+ 1, idx .+ 2, idx .+ 3, idx .+ 4
     end
     return lagrange_quintic.(s .- i, v[i_m1], v[i], v[i_1], v[i_2], v[i_3], v[i_4])
 end

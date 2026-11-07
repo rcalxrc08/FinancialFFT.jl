@@ -1,5 +1,5 @@
 """
-    CosMethod(N)
+    CosMethod(N; mode = SerialMode())
 
 Fourier-cosine expansion method of Fang & Oosterlee (2008). The density of the log-price is expanded on
 a truncation interval `[a, b]` with the cosine terms `k = 0, …, N`; the interval is computed from a
@@ -8,14 +8,17 @@ The expansion is on the put, and calls follow from parity: a call needs no infor
 
 # Arguments
 - `N`: number of cosine terms (`N > 2`).
+- `mode` (keyword): the execution mode, `FinancialMonteCarlo.SerialMode()` (default) or `FinancialMonteCarlo.CudaMode()` with CUDA.jl loaded; `FinancialMonteCarlo.with_mode(method, mode)` changes it.
 """
-struct CosMethod{num_1 <: Integer} <: FinancialFFT.AbstractIntegralMethod
+struct CosMethod{num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode} <: FinancialFFT.AbstractIntegralMethod
     N::num_1
-    function CosMethod(N::num_1) where {num_1 <: Integer}
+    mode::modeType
+    function CosMethod(N::num_1, mode::modeType) where {num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
         ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
-        return new{num_1}(N)
+        return new{num_1, modeType}(N, mode)
     end
 end
+CosMethod(N::Integer; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = CosMethod(N, mode)
 export CosMethod
 # The expansion is on the put, whose payoff is bounded. The coefficients of a call grow like exp(b): they lose accuracy
 # to rounding when the range is wide, and the heavy right tail they need is beyond it when it is not. Parity needs neither.
@@ -43,18 +46,20 @@ function cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.Seria
     θ = x .* (last(u) / (length(u) - 1))
     return map(θ_j -> cos_clenshaw(c_re, c_im, θ_j), θ)
 end
-cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.BaseMode) = phased_cos_sum(coefficient, phase, u, x)
+cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.AbstractMode) = phased_cos_sum(coefficient, phase, u, x)
 
 # Re Σ_k (c_re_k + i c_im_k) exp(i k θ) = Σ_k c_re_k cos(k θ) - c_im_k sin(k θ).
 cos_clenshaw(c_re, c_im, θ) = clenshaw_exp_sum(c_re, c_im, θ, Val(true))
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, opt_::FourierPayoff)
+    mode = FinancialMonteCarlo.execution_mode(method)
+    opt = FinancialMonteCarlo.to_mode(opt_, mode)
     T = opt.T
     N = method.N
     S0 = mcProcess.underlying.S0
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     rT = FinancialMonteCarlo.integral(r.r, T)
-    K = adapt_array(opt.K, mode)
+    K = opt.K
     # The limits are for log(S_T / S0): on y = log(S_T / K) they move with the strike, and the range covers all of them.
     # Sharing it among the strikes shares the payoff coefficients: only the phase below depends on the strike.
     a, b = ChainRulesCore.@ignore_derivatives begin

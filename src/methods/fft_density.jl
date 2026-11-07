@@ -1,5 +1,5 @@
 """
-    FFTDensityInverter(N = 14, M = 2^10)
+    FFTDensityInverter(N = 14, M = 2^10; mode = SerialMode())
 
 Density of the log-return `log(S_T / S_0)` recovered by inverting the characteristic function with a single
 complex-to-real FFT on `2^N` points, see [`density`](@ref): the density is real, so the characteristic function is
@@ -17,16 +17,19 @@ smile share the density, and their prices are the ones of the single options.
 # Arguments
 - `N`: base-2 logarithm of the number of grid points (`N > 2`).
 - `M`: number of Simpson intervals for each strike (even, `M > 2`); the density does not use it.
+- `mode` (keyword): the execution mode, `FinancialMonteCarlo.SerialMode()` (default) or `FinancialMonteCarlo.CudaMode()` with CUDA.jl loaded; `FinancialMonteCarlo.with_mode(method, mode)` changes it.
 """
-struct FFTDensityInverter{num_1 <: Integer, num_2 <: Integer} <: AbstractDensityMethod
+struct FFTDensityInverter{num_1 <: Integer, num_2 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode} <: AbstractDensityMethod
     N::num_1
     M::num_2
-    function FFTDensityInverter(N::num_1 = 14, M::num_2 = 2^10) where {num_1 <: Integer, num_2 <: Integer}
+    mode::modeType
+    function FFTDensityInverter(N::num_1, M::num_2, mode::modeType) where {num_1 <: Integer, num_2 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
         ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
         ChainRulesCore.@ignore_derivatives @assert(M > 2 && iseven(M), "M must be even and greater than 2")
-        return new{num_1, num_2}(N, M)
+        return new{num_1, num_2, modeType}(N, M, mode)
     end
 end
+FFTDensityInverter(N::Integer = 14, M::Integer = 2^10; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = FFTDensityInverter(N, M, mode)
 export FFTDensityInverter
 
 """
@@ -48,7 +51,8 @@ struct FFTDensity{num_1, num_2} <: AbstractDensity
 end
 Adapt.@adapt_structure FFTDensity
 
-function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FFTDensityInverter, T, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FFTDensityInverter, T)
+    mode = FinancialMonteCarlo.execution_mode(method)
     N = method.N
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
@@ -114,9 +118,10 @@ end
 function density_array(f::FFTDensity, y::AbstractArray)
     v = f.values
     s = @. (clamp(y, f.a, f.b) - f.a) / f.dx
+    # a name of its own inside the closure: assigning i there too would box it (Core.Box) and hide every type below
     i, i_1, i_2, i_3 = ChainRulesCore.@ignore_derivatives begin
-        i = stencil_index.(s, length(v))
-        i, i .+ 1, i .+ 2, i .+ 3
+        idx = stencil_index.(s, length(v))
+        idx, idx .+ 1, idx .+ 2, idx .+ 3
     end
     return interpolate_density.(s .- i, v[i], v[i_1], v[i_2], v[i_3])
 end

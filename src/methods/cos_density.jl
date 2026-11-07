@@ -1,5 +1,5 @@
 """
-    CosDensityMethod(N = 128, M = 2^10)
+    CosDensityMethod(N = 128, M = 2^10; mode = SerialMode())
 
 Density of the log-return expanded on `N + 1` cosine terms (Fang & Oosterlee, 2008) on the range of `CosMethod`, see
 [`density`](@ref). As a pricer, it integrates the payoff against that density by Simpson's rule on `M` intervals of
@@ -10,16 +10,19 @@ their smiles.
 # Arguments
 - `N`: number of cosine terms of the density (`N > 2`).
 - `M`: number of Simpson intervals for each strike (even, `M > 2`); the density does not use it.
+- `mode` (keyword): the execution mode, `FinancialMonteCarlo.SerialMode()` (default) or `FinancialMonteCarlo.CudaMode()` with CUDA.jl loaded; `FinancialMonteCarlo.with_mode(method, mode)` changes it.
 """
-struct CosDensityMethod{num_1 <: Integer, num_2 <: Integer} <: AbstractDensityMethod
+struct CosDensityMethod{num_1 <: Integer, num_2 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode} <: AbstractDensityMethod
     N::num_1
     M::num_2
-    function CosDensityMethod(N::num_1 = 128, M::num_2 = 2^10) where {num_1 <: Integer, num_2 <: Integer}
+    mode::modeType
+    function CosDensityMethod(N::num_1, M::num_2, mode::modeType) where {num_1 <: Integer, num_2 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
         ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
         ChainRulesCore.@ignore_derivatives @assert(M > 2 && iseven(M), "M must be even and greater than 2")
-        return new{num_1, num_2}(N, M)
+        return new{num_1, num_2, modeType}(N, M, mode)
     end
 end
+CosDensityMethod(N::Integer = 128, M::Integer = 2^10; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = CosDensityMethod(N, M, mode)
 export CosDensityMethod
 
 """
@@ -41,7 +44,8 @@ struct CosDensity{num_1, num_2, num_3} <: AbstractDensity
     end
 end
 
-function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosDensityMethod, T, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosDensityMethod, T)
+    mode = FinancialMonteCarlo.execution_mode(method)
     N = method.N
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)

@@ -15,7 +15,7 @@ abstract type AbstractDensity end
 Base.broadcastable(x::AbstractDensity) = Ref(x)
 
 """
-    density(mcProcess, zero_rate, method, T[, mode])
+    density(mcProcess, zero_rate, method, T)
 
 Density of the log-return `log(S_T / S_0)` of `mcProcess` at the horizon `T`, under the risk-neutral measure of
 `zero_rate`, computed with `method` (`CosDensityMethod` or `FFTDensityInverter`). Returns an [`AbstractDensity`](@ref),
@@ -25,6 +25,9 @@ It does not depend on `S_0`: the density of `log(S_T)` given `S_t` is `f(x - log
 as `T` for a Lévy process. For Heston it is the marginal density, not the transition density given the variance. It
 is generic in the number type of the parameters of the model, so scores such as `∂θ log f(y)` come from automatic
 differentiation of `log(f(y))`; its range is a constant for differentiation. The evaluation of a point runs on the CPU.
+
+The method carries the execution mode: with `FinancialMonteCarlo.CudaMode()` (the `mode` keyword of its constructor,
+or `FinancialMonteCarlo.with_mode(method, mode)`) the density is computed and stored on the GPU.
 """
 function density end
 export density
@@ -41,4 +44,14 @@ of `y`. For `FFTDensity` and `CosDensity` it uses broadcasts, gathers and reduct
 density_values(f::AbstractDensity, y::AbstractArray) = mask_outside_range(f, y, density_array(f, y))
 
 density_array(f::AbstractDensity, y::AbstractArray) = map(y_j -> density_value(f, y_j), y)
-density_array(f::AbstractDensity, y::AbstractArray, ::FinancialMonteCarlo.BaseMode) = density_array(f, y)
+density_array(f::AbstractDensity, y::AbstractArray, ::FinancialMonteCarlo.AbstractMode) = density_array(f, y)
+
+# Before FinancialMonteCarlo 0.6 the mode was the last argument of pricer and density: deprecated for one release.
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractIntegrationMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.AbstractMode)
+    Base.depwarn("`pricer(model, zero_rate, method, payoff, mode)` is deprecated, the mode is part of the method: use `pricer(model, zero_rate, FinancialMonteCarlo.with_mode(method, mode), payoff)` instead.", :pricer)
+    return pricer(mcProcess, zero_rate, FinancialMonteCarlo.with_mode(method, mode), opt)
+end
+function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractDensityMethod, T, mode::FinancialMonteCarlo.AbstractMode)
+    Base.depwarn("`density(model, zero_rate, method, T, mode)` is deprecated, the mode is part of the method: use `density(model, zero_rate, FinancialMonteCarlo.with_mode(method, mode), T)` instead.", :density)
+    return density(mcProcess, zero_rate, FinancialMonteCarlo.with_mode(method, mode), T)
+end

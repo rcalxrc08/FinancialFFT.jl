@@ -27,4 +27,16 @@
             @test abs(deltabig - derivative(s -> price(s, Float64), 100.0)) < 1e-9
         end
     end
+    # Type stability: the prices and the densities are inferred (a variable assigned both inside a closure of
+    # @ignore_derivatives and outside of it is boxed, and hides every type after it).
+    @testset "Inferred, $(case.name)" for case in METHOD_CASES
+        model, zero_rate = type_model(Float64), ZeroRate(0.02)
+        for opt in type_payoffs(Float64)
+            @test (@inferred pricer(model, zero_rate, case.method, opt)) isa Union{Float64, Vector{Float64}}
+        end
+        if case.method isa FinancialFFT.AbstractDensityMethod
+            f = @inferred density(model, zero_rate, case.method, 1.0)
+            @test (@inferred FinancialFFT.density_values(f, [-0.1, 0.0, 0.1])) isa Vector{Float64}
+        end
+    end
 end

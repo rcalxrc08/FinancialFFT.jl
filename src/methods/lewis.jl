@@ -1,5 +1,5 @@
 """
-    LewisMethod(A, N)
+    LewisMethod(A, N; mode = SerialMode())
 
 Direct quadrature of the Lewis (2001) formula along the line `Im(u) = 1/2`: the integrand is evaluated
 on `N` equally spaced nodes in `[-A, A]` and summed. No FFT and no interpolation are involved, so every
@@ -8,16 +8,19 @@ strike is priced exactly on its own and dual numbers, hyper-dual numbers, Taylor
 # Arguments
 - `A`: half-width of the frequency integration domain (`A > 0`).
 - `N`: number of quadrature nodes (`N > 2`).
+- `mode` (keyword): the execution mode, `FinancialMonteCarlo.SerialMode()` (default) or `FinancialMonteCarlo.CudaMode()` with CUDA.jl loaded; `FinancialMonteCarlo.with_mode(method, mode)` changes it.
 """
-struct LewisMethod{num <: Number, num_1 <: Integer} <: AbstractIntegralMethod
+struct LewisMethod{num <: Number, num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode} <: AbstractIntegralMethod
     A::num
     N::num_1
-    function LewisMethod(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
+    mode::modeType
+    function LewisMethod(A::num, N::num_1, mode::modeType) where {num <: Number, num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
         ChainRulesCore.@ignore_derivatives @assert(A > 0.0, "A must be positive")
         ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
-        return new{num, num_1}(A, N)
+        return new{num, num_1, modeType}(A, N, mode)
     end
 end
+LewisMethod(A::Number, N::Integer; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = LewisMethod(A, N, mode)
 export LewisMethod;
 
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.EuropeanOption)
@@ -111,7 +114,7 @@ function lw_integrate(char_exp_v_r, abstractPayoff::SmilePayoff, df, dT, dx_adj,
     return convert_integral_result_to_price_interf(dx_adj, total_sum_lewis, S0, dT, df, abstractPayoff)
 end
 
-lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr, ::FinancialMonteCarlo.BaseMode) = lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
+lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr, ::FinancialMonteCarlo.AbstractMode) = lw_integrate(char_exp_v_r, abstractPayoff, df, dT, dx_adj, S0, rT_corr)
 
 # Coefficients C_j of the integrand, Re[exp((1/2 + i v_j) c) C_j] for c = log(S0 / K) + …, as real and imaginary parts:
 # exp(ψ_j) / (1/4 + v_j²) for vanilla options, exp(ψ_j) / (1/2 + i v_j) for binary ones.
@@ -147,7 +150,7 @@ function lewis_clenshaw(c_re, c_im, v_0, h, c)
 end
 
 """
-    pricer(mcProcess, zero_rate, method, payoff[, mode])
+    pricer(mcProcess, zero_rate, method, payoff)
 
 Prices `payoff` under `mcProcess` with the Fourier method `method`
 (`LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CarrMadanMethod`, `CosDensityMethod` or `FFTDensityInverter`).
@@ -159,11 +162,15 @@ Prices `payoff` under `mcProcess` with the Fourier method `method`
 - `payoff`: an `EuropeanOption` or a `BinaryEuropeanOption`, a smile (`EuropeanOptionSmile`,
   `BinaryEuropeanOptionSmile`, several strikes sharing the same maturity). Options with different maturities are
   priced by broadcasting, `pricer.(mcProcess, zero_rate, method, payoffs)`.
-- `mode`: `FinancialMonteCarlo.SerialMode()` (default) or a CUDA mode when CUDA.jl is loaded.
+
+The method carries the execution mode (the `mode` keyword of its constructor): in `FinancialMonteCarlo.CudaMode()` the
+strikes of a smile are moved to the GPU, wherever they are, and its prices stay there.
 
 Returns a price, or a vector of prices for smiles.
 """
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff_::FourierPayoff)
+    mode = FinancialMonteCarlo.execution_mode(method)
+    abstractPayoff = FinancialMonteCarlo.to_mode(abstractPayoff_, mode)
     T = abstractPayoff.T
     N = method.N
     S0 = mcProcess.underlying.S0

@@ -12,8 +12,10 @@ end
 density_put_payoff(::VanillaPayoff) = z -> 1 - exp(z)
 density_put_payoff(::BinaryPayoff) = z -> one(z)
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractDensityMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
-    f = density(mcProcess, r, method, opt.T, mode)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractDensityMethod, opt_::FourierPayoff)
+    mode = FinancialMonteCarlo.execution_mode(method)
+    opt = FinancialMonteCarlo.to_mode(opt_, mode)
+    f = density(mcProcess, r, method, opt.T)
     return density_integral_price(mcProcess, r, f, method.M, opt, mode)
 end
 
@@ -24,7 +26,7 @@ function density_integral_price(mcProcess, r, f, M, opt, mode)
     S0 = mcProcess.underlying.S0
     rT = FinancialMonteCarlo.integral(r.r, T)
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
-    K = adapt_array(opt.K, mode)
+    K = opt.K
     log_K_S0 = strike_columns(@. log(K / S0))
     # log-moneyness z = log(S_T / K) from the left end of the range to the strike, one strike per column; the grid is
     # a constant for differentiation (Mooncake ignores @ignore_derivatives, hence the hook), and the density is ~ε at

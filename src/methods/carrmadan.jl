@@ -22,8 +22,8 @@ end
 fft_grid(grid::FFTGrid, method, mcProcess, zero_rate, opt) = (grid.A, grid.Npow)
 
 """
-    CarrMadanMethod(A, Npow, α = 0.75)
-    CarrMadanMethod(ε; α = 0.75, Npow_max = 23)
+    CarrMadanMethod(A, Npow, α = 0.75; mode = SerialMode())
+    CarrMadanMethod(ε; α = 0.75, Npow_max = 23, mode = SerialMode())
 
 Carr–Madan (1999) FFT method. The damped call transform is integrated with Simpson weights
 on the frequency grid `v ∈ [0, A)` with `2^Npow` nodes, a single FFT returns call prices on a
@@ -42,17 +42,19 @@ needed. Choosing them costs about one price: for a model priced many times, comp
 - `α`: damping exponent (`α > 0`). It needs `E[S^(1 + α)]` to be finite, so it is capped halfway between 1 and the
   exponential moment bound of the model. The frequency step `A / 2^Npow` must be small with respect to the capped value.
 - `ε`: tolerance on the prices (`ε > 0`); `Npow_max`: the largest `Npow` allowed.
+- `mode` (keyword): the execution mode, `FinancialMonteCarlo.SerialMode()` (default) or `FinancialMonteCarlo.CudaMode()` with CUDA.jl loaded; `FinancialMonteCarlo.with_mode(method, mode)` changes it.
 """
-struct CarrMadanMethod{G <: Union{FFTGrid, FFTTolerance}, num_2 <: Number} <: AbstractFFTMethod
+struct CarrMadanMethod{G <: Union{FFTGrid, FFTTolerance}, num_2 <: Number, modeType <: FinancialMonteCarlo.AbstractMode} <: AbstractFFTMethod
     grid::G
     α::num_2
-    function CarrMadanMethod(grid::G, α::num_2) where {G <: Union{FFTGrid, FFTTolerance}, num_2 <: Number}
+    mode::modeType
+    function CarrMadanMethod(grid::G, α::num_2, mode::modeType) where {G <: Union{FFTGrid, FFTTolerance}, num_2 <: Number, modeType <: FinancialMonteCarlo.AbstractMode}
         ChainRulesCore.@ignore_derivatives @assert(α > 0.0, "α must be positive")
-        return new{G, num_2}(grid, α)
+        return new{G, num_2, modeType}(grid, α, mode)
     end
 end
-CarrMadanMethod(A::Number, Npow::Integer, α::Number = 0.75) = CarrMadanMethod(FFTGrid(A, Npow), α)
-CarrMadanMethod(ε::Real; α::Number = 0.75, Npow_max::Integer = 23) = CarrMadanMethod(FFTTolerance(ε, Npow_max), α)
+CarrMadanMethod(A::Number, Npow::Integer, α::Number = 0.75; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = CarrMadanMethod(FFTGrid(A, Npow), α, mode)
+CarrMadanMethod(ε::Real; α::Number = 0.75, Npow_max::Integer = 23, mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = CarrMadanMethod(FFTTolerance(ε, Npow_max), α, mode)
 export CarrMadanMethod;
 
 # E[S^(1 + α)] must be finite: 1 + α stays at most halfway between 1 and the exponential moment bound of the upper tail.
@@ -76,7 +78,10 @@ function carr_madan_weights(v, alfa, dx, den)
     return @. one_minus_one * simpson * dx_3 * inv_denominator(den(v * im + alfa) * (alfa + 1 + v * im))
 end
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt::FourierPayoff, mode::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt_::FourierPayoff)
+    mode = FinancialMonteCarlo.execution_mode(method)
+    # the strikes of a smile go to the device of the mode, wherever they are
+    opt = FinancialMonteCarlo.to_mode(opt_, mode)
     T = opt.T
     A_grid, Npow = ChainRulesCore.@ignore_derivatives fft_grid(method.grid, method, mcProcess, zero_rate, opt)
     N = 2^Npow

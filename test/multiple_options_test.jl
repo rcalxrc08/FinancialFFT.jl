@@ -24,7 +24,7 @@
     @testset "Smiles outside SerialMode, $name, N = $N" for (name, method_N) in ("LewisMethod" => N -> LewisMethod(600.0, N), "CosMethod" => N -> CosMethod(N)), N in (4096, 4097)
         method = method_N(N)
         for smile in (FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls), FinancialMonteCarlo.BinaryEuropeanOptionSmile(1.0, Ks, calls))
-            @test max_abs_diff(pricer(model, zero_rate, method, smile, FinancialMonteCarlo.MultiThreading()), pricer(model, zero_rate, method, smile)) < 1e-12
+            @test max_abs_diff(pricer(model, zero_rate, FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.MultiThreading()), smile), pricer(model, zero_rate, method, smile)) < 1e-12
         end
     end
 
@@ -72,6 +72,17 @@
         isCall = [true, false, true, false, true]
         for (smile, payoff) in ((FinancialMonteCarlo.EuropeanOptionSmile(0.01, Ks, isCall), EuropeanOption), (FinancialMonteCarlo.BinaryEuropeanOptionSmile(0.01, Ks, isCall), BinaryEuropeanOption))
             @test maximum(abs.(pricer(model, zero_rate, CosMethod(2^12), smile) .- pricer.(model, zero_rate, CosMethod(2^12), payoff.(0.01, Ks, isCall)))) < 1e-10
+        end
+    end
+    # The mode is part of the method (FinancialMonteCarlo 0.6): the five-argument forms are deprecated, with the same prices.
+    @testset "Deprecated trailing mode, $(case.name)" for case in METHOD_CASES
+        method = case.method
+        @test FinancialMonteCarlo.execution_mode(method) == FinancialMonteCarlo.SerialMode()
+        @test FinancialMonteCarlo.execution_mode(FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.MultiThreading(2))) == FinancialMonteCarlo.MultiThreading(2)
+        option = EuropeanOption(1.0, 105.0)
+        @test (@test_deprecated pricer(model, zero_rate, method, option, FinancialMonteCarlo.SerialMode())) == pricer(model, zero_rate, method, option)
+        if method isa FinancialFFT.AbstractDensityMethod
+            @test (@test_deprecated density(model, zero_rate, method, 1.0, FinancialMonteCarlo.SerialMode()))(0.1) == density(model, zero_rate, method, 1.0)(0.1)
         end
     end
 end
