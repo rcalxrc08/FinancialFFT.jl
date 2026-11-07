@@ -7,6 +7,10 @@ jobs:
   CompatHelper:
     runs-on: ubuntu-latest
     steps:
+      # Julia is not preinstalled in the runner image (ubuntu-latest moves to Ubuntu 26)
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
       - name: "Add the General registry via Git"
         run: |
           import Pkg
@@ -31,7 +35,7 @@ jobs:
                  Pkg.RegistrySpec(name = "localregistry",
                                   uuid = "11f9c9f4-3b5d-4bcd-a025-3bf672513579",
                                   url = "https://github.com/rcalxrc08/LocalRegistry.git")]
-          CompatHelper.main(; subdirs=["","test","benchmark"], registries=my_registries)
+          CompatHelper.main(; subdirs=["","test","benchmark","docs"], registries=my_registries)
         shell: julia --color=yes {0}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
