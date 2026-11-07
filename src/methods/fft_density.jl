@@ -77,7 +77,10 @@ function fft_density_values(mcProcess, r, N, A, a, T, mode)
     FT = float_type(A)
     # -i u_k, a constant for differentiation: A comes from the range. A vector, not a range: Mooncake, which ignores
     # @ignore_derivatives, fails on the TwicePrecision of a float range.
-    u_im = ChainRulesCore.@ignore_derivatives adapt_array([complex(zero(FT), -k * (π / A)) for k in 0:n2], mode)
+    # the closure captures a value, not the type FT: Julia 1.11 types a captured type as DataType, and the grid as a Vector
+    # of unknown element type
+    zero_FT = zero(FT)
+    u_im = ChainRulesCore.@ignore_derivatives adapt_array([complex(zero_FT, -k * (π / A)) for k in 0:n2], mode)
     drift_rd = FinancialMonteCarlo.integral(r.r - mcProcess.underlying.d, T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     phase = drift_rd - corr - a
