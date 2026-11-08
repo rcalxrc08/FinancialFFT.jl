@@ -1,4 +1,14 @@
 # Truncation range of the COS method, computed from a Chernoff bound on the tails of the log-price.
+
+# An exponent that counts its evaluations, to bound the cost of the search.
+mutable struct CountingExponent{E}
+    exponent::E
+    evaluations::Int
+end
+(e::CountingExponent)(s) = (e.evaluations += 1; e.exponent(s))
+FinancialFFT.complex_step(s, e::CountingExponent) = FinancialFFT.complex_step(s, e.exponent)
+FinancialFFT.exponential_moment_bound(e::CountingExponent) = FinancialFFT.exponential_moment_bound(e.exponent)
+
 @testset "Chernoff extrema" begin
     epss = 1e-12
     S0, r, d, K = 100.0, 0.02, 0.01, 100.0
@@ -9,30 +19,49 @@
         driftT = drift - FinancialFFT.characteristic_exponent_i(1, model) * T
         # P(X - driftT > x) ≤ exp(σ²Ts²/2 - sx), minimized over s and set equal to epss
         half_width = sigma * sqrt(-2 * T * log(epss))
-        a, b = FinancialFFT.compute_chernoff_extrema_bisection(model, T, epss, drift)
+        a, b = FinancialFFT.compute_chernoff_extrema(model, T, epss, drift)
         @test abs(a - (driftT - half_width)) < 1e-8
         @test abs(b - (driftT + half_width)) < 1e-8
     end
-    @testset "$name, T = $T" for (name, model) in model_cases(S0, d), T in (0.01, 0.05, 1.1)
+    # Merton with large jumps: the Gaussian guess from s = 1 overflows the exponent at short maturities
+    @testset "$name, T = $T" for (name, model) in vcat(model_cases(S0, d), ["Merton, large jumps" => MertonProcess(0.2, 5.0, 0.0, 0.1, Underlying(S0, d))]), T in (0.001, 0.01, 0.05, 1.1)
         drift = (r - d) * T + log(S0 / K)
-        a, b = FinancialFFT.compute_chernoff_extrema_bisection(model, T, epss, drift)
+        a, b = FinancialFFT.compute_chernoff_extrema(model, T, epss, drift)
         @test a < drift < b
         # the optimum is admissible (below the exponential moment bound) and matches a grid search over the admissible s
         @testset "mul = $mul" for mul in (-1, 1)
             log_epss = log(epss)
             bound = FinancialFFT.exponential_moment_bound(model, mul, T)
-            t_opt = mul * FinancialFFT.compute_chernoff_extrema_bisection_single(model, T, log_epss, 1.0, 50.0, 1e-14, mul, 0.0)
+            t_opt = mul * FinancialFFT.compute_chernoff_extrema_single(model, T, log_epss, 1.0, sqrt(eps()), mul, 0.0)
             grid = exp.(range(log(1e-2), log(min(bound, 1e4) * (1 - 1e-9)), length = 10^5))
             t_grid = minimum(s -> FinancialFFT.compute_ts(s, model, T, log_epss, mul), grid)
             @test t_opt > 0
             @test t_opt <= t_grid * (1 + 1e-6)
         end
     end
+    # Issue #38: Brent's method to a relative tolerance sqrt(eps) on s gives the endpoints of a solve to 1e-14, since t is
+    # flat at its minimum, and any s gives a valid bound: never narrower than the tight one beyond rounding.
+    @testset "Tolerance and cost of the search, $name, T = $T" for (name, model) in vcat(["BlackScholes" => BlackScholesProcess(0.2, Underlying(S0, d))], model_cases(S0, d)), T in (1e-3, 0.01, 0.25, 1.0, 10.0)
+        a, b = FinancialFFT.compute_chernorff_limits(model, r * T, d * T, T)
+        epss_range = FinancialFFT.scaled_tolerance(Float64, 1e-14)
+        a_tight, b_tight = FinancialFFT.compute_chernoff_extrema(model, T, epss_range, (r - d) * T, 1.0, 1e-14)
+        @test abs(a - a_tight) <= 1e-10 * abs(a_tight)
+        @test abs(b - b_tight) <= 1e-10 * abs(b_tight)
+        @test a <= a_tight + 1e-12 * abs(a_tight)
+        @test b >= b_tight - 1e-12 * abs(b_tight)
+        # the bisection it replaced took 102-115 evaluations of the exponent per range
+        evaluations = sum((-1, 1)) do mul
+            exponent = CountingExponent(FinancialFFT.TailExponent(model, T, mul), 0)
+            FinancialFFT.chernoff_optimum(exponent, log(epss_range), 1.0, sqrt(eps()))
+            exponent.evaluations
+        end
+        @test evaluations <= 30
+    end
     # The wider side of the range is the heavier tail. The models above are too symmetric to tell the two endpoints apart.
     @testset "Skewed models, $name" for (name, model) in ("VarianceGamma" => VarianceGammaProcess(0.12, -0.3, 0.5, Underlying(S0, d)), "Kou" => KouProcess(0.2, 5.0, 0.1, 50.0, 3.0, Underlying(S0, d)), "Heston" => HestonProcess(1.0, 0.2, 0.0, 1.5, -0.9, 0.04, Underlying(S0, d)))
         T = 1.0
         driftT = -FinancialFFT.characteristic_exponent_i(1, model, T)
-        a, b = FinancialFFT.compute_chernoff_extrema_bisection(model, T, epss, 0.0)
+        a, b = FinancialFFT.compute_chernoff_extrema(model, T, epss, 0.0)
         @test driftT - a > b - driftT
         # each endpoint is the tightest of the bounds exp(T ψ(mul * s) - s * t) on its own tail, with mul = 1 the upper one
         for (mul, x) in ((-1, a), (1, b)), s in (0.1, 0.5, 0.99) .* min(FinancialFFT.exponential_moment_bound(model, mul, T), 1.0)

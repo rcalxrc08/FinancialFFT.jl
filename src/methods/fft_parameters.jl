@@ -36,7 +36,7 @@ complex_step(s, e::AliasingExponent) = complex_step(s, e.model)
 function aliasing_chernoff_bound(model, T, c, γ, k_min, drift, corr, log_epss)
     FT = typeof(log_epss)
     exponent = AliasingExponent(model, T, c + γ, γ, k_min - drift, corr)
-    s_opt = chernoff_optimum(exponent, log_epss, one(FT) / 8, FT(50), max(FT(1e-10), 8 * eps(FT)))
+    s_opt = chernoff_optimum(exponent, log_epss, one(FT) / 8, sqrt(eps(FT)))
     return compute_ts(s_opt, exponent, log_epss)
 end
 

@@ -3,7 +3,7 @@
 
 Fourier-cosine expansion method of Fang & Oosterlee (2008). The density of the log-price is expanded on
 a truncation interval `[a, b]` with the cosine terms `k = 0, …, N`; the interval is computed from a
-Chernoff bound on the tails of the process (see `compute_chernoff_extrema_bisection`), so no range parameter is needed.
+Chernoff bound on the tails of the process (see `compute_chernoff_extrema`), so no range parameter is needed.
 The expansion is on the put, and calls follow from parity: a call needs no information on the right tail of the process.
 
 # Arguments

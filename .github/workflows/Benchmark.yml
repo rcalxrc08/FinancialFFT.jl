@@ -1,13 +1,19 @@
 name: Benchmark
 # The suite of benchmark/benchmarks.jl. On a pull request it also measures the base branch with the same suite and
-# compares the two (report in the job summary and in a comment of the pull request); on master and on demand it
-# reports the timings alone. Results are kept as artifacts.
+# compares the two (report in the job summary and in a comment of the pull request); on master it reports the timings
+# alone, and on demand it compares with the ref given as base (a release tag, say), or reports the timings alone without
+# one. Results are kept as artifacts.
 on:
   push:
     branches:
       - master
   pull_request:
   workflow_dispatch:
+    inputs:
+      base:
+        description: 'Ref to compare with (e.g. a release tag); empty for the timings alone'
+        required: false
+        default: ''
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -34,12 +40,14 @@ jobs:
             Pkg.Registry.add("General");'
       - name: Benchmark this commit
         run: julia benchmark/run.jl head.json
-      - name: Benchmark the base of the pull request
-        if: github.event_name == 'pull_request'
+      - name: Benchmark the base
+        if: github.event_name == 'pull_request' || inputs.base != ''
         # the base may predate parts of the suite: the report then shows this commit alone
         continue-on-error: true
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.base }}
         run: |
-          git worktree add ../base ${{ github.event.pull_request.base.sha }}
+          git worktree add ../base "$BASE_REF"
           julia benchmark/run.jl base.json ../base
       - name: Report
         run: |

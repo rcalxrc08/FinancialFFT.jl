@@ -2,12 +2,13 @@
 #   Black Scholes / method / payoff / back-end    prices and gradients in (S0, r, σ), a single option and a smile
 #   Models / model / method                        prices of a single option
 #   Densities / method / task                      setup and evaluation at 1000 points
+#   Chernoff range / model / number type           the truncation range of COS and of the densities
 # It is built in parts, `suite(part)` for each of `PARTS`: the Black Scholes group of each method, the models and the
 # densities. run.jl runs each part in its own process, since the code compiled for the gradients (Zygote, Mooncake) is
 # never freed: in one process the whole suite needs about 7 GB, more than a CI runner has.
 # A method that the package does not define is skipped, so that the suite also runs on older commits (the base of a
 # pull request).
-using BenchmarkTools, FinancialFFT, FinancialMonteCarlo, ForwardDiff, Zygote, Mooncake
+using BenchmarkTools, FinancialFFT, FinancialMonteCarlo, ForwardDiff, TaylorSeries, Zygote, Mooncake
 
 # The group at the path keys, created when missing.
 group!(group, keys...) = foldl((g, k) -> haskey(g, k) ? g[k] : (g[k] = BenchmarkGroup()), keys; init = group)
@@ -24,7 +25,7 @@ method_constructors = [
     :CosDensityMethod => () -> CosDensityMethod(),
 ]
 const METHODS = [string(name) => constructor() for (name, constructor) in method_constructors if isdefined(FinancialFFT, name)]
-const PARTS = vcat(["Black Scholes / " * name for (name, _) in METHODS], ["Models", "Densities"])
+const PARTS = vcat(["Black Scholes / " * name for (name, _) in METHODS], ["Models", "Densities", "Chernoff range"])
 const PAYOFFS = ["option" => EuropeanOption(T, 105.0), "smile of 101" => FinancialMonteCarlo.EuropeanOptionSmile(T, Ks, Ks .>= S0)]
 
 # The price, summed over the strikes of a smile, as a function of (S0, r, σ).
@@ -46,6 +47,21 @@ const MODELS = [
     "NormalInverseGaussian" => NormalInverseGaussianProcess(0.2, 0.01, 0.01, Underlying(S0, d)),
     "Heston" => HestonProcess(0.3, 0.2, 0.0, 1.5, -0.7, 0.04, Underlying(S0, d)),
 ]
+
+# The parameters of the models of the "Chernoff range" part, and the models from them: Float64 values, ForwardDiff duals
+# (a gradient in every parameter) or TaylorN (order 2 in every parameter, the Hessian).
+const RANGE_MODELS = [
+    "Merton" => ((σ, λ, μ, δ, S) -> MertonProcess(σ, λ, μ, δ, Underlying(S, d)), [0.2, 5.0, 0.03, 0.02, S0]),
+    "Heston" => ((σ, σ₀, κ, θ, S) -> HestonProcess(σ, σ₀, 0.0, κ, -0.7, θ, Underlying(S, d)), [0.3, 0.2, 1.5, 0.04, S0]),
+]
+function with_derivatives(x, number_type)
+    number_type == "Float64" && return x
+    n = length(x)
+    number_type == "ForwardDiff" && return [ForwardDiff.Dual{Nothing}(x[i], ntuple(j -> float(i == j), n)...) for i in eachindex(x)]
+    # TaylorSeries 0.23 renamed set_variables to variables!
+    variables = isdefined(TaylorSeries, :variables!) ? TaylorSeries.variables!("x", numvars = n, order = 2) : TaylorSeries.set_variables("x", numvars = n, order = 2)
+    return x .+ variables
+end
 
 # The part of the suite named part (one of PARTS), at its place in the whole suite.
 function suite(part)
@@ -70,6 +86,11 @@ function suite(part)
             group["setup"] = @benchmarkable density($model, $(ZeroRate(r)), $method, $T)
             group["f(y), 1000 points"] = @benchmarkable map($f, $y)
             group["density_values, 1000 points"] = @benchmarkable FinancialFFT.density_values($f, $y)
+        end
+    elseif part == "Chernoff range"
+        for (model_name, (model_of, x)) in RANGE_MODELS, number_type in ("Float64", "ForwardDiff", "TaylorN")
+            model = model_of(with_derivatives(x, number_type)...)
+            group!(SUITE, "Chernoff range", model_name)[number_type] = @benchmarkable FinancialFFT.compute_chernorff_limits($model, $(r * T), $(d * T), $T)
         end
     else
         throw(ArgumentError("unknown part $part, not in $PARTS"))

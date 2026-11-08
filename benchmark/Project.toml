@@ -4,6 +4,7 @@ FinancialFFT = "ccc4acef-1676-4a84-946d-4093fe376f06"
 FinancialMonteCarlo = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [sources]
@@ -11,8 +12,9 @@ FinancialFFT = {path = ".."}
 
 [compat]
 BenchmarkTools = "1"
-FinancialMonteCarlo = "0.5.2"
+FinancialMonteCarlo = "0.6"
 ForwardDiff = "0.10, 1"
 Mooncake = "0.5"
+TaylorSeries = "0.15 - 0.23"
 Zygote = "0.6, 0.7"
 julia = "1.11"
