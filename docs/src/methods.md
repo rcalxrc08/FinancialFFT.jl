@@ -37,7 +37,7 @@ density methods at the error of Simpson's rule on `M` intervals:
 ## Choosing a method
 
 - `LewisMethod` and `CosMethod` are the most accurate. Every method is differentiable with every back-end, Zygote included, see [Automatic differentiation](@ref).
-- `CosMethod` has no range parameter: its range comes from the tails of the model and covers the forward of every strike. A smile shares one range, so all of its strikes reuse the same coefficients, at the price of a larger `N` when the strikes are many standard deviations apart. It expands the put and recovers the call by parity, so calls stay accurate on models with a heavy right tail. On the CPU the strikes of a smile share the phases of the characteristic function, and each strike sums the series with a Clenshaw recurrence, at the cost of one `sincos` instead of one `cos` per term: in Black Scholes with `N = 2^12`, a smile of 100 strikes costs about 3.5 times a single option, rather than about 18. On the GPU the series stays one broadcast over terms and strikes.
+- `CosMethod` has no range parameter: its range comes from the tails of the model (see [Truncation range](#Truncation-range)) and covers the forward of every strike. A smile shares one range, so all of its strikes reuse the same coefficients, at the price of a larger `N` when the strikes are many standard deviations apart. It expands the put and recovers the call by parity, so calls stay accurate on models with a heavy right tail. On the CPU the strikes of a smile share the phases of the characteristic function, and each strike sums the series with a Clenshaw recurrence, at the cost of one `sincos` instead of one `cos` per term: in Black Scholes with `N = 2^12`, a smile of 100 strikes costs about 3.5 times a single option, rather than about 18. On the GPU the series stays one broadcast over terms and strikes.
 - `LewisMethod` evaluates the characteristic function on the nodes in `[0, A]` only, since the integrand is even. It prices the strikes of a smile from one set of these evaluations: on the CPU each strike sums the quadrature with a Clenshaw recurrence (in Reinsch's form, which stays accurate at the money), at the cost of one `sincos` per strike instead of an `exp` and a `cos` per node, about 6 times faster for smiles of 100-500 strikes with `N = 20000`.
 - `CarrMadanLewisMethod` and `CarrMadanMethod` run one FFT for all strikes, so their cost does not grow with the number of strikes; prices between the nodes of the strike grid come from Lagrange polynomials on six nodes, of order `h⁶` in the step `h = 2π / A` of the grid, which is what limits their accuracy. The interpolant is continuous but its derivatives in the strike jump at the nodes, by about 1e-8 for `CarrMadanLewisMethod(600, 16)`.
 - `CarrMadanMethod` needs `A / 2^Npow` to be small with respect to the damping, which is capped by the exponential moments of the model. Both Carr-Madan methods can choose `A` and `Npow` from a price tolerance, see [below](#Carr-Madan-parameters-from-a-tolerance).
@@ -48,6 +48,86 @@ model = MertonProcess(σ, 5.0, 0.03, 0.02, Underlying(S0, d))
 pricer(model, zero_rate, FFTDensityInverter(), option) - pricer(model, zero_rate, LewisMethod(600.0, 20000), option)
 ```
 
+
+## Truncation range
+
+`CosMethod`, `CosDensityMethod` and `FFTDensityInverter` work on a finite interval `[a, b]` of the log-return
+``X = \log(S_T / S_0)``: the cosine expansion and the FFT grid represent the density there and take it as zero outside.
+The interval must hold all but a negligible probability, or the prices lose the mass left outside, and it should be no
+wider than that, since the number of terms (or grid points) needed for an accuracy grows with its width. The usual rule
+of the COS method, ``c_1 \pm L \sqrt{c_2 + \sqrt{c_4}}`` from the cumulants with ``L = 10`` (Fang and Oosterlee, 2008),
+is a heuristic: it does not bound the mass outside, it is symmetric even for skewed models, and `L` needs tuning for
+heavy tails. The package computes the range from the characteristic function instead, with a Chernoff bound on each
+tail, so these methods have no range parameter.
+
+### Chernoff bounds
+
+Markov's inequality applied to ``e^{s X}``, for any ``s > 0``, bounds the upper tail:
+
+```math
+P(X - m \geq t) \leq E\left[e^{s (X - m)}\right] e^{-s t} = e^{\kappa(s) - s t},
+```
+
+where ``m`` is the drift of the log-return and ``\kappa(s) = \log E[e^{s (X - m)}]`` its cumulant generating function,
+the characteristic exponent at an imaginary argument (`characteristic_exponent_i(s, process, T)`, see
+[Adding a model](@ref)). Setting the bound equal to a tolerance ``\varepsilon``, the probability beyond
+
+```math
+t(s) = \frac{\kappa(s) - \log \varepsilon}{s}
+```
+
+is at most ``\varepsilon``, whatever ``s``. The range uses the tightest of these bounds, ``b = m + \min_s t(s)``, the
+point where the Legendre transform of ``\kappa`` (the rate function of Cramér's theorem on large deviations) reaches
+``-\log \varepsilon``. The lower end is the same bound for ``-X``, with ``\kappa(-s)``: a skewed model gets a wider
+range on the side of its heavier tail.
+
+In Black and Scholes ``\kappa(s) = \sigma^2 T s^2 / 2``, so the minimum is at ``s^* = \sqrt{2 \log(1/\varepsilon) /
+(\sigma^2 T)}`` and the half-width is ``\sigma \sqrt{2 T \log(1/\varepsilon)}``, about ``8 \sigma \sqrt{T}`` for
+``\varepsilon = 10^{-14}``: the number of standard deviations follows from the tolerance instead of being chosen by
+hand.
+
+```@example methods
+model = BlackScholesProcess(σ, Underlying(S0, d))
+f = density(model, zero_rate, CosDensityMethod(), T)
+(f.b - f.a) / 2, σ * sqrt(2 * T * log(1e14))
+```
+
+Heavier tails make ``\kappa`` grow faster, which moves the minimum to a smaller ``s`` and a larger distance. In Kou,
+Variance Gamma, NIG and Heston ``E[e^{s X}]`` is finite only below a bound on ``s`` (`exponential_moment_bound`: the
+rates of the exponential jumps for Kou, the zero of the argument of the logarithm or of the square root for Variance
+Gamma and NIG, the moment explosion before the maturity for Heston), where ``\kappa`` and ``t`` become infinite. The
+minimum is then close to the bound; if it is not reached before it, the range uses an ``s`` just below the bound, which
+still gives a valid, wider, range.
+
+![Chernoff bound of the lower tail as a function of s, for six models](assets/figures/chernoff-light.svg)![Chernoff bound of the lower tail as a function of s, for six models](assets/figures/chernoff-dark.svg)
+
+The tolerance is ``\varepsilon = 10^{-14}`` on each side in Float64, scaled by the machine epsilon in other types. It is
+that small because the error of a price is the mass outside times the payoff (the COS methods expand the put, bounded by
+the strike: the call would need the right tail under the share measure, which this range does not cover), and the
+derivatives weight the tail with the scores, so that the second derivative in ``\sigma`` errs by about
+``2500 \varepsilon``. The range is a constant for differentiation: it is a numerical parameter, and moving it with the
+parameters of the model would add the derivative of the truncation error to the sensitivities.
+
+### Finding the minimum
+
+The derivative of ``t`` is
+
+```math
+t'(s) = \frac{g(s) - L}{s^2}, \qquad g(s) = s \kappa'(s) - \kappa(s), \qquad L = -\log \varepsilon,
+```
+
+and ``g'(s) = s \kappa''(s) > 0`` since ``\kappa`` is convex: ``g`` crosses ``L`` once, so ``t`` has a single minimum, at
+the root of ``g(s) = L``, where ``t(s^*) = \kappa'(s^*)``. One evaluation of ``\kappa`` at the complex point
+``s + i h`` gives both ``\kappa(s)`` (the real part) and ``\kappa'(s)`` (the imaginary part over ``h``), hence ``g``. The
+search starts from ``s = 1`` and from the Gaussian guess ``s \sqrt{L / g(s)}``, exact in Black and Scholes, brackets the
+root without reaching the moment bound, and solves ``g(s) = L`` with Brent's method in logarithmic coordinates, in which
+``g`` is close to a line both for Gaussian tails and near the moment bound.
+
+The minimum is flat: an error ``\delta`` in ``s`` changes ``t`` by ``O(\delta^2)``, so ``s`` to a relative
+``\sqrt{\epsilon}`` gives the ends of the range to about the machine epsilon, and since every ``s`` gives a valid bound,
+an inexact search can only widen the range, never narrow it. Both tails take 4 to 26 evaluations of the characteristic
+exponent, a few microseconds, against about 110 for a bisection. The tolerance of the
+[Carr-Madan methods](#Carr-Madan-parameters-from-a-tolerance) uses the same search for its aliasing bound.
 
 ## Carr-Madan parameters from a tolerance
 
@@ -60,7 +140,7 @@ FFT methods:
   modulus of the integrand with this error (with a cap, and with 1 beyond `A`) gives a bound decreasing in `A`, solved for `A`.
 - **Aliasing:** the result is periodic in the log-strike. Simpson's weights also add copies at half the period, which
   is the half-width `b = π 2^Npow / A` of the strike grid, so `b` must reach the distance at which the damped price is below
-  `ε`. It is a closed form on one side, and on the other, where the price can have a heavy tail, a Chernoff bound minimised
+  `ε`. It is a closed form on one side, and on the other, where the price can have a heavy tail, a [Chernoff bound](#Chernoff-bounds) minimised
   as for the range of `CosMethod`.
 
 `2^Npow` is the smallest power of two with both, and the spare nodes go to `A`. The bounds are model-free apart from the

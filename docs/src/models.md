@@ -40,5 +40,5 @@ differentiated by every AD back-end, so it must be written generically, without 
 Methods call `characteristic_exponent_i(imv, process, T)`, the log of ``E[\exp(imv\, X_T)]``, which defaults to the
 exponent above times `T`. A process that is not Lévy, such as Heston, has no exponent per unit of time and defines this
 three argument method (and `characteristic_exponent_vi`) directly. A process with semi-heavy tails also needs
-`exponential_moment_bound(process, mul[, T])`, which limits the truncation range of `CosMethod`: pass `T` when the bound
+`exponential_moment_bound(process, mul[, T])`, which limits the [truncation range](@ref "Truncation range") of `CosMethod`: pass `T` when the bound
 depends on the maturity, as the moment explosion of Heston does.

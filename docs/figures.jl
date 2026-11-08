@@ -107,7 +107,25 @@ function scores_figure(theme)
     return p
 end
 
+# The Chernoff bound of the lower tail of the log-return, t(s) = (κ(s) - log ε) / s for the exponent κ(s) = log E[exp(-s X)]:
+# every s gives a valid distance, the range uses the minimum (marked, as the search of the package finds it). The curves
+# stop at the exponential moment bound, where κ, and t, become infinite.
+function chernoff_figure(theme)
+    T, log_ε = 1.0, log(1e-14)
+    p = base_plot(theme; title = "Chernoff bound of the lower tail at T = 1, ε = 1e-14", xlabel = "s", ylabel = "t(s), distance below the drift", xscale = :log10, xlims = (1, 100), xticks = ([1, 2, 5, 10, 20, 50, 100], ["1", "2", "5", "10", "20", "50", "100"]), ylims = (0, 14), legend = :outerright, size = (900, 430))
+    for (j, (name, model)) in enumerate(showcase_models())
+        exponent = FinancialFFT.TailExponent(model, T, -1)
+        s_end = min(FinancialFFT.exponential_moment_bound(exponent) * (1 - 1e-9), 100.0)
+        s = exp.(range(0.0, log(s_end), length = 600))
+        plot!(p, s, FinancialFFT.compute_ts.(s, Ref(exponent), log_ε); label = nothing, color = theme.series[j], linewidth = 2)
+        s_opt = FinancialFFT.chernoff_optimum(exponent, log_ε, 1.0, sqrt(eps()))
+        scatter!(p, [s_opt], [FinancialFFT.compute_ts(s_opt, exponent, log_ε)]; label = name, color = theme.series[j], marker = MARKERS[j], markersize = 6, markerstrokewidth = 0)
+    end
+    return p
+end
+
 save_themes(smiles_figure, "smiles")
 save_themes(convergence_figure, "convergence")
 save_themes(densities_figure, "densities")
 save_themes(scores_figure, "scores")
+save_themes(chernoff_figure, "chernoff")
