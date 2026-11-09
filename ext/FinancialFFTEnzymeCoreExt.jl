@@ -14,11 +14,17 @@ using Base: IEEEFloat
 EnzymeRules.inactive(::typeof(FinancialFFT.v_value_mod), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.ignore_derivatives_mod), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.chernoff_optimum), args...) = nothing
+# The truncation range of the COS methods and of the densities as a whole: on Julia 1.11 Enzyme inlines the hooks
+# broadcast over the tuple of its ends and differentiates them, which moves the grid of FFTDensityInverter and gives
+# wrong scores without an error.
+EnzymeRules.inactive(::typeof(FinancialFFT.compute_chernorff_limits), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.exponential_moment_bound), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.fft_grid), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.carr_madan_damping), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.carr_madan_weights), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.density_integration_grid), args...) = nothing
+EnzymeRules.inactive(::typeof(FinancialFFT.fft_density_nodes), args...) = nothing
+EnzymeRules.inactive(::typeof(FinancialFFT.inside_range), args...) = nothing
 
 # Enzyme cannot differentiate through the FFTW plans (foreign calls). Both transforms of the pricers are linear maps y = L x:
 # the tangent is L ẋ, with one plan for the primal and every tangent, and the adjoint adds Lᵀ ȳ to the cotangent of x.

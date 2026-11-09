@@ -72,15 +72,20 @@ end
 # result is real: the characteristic exponent is evaluated on k = 0, …, 2^(N-1) only, and transformed by brfft (the
 # node -2^(N-1) through the real part of 2^(N-1), at the rounding level on the range of COS). The values are floored at
 # eps.
+# -i u_k for k = 0, …, n2, a constant for differentiation (A comes from the range), in a function of its own so that the
+# Enzyme extension can mark it inactive (on Julia 1.11 and 1.12 Enzyme cannot tell this constant array from active
+# memory in the broadcasts below). A vector, not a range: Mooncake, which ignores @ignore_derivatives, fails on the
+# TwicePrecision of a float range. The comprehension captures a value, not the type FT: Julia 1.11 types a captured type
+# as DataType, and the grid as a Vector of unknown element type.
+function fft_density_nodes(A, n2, mode)
+    zero_FT = zero(float_type(A))
+    return adapt_array([complex(zero_FT, -k * (π / A)) for k in 0:n2], mode)
+end
+
 function fft_density_values(mcProcess, r, N, A, a, T, mode)
     n2 = ChainRulesCore.@ignore_derivatives 2^(N - 1)
     FT = float_type(A)
-    # -i u_k, a constant for differentiation: A comes from the range. A vector, not a range: Mooncake, which ignores
-    # @ignore_derivatives, fails on the TwicePrecision of a float range.
-    # the closure captures a value, not the type FT: Julia 1.11 types a captured type as DataType, and the grid as a Vector
-    # of unknown element type
-    zero_FT = zero(FT)
-    u_im = ChainRulesCore.@ignore_derivatives adapt_array([complex(zero_FT, -k * (π / A)) for k in 0:n2], mode)
+    u_im = ChainRulesCore.@ignore_derivatives fft_density_nodes(A, n2, mode)
     drift_rd = FinancialMonteCarlo.integral(r.r - mcProcess.underlying.d, T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     phase = drift_rd - corr - a

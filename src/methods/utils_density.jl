@@ -3,8 +3,11 @@
 # Zero outside the range [f.a, f.b] of the density, where its expansion or its grid says nothing (the cosine series is
 # periodic there). The test is on the values: the range is a constant for differentiation.
 mask_outside_range(f, y::Number, value) = ifelse(f.a <= v_value_mod(y) <= f.b, value, zero(value))
+# The test at an array of points, a constant for differentiation, in a function of its own that the Enzyme extension marks
+# inactive (it cannot tell the ends of the range, fields of a density with active values, from active memory).
+inside_range(a, b, y) = @. a <= v_value_mod(y) <= b
 function mask_outside_range(f, y::AbstractArray, value)
-    is_inside = ChainRulesCore.@ignore_derivatives @. f.a <= v_value_mod(y) <= f.b
+    is_inside = ChainRulesCore.@ignore_derivatives inside_range(f.a, f.b, y)
     return @. ifelse(is_inside, value, zero(value))
 end
 
