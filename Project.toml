@@ -16,15 +16,20 @@ PatternVectors = "92638b5e-77be-42fd-8598-99573a47aaa0"
 [weakdeps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 DualNumbers = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 
+[sources]
+FinancialMonteCarlo = {path = "C:/Users/Nicola/.julia/dev/FinancialMonteCarlo"}
+
 [extensions]
 FinancialFFTCUDAExt = "CUDA"
 FinancialFFTDualNumbersExt = "DualNumbers"
+FinancialFFTEnzymeCoreExt = "EnzymeCore"
 FinancialFFTForwardDiffExt = "ForwardDiff"
 FinancialFFTHyperDualNumbersExt = "HyperDualNumbers"
 FinancialFFTMooncakeExt = "Mooncake"
@@ -36,6 +41,7 @@ Adapt = "3, 4"
 CUDA = "5, 6"
 ChainRulesCore = "1"
 DualNumbers = "0.6"
+EnzymeCore = "0.8"
 FFTA = "0.3"
 FFTW = "1"
 FinancialMonteCarlo = "0.6"

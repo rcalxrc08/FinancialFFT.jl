@@ -19,6 +19,22 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCar
     return density_integral_price(mcProcess, r, f, method.M, opt, mode)
 end
 
+# Log-moneyness z = log(S_T / K) from the left end a of the range of a density to the strike, M Simpson intervals for each
+# strike (one per column), and the weights of Simpson's rule times the put payoff: a constant for differentiation, in a
+# function of its own so that the Enzyme extension can mark it inactive (Enzyme ignores @ignore_derivatives, and cannot
+# tell that the ends of the range, fields of a density with active values, are constants). The density is ~ε at a.
+function density_integration_grid(a, b, log_K_S0_val, M, opt, mode)
+    z_min = @. a - log_K_S0_val
+    z_max = @. max(z_min, min(0, b - log_K_S0_val))
+    # a vector, not a float range (see the nodes of carrmadan.jl): k / M is rounded once, as the range is
+    M_FT = convert(typeof(a), M)
+    t = adapt_array([k / M_FT for k = 0:M], mode)
+    z_grid = @. z_min + (z_max - z_min) * t
+    simpson = PatternVector(M + 1, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
+    put_payoff = density_put_payoff(opt)
+    return z_grid, @. simpson * put_payoff(z_grid) * (z_max - z_min) / (3 * M)
+end
+
 # Price of opt from a density f of the log-return: Simpson's rule on M intervals of log-moneyness for the put, whose
 # integration domain ends at the strike, so that the kink of the payoff is an endpoint; the call by parity.
 function density_integral_price(mcProcess, r, f, M, opt, mode)
@@ -28,19 +44,8 @@ function density_integral_price(mcProcess, r, f, M, opt, mode)
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     K = opt.K
     log_K_S0 = strike_columns(@. log(K / S0))
-    # log-moneyness z = log(S_T / K) from the left end of the range to the strike, one strike per column; the grid is
-    # a constant for differentiation (Mooncake ignores @ignore_derivatives, hence the hook), and the density is ~ε at
-    # its left end
-    z, payoff = ChainRulesCore.@ignore_derivatives begin
-        log_K_S0_val = ignore_derivatives_mod.(log_K_S0)
-        z_min = @. f.a - log_K_S0_val
-        z_max = @. max(z_min, min(0, f.b - log_K_S0_val))
-        t = adapt_array(collect((0:M) ./ convert(typeof(f.a), M)), mode)
-        z_grid = @. z_min + (z_max - z_min) * t
-        simpson = PatternVector(M + 1, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
-        put_payoff = density_put_payoff(opt)
-        z_grid, @. simpson * put_payoff(z_grid) * (z_max - z_min) / (3 * M)
-    end
+    # the grid is a constant for differentiation (Mooncake ignores @ignore_derivatives, hence the hook)
+    z, payoff = ChainRulesCore.@ignore_derivatives density_integration_grid(f.a, f.b, ignore_derivatives_mod(log_K_S0), M, opt, mode)
     # the nodes are inside the range: no mask
     f_z = density_array(f, z .+ log_K_S0, mode)
     df = exp(-rT)

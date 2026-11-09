@@ -1,6 +1,7 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DualNumbers = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 FinancialMonteCarlo = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
 FinancialToolbox = "2edd74a5-e968-5e45-af77-76d29aa6a478"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -15,6 +16,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [compat]
 Aqua = "0.8"
 DualNumbers = "0.5, 0.6"
+Enzyme = "0.13"
 FinancialMonteCarlo = "0.6"
 FinancialToolbox = "0.7, 0.8"
 ForwardDiff = "0.10, 1"

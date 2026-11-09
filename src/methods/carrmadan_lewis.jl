@@ -47,9 +47,10 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     A = to_float_type(float_type(S0, rT, dT, T), A_grid)
     correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
-    idx = ChainRulesCore.@ignore_derivatives 0:(N-1)
     dx = A / N
-    x = ChainRulesCore.@ignore_derivatives adapt_array(collect(idx * dx), mode)
+    # A vector, not a float range: Enzyme, which ignores @ignore_derivatives, fails on the TwicePrecision of a float range even
+    # with constant inputs (Mooncake with active ones, see fft_density.jl). k * dx is rounded once, as the range is.
+    x = ChainRulesCore.@ignore_derivatives adapt_array([k * dx for k = 0:(N-1)], mode)
     # The factors that do not depend on the model (signs (-1)^j, Simpson weights, dx / 3, 1 / den(1/2 + ix) on floats) are
     # computed in the same broadcast. The nodes are complex(one_half, x), with a float one_half: a Rational added to a
     # complex number in this lazy argument (1 // 2 + x * im) makes the vectorised exponent 2.3 times slower.

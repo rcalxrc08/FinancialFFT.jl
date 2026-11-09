@@ -75,4 +75,6 @@ end
 density_array(f::CosDensity, y::AbstractArray, ::FinancialMonteCarlo.SerialMode) = map(y_j -> density_value(f, y_j), y)
 # density_values of a density and points on the CPU: the recurrence too, without the N × K array of the broadcast
 # (7-10 times faster at 1000 points with N = 64-512, and no allocation but the result).
-density_array(f::CosDensity{<:Array}, y::Array) = density_array(f, y, FinancialMonteCarlo.SerialMode())
+# A broadcast with the density as an argument, not map: map allocates with similar(y), and Enzyme cannot tell that the
+# values stored there, active when the density is, are allowed in an array derived from constant points.
+density_array(f::CosDensity{<:Array}, y::Array) = density_value.(Ref(f), y)

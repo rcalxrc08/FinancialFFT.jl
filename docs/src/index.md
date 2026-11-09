@@ -42,7 +42,7 @@ pricer(model, zero_rate, CosMethod(2^12), option)                    # COS metho
 - Models: Black–Scholes, Merton, Kou, Variance Gamma, Normal Inverse Gaussian, Heston.
 - Payoffs: European and binary (digital) options, calls and puts, and their smiles (several strikes, one maturity), with every method. Options with different maturities are priced by broadcasting, `pricer.(model, zero_rate, method, options)`.
 - Non-constant zero rates and dividends.
-- Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl and TaylorSeries.jl, see [Automatic differentiation](@ref) for the exceptions.
+- Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl, Enzyme.jl and TaylorSeries.jl, see [Automatic differentiation](@ref) for the exceptions.
 - Float32, BigFloat and other floating-point types (DoubleFloats, …), see [Floating-point types](@ref).
 - GPU execution through CUDA.jl, see [GPU](@ref).
 - Calibration: model volatilities from a smile pricer and FinancialToolbox's `blsimpv`, their Jacobian by automatic differentiation, a Levenberg–Marquardt fit of Heston and the sensitivities of the calibrated parameters to the quotes, see [Calibration](calibration.md).
@@ -92,7 +92,7 @@ pricer(model, zero_rate, CosMethod(2^12; mode = FinancialMonteCarlo.CudaMode()),
 - Every method runs on the GPU, with the accuracy it has on the CPU.
 - `density(model, zero_rate, FFTDensityInverter(; mode = FinancialMonteCarlo.CudaMode()), T)` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
 - The strikes of a smile are moved to the device of the mode, wherever they are; the prices of a smile stay on the GPU.
-- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU. ReverseDiff.jl and Mooncake.jl are not supported on the GPU.
+- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU. ReverseDiff.jl is not supported on the GPU, and Mooncake.jl differentiates only the binary Lewis option there, see [Known limitations](ad.md#Known-limitations).
 
 ## Testing
 

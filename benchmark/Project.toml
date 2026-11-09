@@ -1,9 +1,13 @@
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+DualNumbers = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 FinancialFFT = "ccc4acef-1676-4a84-946d-4093fe376f06"
 FinancialMonteCarlo = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
@@ -12,9 +16,13 @@ FinancialFFT = {path = ".."}
 
 [compat]
 BenchmarkTools = "1"
+DualNumbers = "0.5, 0.6"
+Enzyme = "0.13"
 FinancialMonteCarlo = "0.6"
 ForwardDiff = "0.10, 1"
+HyperDualNumbers = "2, 3, 4"
 Mooncake = "0.5"
+ReverseDiff = "1.18"
 TaylorSeries = "0.15 - 0.23"
 Zygote = "0.6, 0.7"
 julia = "1.11"

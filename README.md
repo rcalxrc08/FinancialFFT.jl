@@ -34,8 +34,8 @@ It currently contains the following capabilities:
     - Binary European Options
     - Smiles of both (several strikes, one maturity)
 
-Currently supports [DualNumbers.jl](https://github.com/JuliaDiff/DualNumbers.jl), [HyperDualNumbers.jl](https://github.com/JuliaDiff/HyperDualNumbers.jl), [TaylorSeries.jl](https://github.com/JuliaDiff/TaylorSeries.jl), [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl), [ReverseDiff.jl](https://github.com/JuliaDiff/ReverseDiff.jl), [Zygote.jl](https://github.com/FluxML/Zygote.jl) and [Mooncake.jl](https://github.com/chalk-lab/Mooncake.jl)
-for Automatic Differentiation (where it makes sense), see the [limitations](https://rcalxrc08.github.io/FinancialFFT.jl/ad/), and GPU execution through [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).
+Currently supports [DualNumbers.jl](https://github.com/JuliaDiff/DualNumbers.jl), [HyperDualNumbers.jl](https://github.com/JuliaDiff/HyperDualNumbers.jl), [TaylorSeries.jl](https://github.com/JuliaDiff/TaylorSeries.jl), [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl), [ReverseDiff.jl](https://github.com/JuliaDiff/ReverseDiff.jl), [Zygote.jl](https://github.com/FluxML/Zygote.jl), [Mooncake.jl](https://github.com/chalk-lab/Mooncake.jl) and [Enzyme.jl](https://github.com/EnzymeAD/Enzyme.jl) (CPU)
+for Automatic Differentiation (where it makes sense), see the [limitations](https://rcalxrc08.github.io/FinancialFFT.jl/ad/#Known-limitations) and [which back-end to use](https://rcalxrc08.github.io/FinancialFFT.jl/ad/#Choosing-a-back-end), and GPU execution through [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl).
 
 ## How to Install
 The package and FinancialMonteCarlo.jl are in a custom registry. To install them simply type on the Julia REPL the following:

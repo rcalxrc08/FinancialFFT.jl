@@ -1,7 +1,8 @@
 # GPU execution in CudaMode. Not in SUITES, since GitHub CI has no GPU: on a machine with a CUDA GPU run
 #     Pkg.test("FinancialFFT"; test_args = ["gpu"])
 # which adds CUDA to the test environment (see runtests.jl). The mode is part of the method (with_mode); the strikes of a smile
-# can be on either device. ReverseDiff and Mooncake are not supported on the GPU.
+# can be on either device. ReverseDiff is not supported on the GPU; Mooncake differentiates the binary Lewis option only, and
+# is recorded as broken elsewhere (chalk-lab/Mooncake.jl#1450), so that the suite reports when it starts working.
 using CUDA
 
 function gpu_payoff(kind, T, K, iscall)
@@ -40,6 +41,9 @@ end
                     end
                     @testset "Zygote" begin
                         test_within(() -> max_abs_diff([something(x, 0.0) for x in Zygote.gradient(f, args...)], reference), toll.zygote)
+                    end
+                    @testset "Mooncake" begin
+                        test_within(() -> max_abs_diff(mooncake_gradient(x -> f(x...), args), reference), toll.mooncake_gpu)
                     end
                 end
             end

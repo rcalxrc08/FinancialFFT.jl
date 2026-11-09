@@ -92,8 +92,9 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     A = to_float_type(FT, A_grid)
     #* v-> compute integral as a summation
     dx = A / N
-    real_vec = 0:(N-1)
-    v = ChainRulesCore.@ignore_derivatives adapt_array(collect(real_vec * dx), mode)
+    # A vector, not a float range: Enzyme, which ignores @ignore_derivatives, fails on the TwicePrecision of a float range even
+    # with constant inputs (EnzymeAD/Enzyme.jl#4016; Mooncake with active ones, see fft_density.jl). k * dx is rounded once, as the range is.
+    v = ChainRulesCore.@ignore_derivatives adapt_array([k * dx for k = 0:(N-1)], mode)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     dk = twoπ / A
     # not pi * N / A: an irrational times an integer is a Float64

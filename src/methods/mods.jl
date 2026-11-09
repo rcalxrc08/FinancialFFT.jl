@@ -23,3 +23,6 @@ v_value_mod(s::Real) = s
 # quantity). The value covers the dual numbers, the Taylor series and ReverseDiff, which does not honor the macro;
 # Mooncake ignores the macro too, so its extension makes this hook a primitive with zero derivative.
 ignore_derivatives_mod(x) = v_value_mod(x)
+# On an array, one call: the broadcast is the same for every back-end, and Enzyme, whose extension marks the hook
+# inactive, can tell that the result is a constant (a broadcast of the hook over an active array is not).
+ignore_derivatives_mod(x::AbstractArray) = ignore_derivatives_mod.(x)
