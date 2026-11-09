@@ -23,9 +23,6 @@ Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 
-[sources]
-FinancialMonteCarlo = {path = "C:/Users/Nicola/.julia/dev/FinancialMonteCarlo"}
-
 [extensions]
 FinancialFFTCUDAExt = "CUDA"
 FinancialFFTDualNumbersExt = "DualNumbers"
