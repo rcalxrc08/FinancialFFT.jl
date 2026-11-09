@@ -45,11 +45,15 @@ pricer(model, zero_rate, CosMethod(2^12), option)                    # COS metho
 - Automatic differentiation with DualNumbers.jl, HyperDualNumbers.jl, ForwardDiff.jl, ReverseDiff.jl, Zygote.jl, Mooncake.jl and TaylorSeries.jl, see [Automatic differentiation](@ref) for the exceptions.
 - Float32, BigFloat and other floating-point types (DoubleFloats, …), see [Floating-point types](@ref).
 - GPU execution through CUDA.jl, see [GPU](@ref).
+- Calibration: model volatilities from a smile pricer and FinancialToolbox's `blsimpv`, their Jacobian by automatic differentiation, a Levenberg–Marquardt fit of Heston and the sensitivities of the calibrated parameters to the quotes, see [Calibration](calibration.md).
 
 ## Installation
 
+The package and FinancialMonteCarlo.jl are registered in a registry of their own, to be added once:
+
 ```julia
-] add FinancialFFT
+] registry add https://github.com/rcalxrc08/LocalRegistry.git
+] add FinancialFFT, FinancialMonteCarlo
 ```
 
 ## Quick start
@@ -106,6 +110,6 @@ Pkg.test("FinancialFFT"; test_args = ["gpu"])
 ## Contents
 
 ```@contents
-Pages = ["methods.md", "payoffs.md", "models.md", "ad.md", "api.md"]
+Pages = ["methods.md", "payoffs.md", "models.md", "ad.md", "calibration.md", "api.md", "references.md"]
 Depth = 2
 ```

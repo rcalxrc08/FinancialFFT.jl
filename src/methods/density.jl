@@ -39,7 +39,8 @@ export density
 
 Values of the density `f` (an [`FinancialFFT.AbstractDensity`](@ref)) at the array of log-returns `y`, with the shape
 of `y`. For `FFTDensity` and `CosDensity` it uses broadcasts, gathers and reductions only: it runs on the device of
-`y` and of the density, and Zygote differentiates it there too.
+`y` and of the density, and Zygote differentiates it there too. A `CosDensity` and points on the CPU (`Array`s) use
+the Clenshaw recurrence at each point instead, as `f(y)` does, which needs no array of terms by points.
 """
 density_values(f::AbstractDensity, y::AbstractArray) = mask_outside_range(f, y, density_array(f, y))
 

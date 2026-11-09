@@ -14,6 +14,8 @@ It currently contains the following capabilities:
     - Carr-Madan-Lewis
     - COS density (`CosDensityMethod`)
     - FFT density inversion (`FFTDensityInverter`)
+- No range parameter for COS and the densities: the truncation range comes from a Chernoff bound on the tails of the model ([theory](https://rcalxrc08.github.io/FinancialFFT.jl/methods/#Truncation-range))
+- Carr-Madan and Carr-Madan-Lewis parameters chosen from a price tolerance, `CarrMadanMethod(1e-8)` ([details](https://rcalxrc08.github.io/FinancialFFT.jl/methods/#Carr-Madan-parameters-from-a-tolerance))
 - Densities of the log-return, for the likelihood ratio method and Vibrato (`density`):
     - FFT inversion of the characteristic function (`FFTDensityInverter`)
     - COS expansion (`CosDensityMethod`)
@@ -25,6 +27,8 @@ It currently contains the following capabilities:
     - Normal Inverse Gaussian
     - Variance Gamma
 - Support for non constant zero rates and dividends
+- Prices in the floating-point type of the inputs: Float32, Float64, BigFloat, DoubleFloats, …
+- A worked calibration of Heston to implied volatilities, with the sensitivities of the calibrated parameters to the quotes ([Calibration](https://rcalxrc08.github.io/FinancialFFT.jl/calibration/))
 - Support for the following Option families:
     - European Options
     - Binary European Options

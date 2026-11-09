@@ -23,6 +23,30 @@ function save_themes(draw, name)
     end
 end
 
+# The calibration of calibration.md: its @example blocks run in a module of their own, up to the one that computes the
+# model volatilities, so that the figure shows the data of the page without a copy of its code.
+function calibration_data()
+    page = read(joinpath(@__DIR__, "src", "calibration.md"), String)
+    example = Module(:CalibrationExample)
+    for block in eachmatch(r"```@example calibration\r?\n(.*?)```"s, page)
+        Base.include_string(example, block.captures[1])
+        isdefined(example, :model_vols) && break
+    end
+    # the bindings are newer than this function: read them in the latest world
+    return Base.invokelatest(() -> (example.quote_T, example.quote_K, example.v, example.model_vols))
+end
+
+# The implied volatilities of the quotes (markers) and of the calibrated model (lines), one series per maturity.
+function calibration_figure(theme, (quote_T, quote_K, market_vols, model_vols))
+    p = base_plot(theme; title = "Heston calibrated on four smiles: quotes (markers) and model (lines)", xlabel = "strike", ylabel = "implied volatility", legend = :outerright, size = (900, 430))
+    for (j, T) in enumerate(unique(quote_T))
+        i = quote_T .== T
+        plot!(p, quote_K[i], model_vols[i]; label = nothing, color = theme.series[j], linewidth = 2)
+        scatter!(p, quote_K[i], market_vols[i]; label = "T = $T", color = theme.series[j], marker = MARKERS[j], markersize = 5, markerstrokewidth = 0)
+    end
+    return p
+end
+
 const S0, r, d = 100.0, 0.02, 0.01
 const zero_rate = ZeroRate(r)
 underlying() = Underlying(S0, d)
@@ -129,3 +153,5 @@ save_themes(convergence_figure, "convergence")
 save_themes(densities_figure, "densities")
 save_themes(scores_figure, "scores")
 save_themes(chernoff_figure, "chernoff")
+const CALIBRATION = calibration_data()
+save_themes(theme -> calibration_figure(theme, CALIBRATION), "calibration")

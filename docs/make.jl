@@ -14,5 +14,5 @@ makedocs(
     repo = Remotes.GitHub("rcalxrc08", "FinancialFFT.jl"),
     sitename = "FinancialFFT.jl",
     modules = [FinancialFFT],
-    pages = ["index.md", "methods.md", "payoffs.md", "models.md", "ad.md", "api.md"],
+    pages = ["index.md", "methods.md", "payoffs.md", "models.md", "ad.md", "calibration.md", "api.md", "references.md"],
 )

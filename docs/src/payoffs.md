@@ -50,5 +50,8 @@ pricer.(model, zero_rate, method, options)
 
 ## Puts
 
-Every price is computed as a call and converted to a put through the put–call parity, so calls and puts share their
-accuracy, and their cost when they are in the same smile.
+Each method prices one of the two and gets the other from the put–call parity, so calls and puts share their accuracy,
+and their cost when they are in the same smile. `LewisMethod` and the Carr-Madan methods compute calls. `CosMethod`
+and the two density methods compute puts: a put is bounded by its strike, so the probability left outside their
+[truncation range](@ref "Truncation range") costs at most that much, while the coefficients of a call grow like the
+exponential of the upper end of the range, so a call would need the right tail under the share measure.
