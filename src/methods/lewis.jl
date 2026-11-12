@@ -44,12 +44,6 @@ function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCa
     return @. evaluate_integrand_lewis_v2_scalar_binary(v, corr_adj, re_char_exp, im_char_exp)
 end
 
-# function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.BinaryEuropeanOption)
-#     corr_h = corr_adj / 2
-#     corr_im = corr_adj * im
-#     return @. FinancialFFT.real_mod(exp(corr_h + v * corr_im + char_exp_v) / (1 // 2 + im * v))
-# end
-
 function convert_integral_result_to_price(discounted_sum_, _, _, df, opt::BinaryEuropeanOption)
     return df * ifelse(opt.isCall, discounted_sum_, 1 - discounted_sum_)
 end

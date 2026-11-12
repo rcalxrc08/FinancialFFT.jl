@@ -175,11 +175,24 @@ function chernoff_optimum(exponent, log_epss, s_min, toll, max_steps = 60)
     g0 = min(zero(g_lo), 2 * g_lo)
     # g increases on the bracket, so g - g0 >= g_lo - g0 > 0 there, up to rounding when g_lo is about 0
     log_gap(g_s) = log(max(g_s - g0, eps(L))) - log(L - g0)
-    to_u(s) = isfinite(B) ? log(s / (B - s)) : log(s)
-    to_s(u) = isfinite(B) ? B / (1 + exp(-u)) : exp(u)
-    residual(u) = log_gap(g(to_s(u)))
-    return to_s(brent_root(residual, to_u(s_lo), to_u(s_hi), log_gap(g_lo), log_gap(g_hi), toll))
+    residual(s) = log_gap(g(s))
+    # the coordinate is chosen once, by dispatch; both branches return FT, so the result stays type stable
+    r_lo, r_hi = log_gap(g_lo), log_gap(g_hi)
+    isfinite(B) && return brent_in_coordinate(BoundedCoordinate(B), residual, s_lo, s_hi, r_lo, r_hi, toll)
+    return brent_in_coordinate(UnboundedCoordinate(), residual, s_lo, s_hi, r_lo, r_hi, toll)
 end
+
+# The coordinate u of Brent's method: u = log(s / (B - s)) below a finite bound B, u = log(s) without one.
+struct BoundedCoordinate{T}
+    B::T
+end
+struct UnboundedCoordinate end
+to_u(c::BoundedCoordinate, s) = log(s / (c.B - s))
+to_s(c::BoundedCoordinate, u) = c.B / (1 + exp(-u))
+to_u(::UnboundedCoordinate, s) = log(s)
+to_s(::UnboundedCoordinate, u) = exp(u)
+# The root in s of residual(s), found in the coordinate u: a function of its own, compiled for each coordinate.
+brent_in_coordinate(c, residual, s_lo, s_hi, r_lo, r_hi, toll) = to_s(c, brent_root(u -> residual(to_s(c, u)), to_u(c, s_lo), to_u(c, s_hi), r_lo, r_hi, toll))
 
 function compute_chernoff_extrema_single(Model, T, log_epss, s_min, toll, mul, driftT)
     s_opt = ChainRulesCore.@ignore_derivatives chernoff_optimum(TailExponent(Model, v_value_mod(T), mul), v_value_mod(log_epss), s_min, toll)

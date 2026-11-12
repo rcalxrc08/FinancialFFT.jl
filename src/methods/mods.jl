@@ -8,9 +8,6 @@ real_mod(x) = real(x)
 imag_mod(x) = imag(x)
 # Mooncake cannot differentiate the complex sqrt of Base: its extension overlays this hook.
 sqrt_mod(x) = sqrt(x)
-# The abs of a Taylor series refuses a constant term of zero, which a density has at some nodes of its tails: the
-# TaylorSeries extension overloads this hook.
-abs_mod(x) = abs(x)
 # DualNumbers and HyperDualNumbers have no sincos: their extensions overload this hook.
 sincos_mod(x) = sincos(x)
 # real(exp(z)), without the imaginary part of the exponential.

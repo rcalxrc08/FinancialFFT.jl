@@ -4,7 +4,11 @@
 adapt_array(x, mode) = FinancialMonteCarlo.to_mode(x, mode)
 # The real floating-point type of the inputs, without their derivatives: grids, truncation ranges and the parameters of
 # the methods are built in it, so that Float32 or BigFloat inputs are not promoted to Float64.
-float_type(x...) = ChainRulesCore.@ignore_derivatives typeof(float(v_value_mod(sum(x))))
+float_type(x...) = ChainRulesCore.@ignore_derivatives float(promote_type(map(x_i -> typeof(v_value_mod(x_i)), x)...))
+# The zero of the common type of x..., from their types, without arithmetic on the values. A Taylor series is the
+# exception: its type says neither the order nor the JetSpace, so the TaylorSeries extension builds it from the values.
+zero_promoted(x...) = zero_of_type(promote_type(map(typeof, x)...), x...)
+zero_of_type(::Type{T}, x...) where {T} = zero(T)
 # A parameter of a method (a constant for differentiation) in the floating-point type FT.
 to_float_type(FT, x) = ChainRulesCore.@ignore_derivatives convert(FT, v_value_mod(x))
 # Relative tolerance of a computation in FT that has 1e-14 in Float64: scaled by the machine epsilon.
@@ -62,7 +66,7 @@ function clenshaw_exp_sum(c_re, c_im, θ, ::Val{only_real} = Val(false)) where {
     s_h, c_h = sincos_mod(θ / 2)
     s = 2 * s_h * c_h
     c = (c_h - s_h) * (c_h + s_h)
-    zero_typed = zero(c * first(c_re) * first(c_im))
+    zero_typed = zero_promoted(c, first(c_re), first(c_im))
     if abs(v_value_mod(c)) <= 19 // 20
         t = 2 * c
         b_1r = b_2r = b_1i = b_2i = zero_typed
@@ -93,7 +97,7 @@ end
 function clenshaw_cos_sum(coefficients, θ)
     s_h, c_h = sincos_mod(θ / 2)
     c = (c_h - s_h) * (c_h + s_h)
-    zero_typed = zero(c * first(coefficients))
+    zero_typed = zero_promoted(c, first(coefficients))
     if abs(v_value_mod(c)) <= 19 // 20
         t = 2 * c
         b_1 = b_2 = zero_typed
@@ -129,11 +133,12 @@ imaginary_coefficient(::Nothing, i) = false
 imaginary_coefficient(c_im, i) = c_im[i]
 imaginary_cotangent(::Nothing, T) = nothing
 imaginary_cotangent(c_im, T) = similar(c_im, T)
-set_imaginary_cotangent!(::Nothing, i, x) = nothing
-set_imaginary_cotangent!(c̄_im, i, x) = (c̄_im[i] = x)
+# The cotangent b̄ cos kθ - ā sin kθ of c_im_k, computed only when there are imaginary coefficients.
+set_imaginary_cotangent!(::Nothing, i, ā, b̄, co, si) = nothing
+set_imaginary_cotangent!(c̄_im, i, ā, b̄, co, si) = (c̄_im[i] = b̄ * co - ā * si)
 function clenshaw_exp_sum_pullback(c_re, c_im, θ, ā, b̄)
     n = length(c_re)
-    T = typeof(float(θ * first(c_re) * ā))
+    T = float(promote_type(typeof(θ), eltype(c_re), typeof(ā)))
     c̄_re, c̄_im = similar(c_re, T), imaginary_cotangent(c_im, T)
     s_1, c_1 = sincos(θ)
     co, si = one(T), zero(T)
@@ -144,7 +149,7 @@ function clenshaw_exp_sum_pullback(c_re, c_im, θ, ā, b̄)
         end
         a_k, b_k = c_re[i], imaginary_coefficient(c_im, i)
         c̄_re[i] = ā * co + b̄ * si
-        set_imaginary_cotangent!(c̄_im, i, b̄ * co - ā * si)
+        set_imaginary_cotangent!(c̄_im, i, ā, b̄, co, si)
         d_re -= k * (a_k * si + b_k * co)
         d_im += k * (a_k * co - b_k * si)
         co, si = co * c_1 - si * s_1, si * c_1 + co * s_1

@@ -3,7 +3,7 @@ module FinancialFFTTaylorSeriesExt
 using FinancialFFT, TaylorSeries, FFTW
 import FFTW: fft!, fft
 using TaylorSeries: AbstractSeries, constant_term
-import FinancialFFT: v_value_mod, abs_mod, brfft_mod
+import FinancialFFT: v_value_mod, brfft_mod, zero_of_type
 
 series_order(x) = length(x.coeffs) - 1
 
@@ -11,7 +11,8 @@ function v_value_mod(s::Union{Taylor1, TaylorN})
     return v_value_mod(constant_term(s))
 end
 
-abs_mod(x::Union{Taylor1, TaylorN}) = signbit(v_value_mod(x)) ? -x : x
+# The zero of a series has the order of the values: their product (the type of a series does not say its order).
+zero_of_type(::Type{<:Union{Taylor1, TaylorN}}, x...) = zero(prod(x))
 
 # Position of each coefficient: its degree in a Taylor1, the degree and the monomial in a TaylorN.
 coefficient_indices(x::Taylor1) = 0:series_order(x)
