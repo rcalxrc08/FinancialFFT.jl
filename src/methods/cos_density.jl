@@ -65,7 +65,7 @@ end
 density_value(f::CosDensity, y) = clenshaw_cos_sum(f.coefficients, (y - f.a) * (pi / (f.b - f.a)))
 
 # At an array of points, with broadcasts and a reduction only: the coefficients are arguments of the broadcast, not
-# captured, for ReverseDiff, and the kernels run on the GPU.
+# captured, for ReverseDiff, and the kernels run on the GPU. y of any shape: the pricers pass a matrix (nodes × strikes).
 function density_array(f::CosDensity, y::AbstractArray)
     y_vec = vec(y)
     values = sum(@. f.coefficients' * cos(f.u' * (y_vec - f.a)); dims = 2)
@@ -75,6 +75,7 @@ end
 density_array(f::CosDensity, y::AbstractArray, ::FinancialMonteCarlo.SerialMode) = map(y_j -> density_value(f, y_j), y)
 # density_values of a density and points on the CPU: the recurrence too, without the N × K array of the broadcast
 # (7-10 times faster at 1000 points with N = 64-512, and no allocation but the result).
-# A broadcast with the density as an argument, not map: map allocates with similar(y), and Enzyme cannot tell that the
-# values stored there, active when the density is, are allowed in an array derived from constant points.
-density_array(f::CosDensity{<:Array}, y::Array) = density_value.(Ref(f), y)
+# A broadcast with the density as an argument (a Ref, by Base.broadcastable of AbstractDensity), not map: map allocates
+# with similar(y), and Enzyme cannot tell that the values stored there, active when the density is, are allowed in an
+# array derived from constant points.
+density_array(f::CosDensity{<:Array}, y::Array) = density_value.(f, y)

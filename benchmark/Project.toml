@@ -18,7 +18,7 @@ FinancialFFT = {path = ".."}
 BenchmarkTools = "1"
 DualNumbers = "0.5, 0.6"
 Enzyme = "0.13"
-FinancialMonteCarlo = "0.6"
+FinancialMonteCarlo = "0.7"
 ForwardDiff = "0.10, 1"
 HyperDualNumbers = "2, 3, 4"
 Mooncake = "0.5"

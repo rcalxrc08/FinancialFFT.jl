@@ -46,7 +46,8 @@ function density_integral_price(mcProcess, r, f, M, opt, mode)
     rT = FinancialMonteCarlo.integral(r.r, T)
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     K = opt.K
-    log_K_S0 = strike_columns(@. log(K / S0))
+    # one strike per column
+    log_K_S0 = transpose(@. log(K / S0))
     # the grid is a constant for differentiation (Mooncake ignores @ignore_derivatives, hence the hook)
     z, payoff = ChainRulesCore.@ignore_derivatives density_integration_grid(f.a, f.b, ignore_derivatives_mod(log_K_S0), M, opt, mode)
     # the nodes are inside the range: no mask
