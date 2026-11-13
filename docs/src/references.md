@@ -1,5 +1,22 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Reference</span> Bibliography</p>
+```
+
 # References
 
+
+```@raw html
+<nav class="fc-toc">
+<a href="#Fourier-pricing"><b>01</b>Fourier pricing</a>
+<a href="#Models"><b>02</b>Models</a>
+<a href="#Tail-bounds"><b>03</b>Tail bounds</a>
+<a href="#Calibration"><b>04</b>Calibration</a>
+<a href="#Implicit-function-theorem"><b>05</b>Implicit function theorem</a>
+<a href="#Sensitivities-from-densities"><b>06</b>Sensitivities from densities</a>
+</nav>
+</div>
+```
 ## Fourier pricing
 
 - P. Carr and D. B. Madan, *Option Valuation Using the Fast Fourier Transform*, Journal of Computational Finance 2(4),

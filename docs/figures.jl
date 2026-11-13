@@ -9,7 +9,7 @@ const FIGURES = mkpath(joinpath(@__DIR__, "src", "assets", "figures"))
 
 # Categorical slots in fixed order (validated for colour vision deficiencies on adjacent pairs, in both modes), and
 # the ink of the text, of the axes and of the grid.
-const THEMES = (light = (series = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"], text = "#1f2328", muted = "#5b6470", axis = "#b9b4ab", grid = "#e6e3de"), dark = (series = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"], text = "#e6e8eb", muted = "#9aa3ad", axis = "#4a525c", grid = "#2a2f36"))
+const THEMES = (light = (series = ["#2563d9", "#0a8a6f", "#b86e0b", "#0b7fb3", "#2f8a3c", "#c2456e"], text = "#1f2328", muted = "#5b6470", axis = "#b9b4ab", grid = "#e6e3de", diverging = ["#2563d9", "#f7f6f3", "#c47a12"]), dark = (series = ["#4f8cff", "#00d4aa", "#ffb84d", "#38cfff", "#7ee787", "#ff6b9d"], text = "#f5f7fa", muted = "#a0aec0", axis = "#3a4466", grid = "#252d47", diverging = ["#4f8cff", "#151b2e", "#ffb84d"]))
 # The secondary encoding of the series: the light slots 3-5 are below 3:1 contrast on the surface.
 const MARKERS = [:circle, :rect, :utriangle, :diamond, :dtriangle, :star5]
 
@@ -155,3 +155,26 @@ save_themes(scores_figure, "scores")
 save_themes(chernoff_figure, "chernoff")
 const CALIBRATION = calibration_data()
 save_themes(theme -> calibration_figure(theme, CALIBRATION), "calibration")
+# The hero of the home page: the implied volatility surface of the Heston model of the smiles above, one CosMethod smile
+# per maturity, drawn in perspective by surface.jl.
+include(joinpath(@__DIR__, "surface.jl"))
+let model = HestonProcess(0.4, 0.2, 0.0, 1.5, -0.7, 0.04, underlying())
+    moneyness = collect(range(0.6, 1.5; length = 46))
+    maturities = collect(range(0.1, 3.0; length = 34))
+    vols = fill(NaN, length(maturities), length(moneyness))
+    for (i, T) in enumerate(maturities)
+        strikes = S0 .* moneyness
+        calls = strikes .>= S0 * exp((r - d) * T)
+        prices = pricer(model, zero_rate, CosMethod(2^10), FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, calls))
+        for j in eachindex(strikes)
+            prices[j] > 1e-6 * S0 || continue
+            vols[i, j] = try
+                blsimpv(S0, strikes[j], r, T, prices[j], d, calls[j])
+            catch
+                NaN
+            end
+        end
+    end
+    lo, hi = floor(minimum(filter(isfinite, vols)) / 0.05) * 0.05, ceil(maximum(filter(isfinite, vols)) / 0.05) * 0.05
+    write_surface(FIGURES, "hero-surface", moneyness, maturities, vols; zlims = (lo, hi), xticks = [m => string(m) for m in (0.6, 0.8, 1.0, 1.2, 1.4)], yticks = [0.5 => "6M", 1.0 => "1Y", 2.0 => "2Y", 3.0 => "3Y"], zticks = [z => "$(round(Int, 100z))%" for z = (lo+0.05):0.05:hi], xlabel = "moneyness K / S₀", ylabel = "maturity", zlabel = "implied volatility", label = "Implied volatility surface of a Heston model priced by the COS method")
+end

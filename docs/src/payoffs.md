@@ -1,7 +1,23 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 02</span> Options, binaries and whole smiles</p>
+```
+
 # Payoffs
 
 Payoffs are defined in FinancialMonteCarlo.jl. Every method prices the following ones; any other payoff, such as a
 barrier option, raises a `MethodError`.
+
+```@raw html
+<div class="fc-meta"><span>European</span><span>binary</span><span>smiles</span></div>
+<nav class="fc-toc">
+<a href="#Single-options"><b>01</b>Single options</a>
+<a href="#Smiles"><b>02</b>Smiles</a>
+<a href="#Different-maturities"><b>03</b>Different maturities</a>
+<a href="#Puts"><b>04</b>Puts</a>
+</nav>
+</div>
+```
 
 | Payoff | Constructor | Result |
 |:--|:--|:--|

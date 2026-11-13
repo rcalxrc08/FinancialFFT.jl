@@ -1,7 +1,24 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 01</span> Six ways to invert a characteristic function</p>
+```
+
 # Methods
 
 Every method is a configurator struct passed to `pricer`, in the place of the `MonteCarloConfiguration` of
 FinancialMonteCarlo.jl. All of them price every payoff and model of the package.
+
+```@raw html
+<div class="fc-meta"><span>Lewis</span><span>COS</span><span>Carr–Madan</span><span>densities</span><span class="is-live">computed at build time</span></div>
+<nav class="fc-toc">
+<a href="#Choosing-a-method"><b>01</b>Choosing a method</a>
+<a href="#Truncation-range"><b>02</b>Truncation range</a>
+<a href="#Carr-Madan-parameters-from-a-tolerance"><b>03</b>Carr-Madan parameters from a tolerance</a>
+<a href="#Floating-point-types"><b>04</b>Floating-point types</a>
+<a href="#Densities"><b>05</b>Densities</a>
+</nav>
+</div>
+```
 
 | Method | Constructor | How it works |
 |:--|:--|:--|

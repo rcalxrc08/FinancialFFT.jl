@@ -9,10 +9,4 @@ end
 module DocumentationFigures
 include(joinpath(@__DIR__, "figures.jl"))
 end
-makedocs(
-    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico", "assets/figures.css", "assets/style.css"], edit_link = "master"),
-    repo = Remotes.GitHub("rcalxrc08", "FinancialFFT.jl"),
-    sitename = "FinancialFFT.jl",
-    modules = [FinancialFFT],
-    pages = ["index.md", "methods.md", "payoffs.md", "models.md", "ad.md", "calibration.md", "api.md", "references.md"],
-)
+makedocs(format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico", "assets/figures.css", "assets/style.css", "assets/site.css", "assets/home.css", "assets/dark.js"], edit_link = "master"), repo = Remotes.GitHub("rcalxrc08", "FinancialFFT.jl"), sitename = "FinancialFFT.jl", modules = [FinancialFFT], pages = ["Home" => "index.md", "Guides" => ["Methods" => "methods.md", "Payoffs" => "payoffs.md", "Models and curves" => "models.md", "Automatic differentiation" => "ad.md", "Calibration" => "calibration.md"], "Reference" => ["API" => "api.md", "References" => "references.md"]])

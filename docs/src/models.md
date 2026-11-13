@@ -1,5 +1,20 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 03</span> Characteristic exponents and curves</p>
+```
+
 # Models and curves
 
+
+```@raw html
+<div class="fc-meta"><span>Lévy</span><span>Heston</span><span>curves</span></div>
+<nav class="fc-toc">
+<a href="#Supported-processes"><b>01</b>Supported processes</a>
+<a href="#Curves"><b>02</b>Curves</a>
+<a href="#Adding-a-model"><b>03</b>Adding a model</a>
+</nav>
+</div>
+```
 ## Supported processes
 
 Every process is defined in FinancialMonteCarlo.jl and wraps an `Underlying(S0, d)` holding the spot

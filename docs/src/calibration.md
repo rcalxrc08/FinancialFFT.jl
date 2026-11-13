@@ -1,3 +1,8 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 05</span> Heston to a smile, by hand</p>
+```
+
 # Calibration
 
 Calibrating a model means choosing its parameters so that its prices reproduce the quoted ones. A Fourier method
@@ -6,6 +11,19 @@ generic in the number type, so the derivatives of the model volatilities with re
 automatic differentiation through the pricer. This page calibrates Heston to four smiles with a Levenberg–Marquardt
 method, then computes the sensitivities of the calibrated parameters to the quotes without recalibrating. The implied
 volatilities and their derivatives come from [FinancialToolbox.jl](https://github.com/rcalxrc08/FinancialToolbox.jl).
+
+```@raw html
+<div class="fc-meta"><span>Heston</span><span>Levenberg–Marquardt</span><span>implicit function theorem</span><span class="is-live">computed at build time</span></div>
+<nav class="fc-toc">
+<a href="#The-problem"><b>01</b>The problem</a>
+<a href="#Derivatives-of-the-model-volatilities"><b>02</b>Derivatives of the model volatilities</a>
+<a href="#Levenberg–Marquardt"><b>03</b>Levenberg–Marquardt</a>
+<a href="#Identifiability"><b>04</b>Identifiability</a>
+<a href="#Sensitivity-of-the-calibrated-parameters-to-the-quotes"><b>05</b>Sensitivity of the calibrated parameters to the quotes</a>
+<a href="#On-the-GPU"><b>06</b>On the GPU</a>
+</nav>
+</div>
+```
 
 ## The problem
 

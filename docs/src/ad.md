@@ -1,7 +1,21 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 04</span> Every Greek from one code path</p>
+```
+
 # Automatic differentiation
 
 Prices are generic functions of the inputs of the model, the curve, and the payoff, so they can be differentiated by the
 following back-ends, loaded with the corresponding package:
+
+```@raw html
+<div class="fc-meta"><span>ForwardDiff</span><span>Zygote</span><span>Mooncake</span><span>Enzyme</span></div>
+<nav class="fc-toc">
+<a href="#Choosing-a-back-end"><b>01</b>Choosing a back-end</a>
+<a href="#Known-limitations"><b>02</b>Known limitations</a>
+</nav>
+</div>
+```
 
 | Method | DualNumbers | HyperDualNumbers | TaylorSeries | ForwardDiff | ReverseDiff | Zygote | Mooncake | Enzyme |
 |:--|:--|:--|:--|:--|:--|:--|:--|:--|
