@@ -17,10 +17,9 @@
 <span class="k">smile</span> = pricer(model, ZeroRate(r), CosMethod(2^10), smile_of_strikes)  <span class="c"># one call</span></code></pre>
 </div>
 <figure class="fc-hero-figure">
-<img src="assets/figures/hero-surface-dark.svg" alt="Implied volatility surface of a Heston model priced by the COS method">
-<img src="assets/figures/hero-surface-light.svg" alt="Implied volatility surface of a Heston model priced by the COS method">
-<figcaption><span class="fc-legend"><i class="fc-ramp"></i>implied volatility of Heston, one COS smile per maturity</span>
-Computed with FinancialFFT.jl when this site was built: 34 smiles of 46 strikes, inverted with FinancialToolbox's blsimpv.</figcaption>
+<img src="assets/figures/hero-densities-dark.svg" alt="Densities of the log-return of six models, from their characteristic functions">
+<img src="assets/figures/hero-densities-light.svg" alt="Densities of the log-return of six models, from their characteristic functions">
+<figcaption>The densities of log(S<sub>T</sub> / S<sub>0</sub>) at one year of Black–Scholes, Merton, Kou, Variance Gamma, NIG and Heston, inverted from their characteristic functions by <code>FFTDensityInverter</code> when this site was built.</figcaption>
 </figure>
 </div>
 ```

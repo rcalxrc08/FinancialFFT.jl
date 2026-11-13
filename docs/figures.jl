@@ -155,26 +155,23 @@ save_themes(scores_figure, "scores")
 save_themes(chernoff_figure, "chernoff")
 const CALIBRATION = calibration_data()
 save_themes(theme -> calibration_figure(theme, CALIBRATION), "calibration")
-# The hero of the home page: the implied volatility surface of the Heston model of the smiles above, one CosMethod smile
-# per maturity, drawn in perspective by surface.jl.
-include(joinpath(@__DIR__, "surface.jl"))
-let model = HestonProcess(0.4, 0.2, 0.0, 1.5, -0.7, 0.04, underlying())
-    moneyness = collect(range(0.6, 1.5; length = 46))
-    maturities = collect(range(0.1, 3.0; length = 34))
-    vols = fill(NaN, length(maturities), length(moneyness))
-    for (i, T) in enumerate(maturities)
-        strikes = S0 .* moneyness
-        calls = strikes .>= S0 * exp((r - d) * T)
-        prices = pricer(model, zero_rate, CosMethod(2^10), FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, calls))
-        for j in eachindex(strikes)
-            prices[j] > 1e-6 * S0 || continue
-            vols[i, j] = try
-                blsimpv(S0, strikes[j], r, T, prices[j], d, calls[j])
-            catch
-                NaN
-            end
-        end
+# The hero of the home page: the densities of the log-return of the six models, from their characteristic functions by
+# FFTDensityInverter, one ridge each.
+function hero_figure(theme)
+    T = 1.0
+    y = range(-0.9, 0.6; length = 400)
+    models = showcase_models()
+    step = 2.2
+    p = plot(; size = (760, 600), background_color = :transparent, foreground_color_text = theme.muted, foreground_color_axis = theme.axis, foreground_color_border = theme.axis, framestyle = :none, grid = false, legend = false, fontfamily = "sans-serif", left_margin = 0Plots.mm, right_margin = 0Plots.mm)
+    for (k, (name, model)) in enumerate(reverse(models))
+        j = length(models) - k + 1
+        f = FinancialFFT.density(model, zero_rate, FFTDensityInverter(), T)
+        values = f.(y)
+        base = (k - 1) * step
+        plot!(p, y, base .+ values; fillrange = base, fillalpha = 0.28, color = theme.series[j], linewidth = 2.2)
+        annotate!(p, first(y) - 0.02, base + 0.35, text(name, 11, theme.text, :right))
     end
-    lo, hi = floor(minimum(filter(isfinite, vols)) / 0.05) * 0.05, ceil(maximum(filter(isfinite, vols)) / 0.05) * 0.05
-    write_surface(FIGURES, "hero-surface", moneyness, maturities, vols; zlims = (lo, hi), xticks = [m => string(m) for m in (0.6, 0.8, 1.0, 1.2, 1.4)], yticks = [0.5 => "6M", 1.0 => "1Y", 2.0 => "2Y", 3.0 => "3Y"], zticks = [z => "$(round(Int, 100z))%" for z = (lo+0.05):0.05:hi], xlabel = "moneyness K / S₀", ylabel = "maturity", zlabel = "implied volatility", label = "Implied volatility surface of a Heston model priced by the COS method")
+    plot!(p; xlims = (first(y) - 0.42, last(y)), ylims = (-0.3, (length(models) - 1) * step + 4.2))
+    return p
 end
+save_themes(hero_figure, "hero-densities")
