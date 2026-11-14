@@ -93,27 +93,29 @@ exponential_moment_bound(model::FinancialMonteCarlo.NormalInverseGaussianProcess
 
 # The bound of a Lévy process does not depend on the maturity.
 exponential_moment_bound(model, mul, T) = exponential_moment_bound(model, mul)
-# Time at which E[exp(z X_t)] explodes for a real z, i.e. the first zero of cosh(γ t / 2) + β sinh(γ t / 2) / γ.
-function heston_explosion_time(z, κ_s, ρσ, σ²)
-    0 <= z <= 1 && return Inf
+# Inverse of the time at which E[exp(z X_t)] explodes for a real z, i.e. of the first zero of
+# cosh(γ t / 2) + β sinh(γ t / 2) / γ: zero where the moments never explode. Continuous and finite everywhere, also at
+# D = 0, where both branches tend to -β / 2 (to 0 for β > 0): no Inf to divide by in the residual of the bound.
+function heston_explosion_rate(z, κ_s, ρσ, σ²)
+    0 <= z <= 1 && return zero(κ_s)
     β = κ_s - ρσ * z
     D = κ_s^2 + z * (σ² - 2 * κ_s * ρσ + z * (ρσ^2 - σ²))
     if D < 0
         q = sqrt(-D)
-        return 2 * atan(q, -β) / q
+        return q / (2 * atan(q, -β))
     end
-    β >= 0 && return Inf
+    β >= 0 && return zero(κ_s)
     γ = sqrt(D)
-    return log((β - γ) / (β + γ)) / γ
+    return γ / log((β - γ) / (β + γ))
 end
 # The moments of Heston explode in finite time: the domain of E[exp(mul * s * X_T)] is an interval, shrinking as T grows.
-# Its end solves τ(s) = T for the explosion time τ, decreasing in s past the s where it becomes finite (τ = ∞ before):
-# T / τ - 1 is continuous (τ → ∞ at the edge of the finite region), -1 before it and increasing after, so the doubling
+# Its end solves T / τ(s) = 1 for the explosion time τ, written with the rate 1 / τ (zero before the s where τ becomes
+# finite): T / τ - 1 is continuous, -1 before that s and increasing after, so the doubling
 # from s = 1 brackets the root and Brent's method solves it: 0.7 µs against 4.3 µs for a bisection to the same tolerance,
 # which was half the Heston range after issue #38. Returns an s where the moments are still finite.
 function exponential_moment_bound(model::FinancialMonteCarlo.HestonProcess, mul, T, max_doublings = 60, toll = 1e-12)
     κ_s, ρσ, σ² = v_value_mod(model.κ + model.λ), v_value_mod(model.ρ * model.σ), v_value_mod(model.σ^2)
-    residual(s) = T / heston_explosion_time(mul * s, κ_s, ρσ, σ²) - 1
+    residual(s) = T * heston_explosion_rate(mul * s, κ_s, ρσ, σ²) - 1
     s_low, s_high = zero(κ_s), one(κ_s)
     f_low, f_high = -one(κ_s), residual(s_high)
     n = 0
@@ -173,8 +175,11 @@ function chernoff_optimum(exponent, log_epss, s_min, toll, max_steps = 60)
     end
     (isfinite(g_hi) && g_hi >= L) || return s_lo
     g0 = min(zero(g_lo), 2 * g_lo)
-    # g increases on the bracket, so g - g0 >= g_lo - g0 > 0 there, up to rounding when g_lo is about 0
-    log_gap(g_s) = log(max(g_s - g0, eps(L))) - log(L - g0)
+    # g increases on the bracket, so g - g0 >= g_lo - g0 > 0 there, up to rounding when g_lo is about 0. One log of the
+    # ratio, the gap computed once: near the root the ratio is about 1, and its log is accurate to about eps, where
+    # log(g - g0) - log(L - g0) would lose eps |log(L - g0)| to the cancellation.
+    gap = L - g0
+    log_gap(g_s) = log(max(g_s - g0, eps(L)) / gap)
     residual(s) = log_gap(g(s))
     # the coordinate is chosen once, by dispatch; both branches return FT, so the result stays type stable
     r_lo, r_hi = log_gap(g_lo), log_gap(g_hi)

@@ -86,7 +86,7 @@ FinancialFFT.exponential_moment_bound(e::CountingExponent) = FinancialFFT.expone
         heston = HestonProcess(σ, σ₀, λ, κ, ρ, θ, Underlying(S0, d))
         @testset "Heston, mul = $mul, T = $T" for mul in (-1, 1), T in (0.5, 2.0)
             s = FinancialFFT.exponential_moment_bound(heston, mul, T)
-            @test FinancialFFT.heston_explosion_time(mul * s, κ + λ, ρ * σ, σ^2) ≈ T rtol = 1e-8
+            @test FinancialFFT.heston_explosion_rate(mul * s, κ + λ, ρ * σ, σ^2) ≈ 1 / T rtol = 1e-8
             @test FinancialFFT.exponential_moment_bound(heston, mul, 2 * T) < s
             @test isfinite(FinancialFFT.characteristic_exponent_i(mul * s * (1 - 1e-6), heston, T))
         end
@@ -94,7 +94,7 @@ FinancialFFT.exponential_moment_bound(e::CountingExponent) = FinancialFFT.expone
         σ, κ, ρ = 1.0, 0.5, 1.0
         perfect_correlation = HestonProcess(σ, σ₀, 0.0, κ, ρ, θ, Underlying(S0, d))
         s = FinancialFFT.exponential_moment_bound(perfect_correlation, 1, 0.5)
-        @test FinancialFFT.heston_explosion_time(s, κ, ρ * σ, σ^2) ≈ 0.5 rtol = 1e-8
+        @test FinancialFFT.heston_explosion_rate(s, κ, ρ * σ, σ^2) ≈ 2 rtol = 1e-8
         @test FinancialFFT.exponential_moment_bound(perfect_correlation, -1, 0.5) == Inf
     end
 end
