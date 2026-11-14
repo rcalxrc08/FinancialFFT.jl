@@ -173,6 +173,9 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financial
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     FT = float_type(S0, rT, dT, corr)
     A = to_float_type(FT, method.A)
+    # Quadrature: rectangle rule on [-A, A], every node with weight 1 (the trapezoidal rule but for the half weights of the
+    # end nodes ±A, where the integrand is negligible); for an integrand analytic in a strip it converges geometrically in N,
+    # until the truncation at ±A.
     # the N nodes (2j - (N - 1)) A / (N - 1), j = 0, …, N - 1, are symmetric: only the n_half of them in [0, A] are evaluated
     n_half = cld(N, 2)
     v, weights = ChainRulesCore.@ignore_derivatives begin

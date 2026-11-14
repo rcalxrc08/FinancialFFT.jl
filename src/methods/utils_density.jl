@@ -39,7 +39,9 @@ function density_integration_grid(a, b, log_K_S0_val, M, opt, mode)
 end
 
 # Price of opt from a density f of the log-return: Simpson's rule on M intervals of log-moneyness for the put, whose
-# integration domain ends at the strike, so that the kink of the payoff is an endpoint; the call by parity.
+# integration domain ends at the strike, so that the kink of the payoff is an endpoint; the call by parity. Quadrature:
+# Simpson's rule, weights (1, 4, 2, 4, …, 2, 4, 1) h / 3, error O(M⁻⁴): it sets the accuracy of the density pricers,
+# about 5e-10 at the default M = 2^10 on a Black Scholes call, whatever the accuracy of the density (#88).
 function density_integral_price(mcProcess, r, f, M, opt, mode)
     T = opt.T
     S0 = mcProcess.underlying.S0

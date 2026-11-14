@@ -68,7 +68,10 @@ end
 
 # Density of log(S_T / S0) on the 2^N points y_j = a + 2A j / 2^N, j = 0, …, 2^N - 1: with the frequencies
 # u_k = π k / A, k = -2^(N-1), …, 2^(N-1) - 1, f(y_j) ≈ Σ_k φ(-u_k) exp(i u_k a) exp(2πi jk / 2^N) / (2A), where
-# exp(i u_k a) anchors the grid at its left end. The input of this transform is Hermitian (φ(u) = conj φ(-u)), and the
+# exp(i u_k a) anchors the grid at its left end. Quadrature: this sum is the trapezoidal rule (equal weights, step π / A)
+# for the inverse Fourier integral f(y) = ∫ φ(-u) exp(-iuy) du / 2π truncated at |u| <= π 2^(N-1) / A, i.e. the Fourier
+# series of the density periodised on [a, a + 2A]: its errors are the tails beyond the range (aliasing) and the
+# truncation of the frequencies, and between the nodes the O(dx⁴) of the cubic interpolation. The input of this transform is Hermitian (φ(u) = conj φ(-u)), and the
 # result is real: the characteristic exponent is evaluated on k = 0, …, 2^(N-1) only, and transformed by brfft (the
 # node -2^(N-1) through the real part of 2^(N-1), at the rounding level on the range of COS). The values are floored at
 # eps.

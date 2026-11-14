@@ -67,6 +67,10 @@ carr_madan_call(price, ::VanillaPayoff) = price
 carr_madan_call(price, opt::BinaryPayoff) = @. price / opt.K
 # 1 / z as conj(z) / |z|², with one real division: z is a denominator of the transforms, far from 0 and from overflow.
 inv_denominator(z) = conj(z) * inv(abs2(z))
+# Quadrature: Simpson's rule on the nodes v_j = j dx, weights (1, 4, 2, 4, …, 4, 2, 1) dx / 3 (2^Npow nodes, an even number:
+# the last panel is not closed as Simpson's, harmless where the integrand has decayed), error O(dx⁴) on the
+# transform. It is not what limits the prices: the log-strike step 2π / A, fixed by A whatever Npow, sets the error of the
+# 6-point interpolation in the strike (#88).
 # The constant weights of the Carr-Madan transform on the nodes v: signs (-1)^j, Simpson weights, dx / 3 and
 # 1 / ((α + iv) (1 + α + iv)), with α + iv dropped by den = one for a binary. In a loop of their own, which vectorises:
 # faster, as measured, than computing them in the broadcast of the exponential.

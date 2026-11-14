@@ -156,10 +156,11 @@ function Base.broadcasted(::S, ::typeof(characteristic_exponent_i), v::V, mcProc
     return characteristic_exponent_vi(v, mcProcess[], T[])
 end
 using ChainRulesCore: rrule_via_ad
+# The pullback of the vectorised exponent is taken in the forward pass, together with its value: the exponent is
+# evaluated once per gradient (issue #77), at the cost of keeping its intermediates until the backward pass.
 function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode}, ::typeof(Base.broadcasted), ::typeof(characteristic_exponent_i), v, model, T)
-    res = characteristic_exponent_vi(v, model, T)
+    res, pb_fwd = ChainRulesCore.rrule_via_ad(config, characteristic_exponent_vi, v, model, T)
     function update_pullback(slice)
-        _, pb_fwd = ChainRulesCore.rrule_via_ad(config, characteristic_exponent_vi, v, model, T)
         _, der_v, der_mc, der_T = pb_fwd(slice)
         return NoTangent(), NoTangent(), der_v, der_mc, der_T
     end
