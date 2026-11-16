@@ -28,14 +28,14 @@ end
 # tell that the ends of the range, fields of a density with active values, are constants). The density is ~ε at a.
 function density_integration_grid(a, b, log_K_S0_val, M, opt, mode)
     z_min = @. a - log_K_S0_val
-    z_max = @. max(z_min, min(0, b - log_K_S0_val))
+    z_diff = @. max(0, min(log_K_S0_val - a, b - a))
     # a vector, not a float range (see the nodes of carrmadan.jl): k / M is rounded once, as the range is
     M_FT = convert(typeof(a), M)
     t = adapt_array([k / M_FT for k = 0:M], mode)
-    z_grid = @. z_min + (z_max - z_min) * t
+    z_grid = @muladd @. z_min + z_diff * t
     simpson = PatternVector(M + 1, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
     put_payoff = density_put_payoff(opt)
-    return z_grid, @. simpson * put_payoff(z_grid) * (z_max - z_min) / (3 * M)
+    return z_grid, @. simpson * put_payoff(z_grid) * z_diff / (3 * M)
 end
 
 # Price of opt from a density f of the log-return: Simpson's rule on M intervals of log-moneyness for the put, whose
