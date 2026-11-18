@@ -18,6 +18,11 @@ const SELECTED_SUITES = isempty(ARGS) ? SUITES : ARGS
 
 @testset "FinancialFFT" begin
     for suite in SELECTED_SUITES
-        include("$(suite)_test.jl")
+        # the testsets report only at the end: log each suite so a hung one shows up in the log
+        @info "Running $(suite)_test.jl"
+        flush(stderr)
+        elapsed = @elapsed include("$(suite)_test.jl")
+        @info "Finished $(suite)_test.jl in $(round(elapsed, digits = 1)) s"
+        flush(stderr)
     end
 end
