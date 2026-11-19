@@ -58,4 +58,5 @@ The working tree contains many untracked scratch files (`* copy.jl`, `* - Copia.
 
 ## Sub-environments
 
+- **FinancialMonteCarlo 0.9** (FinancialFFT 0.6.2; compat `"0.7, 0.8, 0.9"` in the package, tests, docs and benchmarks): its curves are `SVector`s and two curves no longer multiply (FinancialMonteCarlo#79, #81); the methods only call `integral` on the rate and on the dividend, each a number or a curve, which works on 0.7-0.9. `fft_density_values` integrated `r.r - d` as one curve: now the two integrals, as every other method (#94).
 - **Compat of the package itself in the sub-environments** (`benchmark/` and `docs/`, which load it through `[sources]` with a path): each has a `[compat]` entry for the package, so CompatHelper does not open PRs to add one (it has no option to skip a dependency). Bump these entries in the same commit as a breaking version bump, otherwise the local package no longer satisfies them and the environment fails to resolve.
