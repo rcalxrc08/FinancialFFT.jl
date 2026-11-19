@@ -54,3 +54,7 @@ Entry point [src/FinancialFFT.jl](src/FinancialFFT.jl) includes, in order: `abst
 ## Working-tree caveats
 
 The working tree contains many untracked scratch files (`* copy.jl`, `* - Copia.jl`, `*_old.jl`, `zygote_mwe.jl`, `pluto/`, `runner_cuda.jl`). Only files `include`d in `src/FinancialFFT.jl` are live code; do not edit the copies. Note `cosc.jl`, `density_cos.jl`, `extrema_computation.jl` are also not included by the module.
+
+## Sub-environments
+
+- **Compat of the package itself in the sub-environments** (`benchmark/` and `docs/`, which load it through `[sources]` with a path): each has a `[compat]` entry for the package, so CompatHelper does not open PRs to add one (it has no option to skip a dependency). Bump these entries in the same commit as a breaking version bump, otherwise the local package no longer satisfies them and the environment fails to resolve.
