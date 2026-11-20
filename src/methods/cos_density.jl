@@ -51,7 +51,10 @@ function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financia
     dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
     a, b = ChainRulesCore.@ignore_derivatives v_value_mod.(compute_chernorff_limits(mcProcess, rT, dT, T))
     bma = b - a
-    u = ChainRulesCore.@ignore_derivatives adapt_array(collect((0:N) * (pi / bma)), mode)
+    # A vector, not a float range: Enzyme, which ignores @ignore_derivatives, has no derivative for the TwicePrecision of
+    # Base.floatrange (EnzymeAD/Enzyme.jl#4016, FinancialCalibrator.jl#41), as in carrmadan.jl. k * du is rounded once.
+    du = pi / bma
+    u = ChainRulesCore.@ignore_derivatives adapt_array([k * du for k = 0:N], mode)
     # the k = 0 term of the cosine series is halved
     weight = ChainRulesCore.@ignore_derivatives PatternVector(N + 1, InitialValuePattern(Int8(1), Int8(2)))
     drift_minus_a = rT - dT - FinancialFFT.characteristic_exponent_i(1, mcProcess, T) - a

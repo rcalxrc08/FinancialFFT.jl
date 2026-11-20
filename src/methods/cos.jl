@@ -68,7 +68,10 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCar
         v_value_mod(a_S0 + log(S0 / K_max)), v_value_mod(b_S0 + log(S0 / K_min))
     end
     bma = b - a
-    u = ChainRulesCore.@ignore_derivatives FinancialFFT.adapt_array(collect((0:N) * (pi / bma)), mode)
+    # A vector, not a float range: Enzyme, which ignores @ignore_derivatives, has no derivative for the TwicePrecision of
+    # Base.floatrange (EnzymeAD/Enzyme.jl#4016, FinancialCalibrator.jl#41), as in carrmadan.jl. k * du is rounded once.
+    du = pi / bma
+    u = ChainRulesCore.@ignore_derivatives FinancialFFT.adapt_array([k * du for k = 0:N], mode)
     payoff = ChainRulesCore.@ignore_derivatives begin
         adj = PatternVector(length(u), InitialValuePattern(true, false))
         cos_payoff_integral(opt).(u, adj, a, max(a, min(0, b)))
