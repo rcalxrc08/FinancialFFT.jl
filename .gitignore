@@ -6,3 +6,4 @@ docs/src/assets/favicon.ico
 docs/src/assets/figures/
 
 .vscode/
+Manifest-v*.toml
