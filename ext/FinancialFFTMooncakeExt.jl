@@ -47,7 +47,9 @@ function Mooncake.rrule!!(::CoDual{typeof(FinancialFFT.brfft_mod)}, x::CoDual{<:
 end
 
 # The complex sqrt of Base bitcasts its argument, which Mooncake refuses to differentiate. The overlay is only seen by Mooncake.
-Mooncake.@mooncake_overlay FinancialFFT.sqrt_mod(z::Complex{<:IEEEFloat}) = sqrt(sqrt(abs2(z))) * cis(angle(z) / 2)
+# Any real type, not only IEEEFloat: Mooncake over ForwardDiff (the nested derivatives of FinancialCalibrator) meets a
+# Complex{<:Dual} here (FinancialCalibrator.jl#41).
+Mooncake.@mooncake_overlay FinancialFFT.sqrt_mod(z::Complex{<:Real}) = sqrt(sqrt(abs2(z))) * cis(angle(z) / 2)
 
 # Mooncake ignores ChainRulesCore.@ignore_derivatives: the quantities that must stay constants go through this hook.
 Mooncake.@zero_derivative DefaultCtx Tuple{typeof(FinancialFFT.ignore_derivatives_mod), IEEEFloat}
