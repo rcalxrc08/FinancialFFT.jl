@@ -53,8 +53,10 @@ _Grids and float types, the FFT functions, Clenshaw, interpolation, payoff conve
   from the plain sums of `S' = Σ i k c_k e^{ikθ}` (no second recurrence). Only Zygote uses them. The pullback is real
   and fully `@muladd` (#72; `d = d - k * (…)`, since the macro does not fuse `-=`): measured 2026-11-22 (Julia 1.13.4,
   Windows laptop, old and new in one process) 14-26% faster on real series, 0-14% on complex ones, n = 257 and 2048.
-  The `@muladd` of the Lewis binary coefficients measured 3% slower at n = 2048 and was not kept. Open: #74 (no
-  imaginary terms for real series), #100 (the remaining real multiply-adds).
+  The `@muladd` of the Lewis binary coefficients measured 3% slower at n = 2048 and was not kept. The real series of
+  `clenshaw_cos_sum` has its own pullback, `clenshaw_cos_sum_pullback`, without the imaginary terms (#74): 4-14% faster
+  than the complex one with zero imaginary part (n = 65-2049, interleaved in one process). Open: #100 (the remaining
+  real multiply-adds).
 
 ## Interpolation at the strikes
 

@@ -6,7 +6,7 @@ Grids and float types, the FFT functions, Clenshaw sums, interpolation at the st
 
 | Load | Why |
 |:--|:--|
-| `utils.jl` | `adapt_array`, `zero_promoted`, `float_type`, `to_float_type`, `brfft_mod`, `brfft_adjoint`, `plan_fft_mod!`/`fft_mod!`, `InPlaceFFTPlan`, `clenshaw_exp_sum`, `clenshaw_cos_sum` and their `rrule`s, `grid_interpolate`, `lagrange_quintic`, `call_to_put`, `put_to_option` |
+| `utils.jl` | `adapt_array`, `zero_promoted`, `float_type`, `to_float_type`, `brfft_mod`, `brfft_adjoint`, `plan_fft_mod!`/`fft_mod!`, `InPlaceFFTPlan`, `clenshaw_exp_sum`, `clenshaw_cos_sum` and their `rrule`s (`clenshaw_cos_sum_pullback` for the real series), `grid_interpolate`, `lagrange_quintic`, `call_to_put`, `put_to_option` |
 | `references/fft_utils.md` | the FFT plans per back-end, float types and FFTA, Clenshaw and Reinsch, interpolation, payoff conversions |
 | `references/autodiff.md` | which back-end overloads `brfft_mod` and `fft` |
 | `references/gpu.md` | device arrays, no element-wise indexing |

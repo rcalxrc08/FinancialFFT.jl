@@ -128,20 +128,12 @@ end
 # other back-ends differentiate the loops in linear time.
 clenshaw_cotangent(x) = ChainRulesCore.unthunk(x)
 clenshaw_cotangent(::ChainRulesCore.AbstractZero) = false
-# c_im = nothing for a real series (clenshaw_cos_sum): no imaginary coefficients, and no cotangent for them.
-imaginary_coefficient(::Nothing, i) = false
-imaginary_coefficient(c_im, i) = c_im[i]
-imaginary_cotangent(::Nothing, T) = nothing
-imaginary_cotangent(c_im, T) = similar(c_im, T)
-# The cotangent b̄ cos kθ - ā sin kθ of c_im_k, computed only when there are imaginary coefficients.
-set_imaginary_cotangent!(::Nothing, i, ā, b̄, co, si) = nothing
-@muladd set_imaginary_cotangent!(c̄_im, i, ā, b̄, co, si) = (c̄_im[i] = b̄ * co - ā * si)
 # Real throughout: @muladd fuses the cotangents, the derivative sums (written d = d ± k * (…), which the macro fuses, unlike
 # -= and +=) and the rotation, which can only reduce its drift between the refreshes (#72).
 @muladd function clenshaw_exp_sum_pullback(c_re, c_im, θ, ā, b̄)
     n = length(c_re)
     T = float(promote_type(typeof(θ), eltype(c_re), typeof(ā)))
-    c̄_re, c̄_im = similar(c_re, T), imaginary_cotangent(c_im, T)
+    c̄_re, c̄_im = similar(c_re, T), similar(c_im, T)
     s_1, c_1 = sincos(θ)
     co, si = one(T), zero(T)
     d_re = d_im = zero(T)
@@ -149,9 +141,9 @@ set_imaginary_cotangent!(::Nothing, i, ā, b̄, co, si) = nothing
         if k % 32 == 0
             si, co = sincos(k * θ)
         end
-        a_k, b_k = c_re[i], imaginary_coefficient(c_im, i)
+        a_k, b_k = c_re[i], c_im[i]
         c̄_re[i] = ā * co + b̄ * si
-        set_imaginary_cotangent!(c̄_im, i, ā, b̄, co, si)
+        c̄_im[i] = b̄ * co - ā * si
         d_re = d_re - k * (a_k * si + b_k * co)
         d_im = d_im + k * (a_k * co - b_k * si)
         co, si = co * c_1 - si * s_1, si * c_1 + co * s_1
@@ -171,12 +163,30 @@ function ChainRulesCore.rrule(::typeof(clenshaw_exp_sum), c_re, c_im, θ)
     y, back = ChainRulesCore.rrule(clenshaw_exp_sum, c_re, c_im, θ, Val(false))
     return y, ȳ -> back(ȳ)[1:4]
 end
+# The real series of clenshaw_cos_sum, Re Σ c_k exp(i k θ) with real c_k (#74): the pullback of the complex one with
+# c_im = 0 and b̄ = 0, without the terms that vanish there: c̄_k = ā cos kθ and θ̄ = -ā Σ k c_k sin kθ.
+@muladd function clenshaw_cos_sum_pullback(coefficients, θ, ā)
+    n = length(coefficients)
+    T = float(promote_type(typeof(θ), eltype(coefficients), typeof(ā)))
+    c̄ = similar(coefficients, T)
+    s_1, c_1 = sincos(θ)
+    co, si = one(T), zero(T)
+    d = zero(T)
+    for (i, k) in zip(eachindex(coefficients), 0:(n-1))
+        if k % 32 == 0
+            si, co = sincos(k * θ)
+        end
+        c̄[i] = ā * co
+        d = d - k * (coefficients[i] * si)
+        co, si = co * c_1 - si * s_1, si * c_1 + co * s_1
+    end
+    return c̄, ā * d
+end
 function ChainRulesCore.rrule(::typeof(clenshaw_cos_sum), coefficients, θ)
     y = clenshaw_cos_sum(coefficients, θ)
     function clenshaw_cos_sum_back(ȳ)
         ā = clenshaw_cotangent(ȳ)
-        # the real coefficients are c_re, without imaginary ones: the cotangent of c_re and θ̄ = ā Re S'
-        c̄, _, θ̄ = clenshaw_exp_sum_pullback(coefficients, nothing, θ, ā, false)
+        c̄, θ̄ = clenshaw_cos_sum_pullback(coefficients, θ, ā)
         return ChainRulesCore.NoTangent(), c̄, θ̄
     end
     return y, clenshaw_cos_sum_back
