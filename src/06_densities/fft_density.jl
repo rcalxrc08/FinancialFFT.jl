@@ -62,7 +62,7 @@ function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::Financia
     A = (b - a) / 2
     values = fft_density_values(mcProcess, zero_rate, N, A, a, T, mode)
     dx = 2 * A / n
-    return FFTDensity(values, a, a + (n - 1) * dx, dx)
+    return FFTDensity(values, a, @muladd(a + (n - 1) * dx), dx)
 end
 
 # Density of log(S_T / S0) on the 2^N points y_j = a + 2A j / 2^N, j = 0, …, 2^N - 1: with the frequencies

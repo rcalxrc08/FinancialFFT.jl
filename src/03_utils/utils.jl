@@ -232,7 +232,7 @@ const BinaryPayoff = Union{BinaryEuropeanOption, BinaryEuropeanOptionSmile}
 const SmilePayoff = Union{EuropeanOptionSmile, BinaryEuropeanOptionSmile}
 const FourierPayoff = Union{VanillaPayoff, BinaryPayoff}
 function call_to_put(C, S0_adj, df, opt::EuropeanOption)
-    adj = opt.K * df - S0_adj
+    adj = @muladd opt.K * df - S0_adj
     return ifelse(opt.isCall, C, C + adj)
 end
 

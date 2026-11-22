@@ -23,7 +23,7 @@ export CosMethod
 # The expansion is on the put, whose payoff is bounded. The coefficients of a call grow like exp(b): they lose accuracy
 # to rounding when the range is wide, and the heavy right tail they need is beyond it when it is not. Parity needs neither.
 # Payoff of the put against cos(u (y - a)) for y = log(S_T / K) in [a, h], with k = 0 halved: adj flags that term.
-function cos_binary_put_integral(u, adj, a, h)
+@muladd function cos_binary_put_integral(u, adj, a, h)
     return (1 + !adj) * (adj * (h - a) + sin(u * (h - a)) / (adj + u))
 end
 

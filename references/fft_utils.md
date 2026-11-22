@@ -55,8 +55,11 @@ _Grids and float types, the FFT functions, Clenshaw, interpolation, payoff conve
   Windows laptop, old and new in one process) 14-26% faster on real series, 0-14% on complex ones, n = 257 and 2048.
   The `@muladd` of the Lewis binary coefficients measured 3% slower at n = 2048 and was not kept. The real series of
   `clenshaw_cos_sum` has its own pullback, `clenshaw_cos_sum_pullback`, without the imaginary terms (#74): 4-14% faster
-  than the complex one with zero imaginary part (n = 65-2049, interleaved in one process). Open: #100 (the remaining
-  real multiply-adds).
+  than the complex one with zero imaginary part (n = 65-2049, interleaved in one process). The other real multiply-adds
+  (#100) were measured one kernel at a time, old and new interleaved in one process: fused where not slower
+  (`cos_binary_put_integral`, which `cos_put_integral` calls; the scalar, once-per-price conversions; the FFT grid; the
+  range helpers), plain where `@muladd` measured slower (the Lewis binary integrand, the Lewis smile conversion,
+  `put_to_option` and the smile `call_to_put`, the rest of `cos_put_integral`).
 
 ## Interpolation at the strikes
 

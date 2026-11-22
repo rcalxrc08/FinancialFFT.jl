@@ -39,7 +39,7 @@ gaussian_root_guess(s, g, L) = g > 0 ? s * sqrt(L / g) : 2 * s
 # Brent's method (Brent 1973, ch. 4) for the root of f in [a, b], with f(a) and f(b) of opposite signs: inverse quadratic
 # interpolation or secant steps, kept inside the bracket and replaced by bisection when they do not shrink it fast
 # enough, down to a width xtol. Never evaluates f outside [a, b].
-function brent_root(f, a, b, f_a, f_b, xtol, max_iterations = 100)
+@muladd function brent_root(f, a, b, f_a, f_b, xtol, max_iterations = 100)
     c, f_c = a, f_a
     d = e = b - a
     for _ = 1:max_iterations
@@ -96,7 +96,7 @@ exponential_moment_bound(model, mul, T) = exponential_moment_bound(model, mul)
 # Inverse of the time at which E[exp(z X_t)] explodes for a real z, i.e. of the first zero of
 # cosh(γ t / 2) + β sinh(γ t / 2) / γ: zero where the moments never explode. Continuous and finite everywhere, also at
 # D = 0, where both branches tend to -β / 2 (to 0 for β > 0): no Inf to divide by in the residual of the bound.
-function heston_explosion_rate(z, κ_s, ρσ, σ²)
+@muladd function heston_explosion_rate(z, κ_s, ρσ, σ²)
     0 <= z <= 1 && return zero(κ_s)
     β = κ_s - ρσ * z
     D = κ_s^2 + z * (σ² - 2 * κ_s * ρσ + z * (ρσ^2 - σ²))
