@@ -42,8 +42,12 @@ is in General); add it when setting up a fresh environment. Default branch `mast
 
 ## Release
 
-Bump `version`, push to `master`, wait for CI, register (General), then make sure the tag `vX.Y.Z` and the GitHub
-release exist (TagBot). `NEWS.md` collects the release notes of the next version as changes land (breaking changes
+Bump `version` (and the package's own compat in `docs/` and `benchmark/` on a breaking release), push to `master`, wait
+for CI, then register the commit on the private registry `localregistry` (`rcalxrc08/LocalRegistry`, not General) with
+`LocalRegistry.register` from Julia 1.12, where LocalRegistry.jl is installed (`julia +1.12`), and push the registry.
+The private registry has no TagBot: tag `vX.Y.Z` on the registered commit and create the GitHub release by hand, on the
+`GitHub` remote. Then widen the `FinancialFFT` compat of VibratoMonteCarlo and FinancialCalibrator (and of their
+sub-environments). Of the author's packages only FinancialMonteCarlo and FinancialToolbox are in General. `NEWS.md` collects the release notes of the next version as changes land (breaking changes
 first); the GitHub release copies its section.
 
 ## Working tree

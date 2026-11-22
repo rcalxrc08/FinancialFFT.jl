@@ -5,14 +5,13 @@ the index an agent reads first._ Updated: 2026-11-22
 
 ## Current focus
 
-Release 0.7: `master` has #95, #72, #89, #93, #51, #40 (docs part); #93 and #89 are breaking, notes in `NEWS.md`. Last
-release 0.6.3 (Enzyme on COS without float ranges, Mooncake `sqrt_mod` for any real complex).
+Release 0.7.0 (2026-11-22): #95, #72, #89, #93, #51, #40 (docs part); #93 and #89 are breaking, notes in `NEWS.md`.
 
 ## Active work
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Release 0.7 | `master` | #95 #72 #89 #93 #51 #40 | CI green, bump to 0.7.0 (self-compat in docs/test), register, tag |
+| Release 0.7.0 | `master` | #95 #72 #89 #93 #51 #40 | CI green, register in localregistry, tag `v0.7.0`, widen the compat of Vibrato and FinancialCalibrator |
 
 ## Known issues
 
