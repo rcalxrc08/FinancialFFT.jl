@@ -4,7 +4,7 @@ _The exported names._ (Layer 3 reference.) Processes, options, rates and modes c
 
 | Name | Signature | Stage | Notes |
 |:--|:--|:--|:--|
-| `pricer` | `pricer(process, zero_rate, method, payoff)` | 05, 06 | extends `FinancialMonteCarlo.pricer`; options and smiles; the five-argument form is deprecated (#93) |
+| `pricer` | `pricer(process, zero_rate, method, payoff)` | 05, 06 | extends `FinancialMonteCarlo.pricer`; options and smiles; the five-argument form was removed in 0.7 (#93) |
 | `CarrMadanMethod` | `CarrMadanMethod(A, Npow, α = 0.75; mode)`, `CarrMadanMethod(ε; α = 0.75, Npow_max = 23, mode)` | 05 | FFT, Simpson, quintic interpolation |
 | `CarrMadanLewisMethod` | `CarrMadanLewisMethod(A, Npow; mode)`, `CarrMadanLewisMethod(ε; Npow_max = 23, mode)` | 05 | FFT of the Lewis integrand |
 | `LewisMethod` | `LewisMethod(A, N; mode)` | 05 | direct quadrature |

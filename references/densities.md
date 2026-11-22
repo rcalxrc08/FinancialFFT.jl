@@ -16,7 +16,8 @@ _The density interface, `CosDensity`, `FFTDensity` and the density pricer._ (Lay
   log-moneyness grid ending at the strike (constant for differentiation: `ignore_derivatives_mod`), call by parity; a
   smile shares the density, so its prices are the ones of the single options. `density_integral_price` builds its
   nodes × strikes matrix through a lazy `transpose(x)`.
-- The five-argument `pricer` and `density` (trailing mode) are deprecated (end of `density.jl`; removal is #93).
+- `pricer` and `density` take four arguments: the five-argument forms with a trailing mode, deprecated since 0.4, were
+  removed in 0.7 (#93).
 
 ## `CosDensityMethod(N, M)` (`cos_density.jl`)
 

@@ -74,15 +74,13 @@
             @test maximum(abs.(pricer(model, zero_rate, CosMethod(2^12), smile) .- pricer.(model, zero_rate, CosMethod(2^12), payoff.(0.01, Ks, isCall)))) < 1e-10
         end
     end
-    # The mode is part of the method (FinancialMonteCarlo 0.6): the five-argument forms are deprecated, with the same prices.
-    @testset "Deprecated trailing mode, $(case.name)" for case in METHOD_CASES
+    # The mode is part of the method (FinancialMonteCarlo 0.6): with_mode rebuilds it; the five-argument forms with a
+    # trailing mode were removed in 0.7 (#93).
+    @testset "Mode of the method, $(case.name)" for case in METHOD_CASES
         method = case.method
         @test FinancialMonteCarlo.execution_mode(method) == FinancialMonteCarlo.SerialMode()
         @test FinancialMonteCarlo.execution_mode(FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.MultiThreading(2))) == FinancialMonteCarlo.MultiThreading(2)
-        option = EuropeanOption(1.0, 105.0)
-        @test (@test_deprecated pricer(model, zero_rate, method, option, FinancialMonteCarlo.SerialMode())) == pricer(model, zero_rate, method, option)
-        if method isa FinancialFFT.AbstractDensityMethod
-            @test (@test_deprecated density(model, zero_rate, method, 1.0, FinancialMonteCarlo.SerialMode()))(0.1) == density(model, zero_rate, method, 1.0)(0.1)
-        end
+        @test_throws MethodError pricer(model, zero_rate, method, EuropeanOption(1.0, 105.0), FinancialMonteCarlo.SerialMode())
+        method isa FinancialFFT.AbstractDensityMethod && @test_throws MethodError density(model, zero_rate, method, 1.0, FinancialMonteCarlo.SerialMode())
     end
 end

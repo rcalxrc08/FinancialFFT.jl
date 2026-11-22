@@ -14,7 +14,7 @@ _Architecture decisions, oldest first. Append; a reversed decision gets a new en
 
 - **Decision:** `pricer` always takes four arguments; `mode` is a keyword of every constructor; `with_mode` rebuilds.
 - **Why:** FinancialMonteCarlo 0.6 moved modes into methods; one dispatch path for CPU and GPU.
-- **Consequences:** the five-argument forms are deprecated (#93).
+- **Consequences:** the five-argument forms, deprecated in 0.4, were removed in 0.7 (#93).
 - **Status:** active
 
 ## D-003 (#38) Chernoff truncation range with Brent's method

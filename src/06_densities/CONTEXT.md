@@ -6,7 +6,7 @@ The `density` interface, `CosDensity`, `FFTDensity` and the pricer of every dens
 
 | Load | Why |
 |:--|:--|
-| `density.jl` | `density`, `AbstractDensity`, `density_values`, the deprecated five-argument forms |
+| `density.jl` | `density`, `AbstractDensity`, `density_values` |
 | `utils_density.jl` | `mask_outside_range`, `density_integral_price`, `density_integration_grid` |
 | `cos_density.jl` | `CosDensityMethod`, `CosDensity`, `density_value`/`density_array` |
 | `fft_density.jl` | `FFTDensityInverter`, `FFTDensity`, `fft_density_values`, `lagrange_cubic` |
