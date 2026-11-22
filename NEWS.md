@@ -1,5 +1,12 @@
 # FinancialFFT.jl release notes
 
+## Unreleased
+
+- Real-series pullback of `clenshaw_cos_sum` (CosDensity under Zygote), 4-14% faster (#74).
+- `density_array` is required of a density type, no default (#78).
+- `@muladd` in the remaining real multiply-adds where not slower (#100).
+- Mooncake differentiates Lewis, COS and `CosDensityMethod` on the GPU with Mooncake 0.5.72 (#63).
+
 ## 0.7.0 (2026-11-22)
 
 ### Breaking

@@ -5,13 +5,15 @@ the index an agent reads first._ Updated: 2026-11-22
 
 ## Current focus
 
-Release 0.7.0 (2026-11-22): #95, #72, #89, #93, #51, #40 (docs part); #93 and #89 are breaking, notes in `NEWS.md`.
+0.7.0 released 2026-11-22 (localregistry, tag `v0.7.0`; #95, #72, #89, #93, #51, #40; breaking #89, #93, `NEWS.md`);
+VibratoMonteCarlo and FinancialCalibrator take it. On branch `easy-fixes-2`, for review: #74, #78, #100, Mooncake on the
+GPU (#63).
 
 ## Active work
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Release 0.7.0 | `master` | #95 #72 #89 #93 #51 #40 | CI green, register in localregistry, tag `v0.7.0`, widen the compat of Vibrato and FinancialCalibrator |
+| Easy fixes 2 | `easy-fixes-2` | #74 #78 #100 #63 | review, merge, push |
 
 ## Known issues
 
