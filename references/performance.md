@@ -16,5 +16,6 @@ How to measure:
 
 - One part of the suite per process (`benchmark/run.jl`); a hot-loop change is timed before and after (old commit in a
   `git worktree`) on an idle machine.
-- Zygote: interpolated non-constant arguments, no `$(args)...` splat (FluxML/Zygote.jl#1752).
+- Zygote: interpolated non-constant arguments, no `$(args)...` splat (FluxML/Zygote.jl#1752, fixed in Zygote 0.7.19:
+  still the fair way to time it on older versions).
 - Open: #96 (Float32 Heston COS 2.2x slower than Float64 on the host), #92 (surfaces launch-bound on the GPU).

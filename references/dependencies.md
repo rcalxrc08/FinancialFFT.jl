@@ -28,4 +28,4 @@ Upstream workarounds (cite issue and version; recheck on every upstream release,
 | `sqrt_mod` overlay for Mooncake | Mooncake bitcasts Base's complex `sqrt` | Mooncake 0.5.72 | 2026-11-21 |
 | phases folded into complex `exp` for TaylorN | JuliaDiff/TaylorSeries.jl#445 (no `cis`) | TaylorSeries 0.23 | 2026-11-19 |
 | Enzyme not supported on the GPU | EnzymeAD/Enzyme.jl#3451, #4017, #2552, #3307, #4094; JuliaGPU/CUDA.jl#3332 | Enzyme 0.13, CUDA 6.5 | 2026-11-21 |
-| `promote`/`convert` instead of `oftype` on differentiated paths | FluxML/Zygote.jl#1751 (also #1752-#1754) | Zygote 0.7.18 | 2026-11-19 |
+| `promote`/`convert` instead of `oftype` on differentiated paths | FluxML/Zygote.jl#1751 (#1752-#1754 fixed in Zygote 0.7.19) | Zygote 0.7.19 | 2026-11-22 |

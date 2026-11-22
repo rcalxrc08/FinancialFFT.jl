@@ -7,8 +7,9 @@
 check_domain(cond::Bool, value, msg::AbstractString) = cond ? nothing : throw_domain_error(value, msg)
 
 # One validation function per constructor, marked @non_differentiable and called without a closure: a
-# ChainRulesCore.@ignore_derivatives block builds a closure whose captures Zygote traces, ~11 μs each
-# (FinancialMonteCarlo#80, FluxML/Zygote.jl#1753). Enzyme and Mooncake go through them as through any function with no
+# ChainRulesCore.@ignore_derivatives block builds a closure whose captures Zygote traces: ~11 μs each with Zygote 0.7.18
+# (FinancialMonteCarlo#80, FluxML/Zygote.jl#1753), ~2.5 μs with 0.7.19, against nothing measurable for the function
+# (FinancialMonteCarlo#85). Enzyme and Mooncake go through them as through any function with no
 # active output.
 function check_fft_grid(A, Npow)
     check_domain(A > 0, A, "A must be positive")

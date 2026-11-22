@@ -54,12 +54,15 @@ _The hooks, what each back-end needs, the upstream issues._ (Layer 3 reference; 
   vectorised characteristic exponent (#77).
 - PatternVectors ≥ 0.1.6 does `dot` with broadcasts (0.1.7 without ambiguities with ReverseDiff); ≥ 0.1.8 unthunks the
   deferred cotangents of Zygote ≥ 0.7.17, which made the cotangent of `sum` a host `Vector` and broke every Zygote GPU
-  gradient but Lewis (#87, PatternVectors#19); the tests require Zygote 0.7.18. The compat is 0.1.9 (also the
+  gradient but Lewis (#87, PatternVectors#19); the tests require Zygote 0.7.19 (below). The compat is 0.1.9 (also the
   constructor error out of line, without which Enzyme ≥ 0.13.219 aborted, EnzymeAD/Enzyme.jl#4053, #86).
 - Traps found while profiling FinancialCalibrator (Zygote 0.7.18): `oftype` has an uninferred pullback
-  (FluxML/Zygote.jl#1751, use `promote`/`convert`); `gradient`/`pullback` are compiled for `f::Function` (#1752); every
-  closure capture traces `Core._typeof_captured_variable` (#1753); branch-only code keeps `Vector{Any}` stacks (#1754:
-  FinancialFFT's `pricer` has 7 of them on the Lewis path).
+  (FluxML/Zygote.jl#1751, still open: use `promote`/`convert`). Fixed in Zygote 0.7.19 (2026-11-22): `gradient`/`pullback`
+  compiled for `f::Function` (#1752), every closure capture tracing `Core._typeof_captured_variable` (#1753), the
+  `Vector{Any}` stacks of branch-only code (#1754; FinancialFFT's `pricer` has 7 branches on the Lewis path). Measured
+  2026-11-22 (fresh processes): a ternary on a flag 18-21 μs → 2.8-2.9 μs, a select 4.5-4.6 → 3.2-3.4 μs; a constructor
+  with one `@non_differentiable` validation as cheap as one without (5.3-5.7 μs), five `@ignore_derivatives` blocks
+  still ~2.5 μs each (FinancialMonteCarlo#85).
 
 ## Enzyme (#62, `ext/FinancialFFTEnzymeCoreExt.jl`)
 
