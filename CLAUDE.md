@@ -36,4 +36,5 @@ Rules for every change (details in `references/conventions.md` and `references/a
 - Invalid arguments throw `DomainError`/`ArgumentError` through `src/01_hooks/checks.jl`, never `@assert` (#89).
 - Reuse the author's packages and established libraries before writing new code.
 - Format with `.JuliaFormatter.toml`; update the CONTEXT.md, references and `state/STATUS.md` a change touches in the
-  same commit (a new rule also gets an entry in `references/decisions.md`); default branch `master`; push to `origin`.
+  same commit (a new rule also gets an entry in `references/decisions.md`); default branch `master`; push to the `GitHub` remote
+  (`origin` is the legacy GitLab mirror, never pushed).
