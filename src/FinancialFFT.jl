@@ -3,20 +3,20 @@ import FFTA
 using FFTW, PatternVectors, MuladdMacro, ChainRulesCore, FinancialMonteCarlo, Adapt
 import FinancialMonteCarlo: BinaryEuropeanOptionSmile, EuropeanOptionSmile
 using IrrationalConstants: twoπ, invπ
-include("methods/abstracts.jl")
-include("methods/mods.jl")
-include("methods/extrema_computation_opt.jl")
-include("methods/utils.jl")
-include("methods/charexp.jl")
-include("methods/carrmadan.jl")
-include("methods/carrmadan_lewis.jl")
-include("methods/fft_parameters.jl")
-include("methods/lewis.jl")
-include("methods/cos.jl")
-include("methods/density.jl")
-include("methods/utils_density.jl")
-include("methods/cos_density.jl")
-include("methods/fft_density.jl")
+include("01_hooks/abstracts.jl")
+include("01_hooks/mods.jl")
+include("02_range/extrema_computation_opt.jl")
+include("03_utils/utils.jl")
+include("04_charexp/charexp.jl")
+include("05_methods/carrmadan.jl")
+include("05_methods/carrmadan_lewis.jl")
+include("05_methods/fft_parameters.jl")
+include("05_methods/lewis.jl")
+include("05_methods/cos.jl")
+include("06_densities/density.jl")
+include("06_densities/utils_density.jl")
+include("06_densities/cos_density.jl")
+include("06_densities/fft_density.jl")
 
 export pricer
 

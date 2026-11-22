@@ -49,7 +49,7 @@ end
 
 The exponent is per unit of time (methods multiply it by `T`) and must not contain any drift: the methods add
 the drift implied by the zero and dividend curves and the martingale correction `characteristic_exponent_i(1, process)`.
-A vectorized variant `characteristic_exponent_vi` is defined next to each exponent in `src/methods/charexp.jl`. The function is broadcast over arrays and
+A vectorized variant `characteristic_exponent_vi` is defined next to each exponent in `src/04_charexp/charexp.jl`. The function is broadcast over arrays and
 differentiated by every AD back-end, so it must be written generically, without type restrictions on `imv`.
 
 Methods call `characteristic_exponent_i(imv, process, T)`, the log of ``E[\exp(imv\, X_T)]``, which defaults to the

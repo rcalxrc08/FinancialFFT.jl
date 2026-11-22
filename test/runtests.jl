@@ -10,6 +10,7 @@ using DualNumbers, HyperDualNumbers, TaylorSeries, ForwardDiff, ReverseDiff, Zyg
 
 include("utils.jl")
 include("cases.jl")
+include("context.jl")
 
 # Suites can be selected with `Pkg.test("FinancialFFT"; test_args = ["gradients"])`.
 # The "gpu" suite (gpu_test.jl) needs a CUDA GPU, so it is not in SUITES and runs only when selected.

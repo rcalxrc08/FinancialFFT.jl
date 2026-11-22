@@ -1,0 +1,41 @@
+# Status
+
+_What is in flight. Layer 4: volatile, rewritten freely; GitHub issues are the source of truth for tasks, this file is
+the index an agent reads first._ Updated: 2026-11-22
+
+## Current focus
+
+Layered context (#97) on branch `context-layers`: done when `test/context.jl` and the full suite are green and the
+branch is merged. Last release 0.6.3 (Enzyme on COS without float ranges, Mooncake `sqrt_mod` for any real complex).
+
+## Active work
+
+| Item | Branch | Issue | Next step |
+|:--|:--|:--|:--|
+| Layered context | `context-layers` | #97 | review, merge, push |
+
+## Known issues
+
+| Issue | Symptom | Workaround |
+|:--|:--|:--|
+| #63, chalk-lab/Mooncake.jl#1450 | Mooncake on the GPU: 2 of 48 cases work | `Broken` in `mooncake_gpu` |
+| EnzymeAD/Enzyme.jl#4108 | Enzyme silently wrong on Float32 Heston (complex `sqrt`/`inv`) | use Float64 |
+| #96 | COS on Heston: Float32 2.2x slower than Float64 on the host | — |
+| #88 | density pricers and Carr-Madan stop at 1e-8 to 1e-10 | larger `M` / `A` |
+| #40 | Lewis error rises at the last convergence point (rounding floor) | — |
+| #81 | test suite 30-38 minutes on CI (~50 locally) | select suites with `test_args` |
+
+## Enhancements and technical debt
+
+- #93 remove the five-argument `pricer`/`density`; #89 explicit exceptions instead of `@assert`.
+- #92 surfaces in one call; #91 barriers for Lévy models; #90 Heston from an arbitrary starting variance; #82
+  LogNormalMixture exponent and ShiftedProcess.
+- #64 differentiate the COS range; #48 Lewis and COS from a tolerance; #38 point 1 (`value_model`).
+- #95 trapezoid weights as a PatternVector; #74, #72 Clenshaw pullback; #43 complex-to-real FFT for Carr-Madan; #42
+  complex arrays on the GPU.
+- #78 coverage gaps; #51 TaylorSeries JetSpace warnings; #49 docs on the Dual Spectral Theorem.
+
+## Working notes
+
+Notes of an active initiative live next to this file as `state/YYYY-MM-DD-<topic>.md`. When the initiative ends, move
+what stays true into `references/` or `references/decisions.md` and delete the note.
