@@ -52,6 +52,13 @@
         f = density(model(σ), ZeroRate(r), method, T)
         y = [f.a - 0.1, -0.3, 0.0, 0.1, 0.25, f.b + 0.1]
         @test maximum(abs.(FinancialFFT.density_values(f, y) .- f.(y))) < 1e-12
+        # points that are not an Array (a range, a view, a matrix of nodes × strikes as the pricers pass): CosDensity takes
+        # its broadcast kernel there, the one of the GPU (#78), with the shape of the points
+        for points in (range(f.a - 0.1, f.b + 0.1, length = 41), view(y, 2:5), reshape(collect(range(-0.4, 0.4, length = 12)), 4, 3))
+            values = FinancialFFT.density_values(f, points)
+            @test size(values) == size(points)
+            @test maximum(abs.(values .- f.(points))) < 1e-12
+        end
     end
     # Scores of the FFT density with every AD back-end, at a point and at an array of points (gathers, whose pullback
     # is a scatter): the grid is a constant for differentiation in all of them.

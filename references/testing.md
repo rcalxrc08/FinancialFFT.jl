@@ -20,5 +20,8 @@ _The suites, the case tables, known failures._ (Layer 3 reference.)
   against `Dictionaries.DictionaryStyle`, is explained in `aqua_test.jl`); `types` also checks with `@inferred` that
   every pricer and density is type stable, and that prices keep the float type (BigFloat through FFTA).
 - `fft_parameters` checks the tolerance-chosen grids and that the parameters are constants on every back-end.
-- Coverage gaps: #78 (CosDensity broadcast only on the GPU, the unused default `density_array`).
+- Coverage (#78): `density_test.jl` reaches the broadcast kernel of `CosDensity` on the CPU (a range, a view, a
+  matrix of points); the unused default `density_array` is gone. One-liners such as `plan_fft_mod!` for
+  ComplexF64 and `mul_mod!` with an FFTW plan are run by the tests but inlined, so Codecov does not count them: with
+  `--inline=no` they are counted (checked 2026-11-22); Mooncake does not precompile with `--inline=no`.
 - Reference values: FinancialToolbox closed forms for Black–Scholes; `LewisMethod` for the other models.

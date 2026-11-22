@@ -1,8 +1,9 @@
 # The interface of the densities: density computes one, and every AbstractDensity is evaluated at a point and at an
 # array of points in the same way. A density type implements, for its points inside [a, b]:
 #   density_value(f, y)               the value at a number y; it must not fail outside [a, b], where it is masked
-#   density_array(f, y[, mode])       the values at an array y, with its shape (default: density_value at each point);
-#                                     the mode lets the pricers choose a CPU or a GPU kernel
+#   density_array(f, y)               the values at an array y, with its shape (no default: a map over density_value
+#                                     is what neither density wants, #78)
+#   density_array(f, y, mode)         optional, the kernel of a pricer in that mode (default: density_array(f, y))
 
 """
     AbstractDensity
@@ -44,5 +45,4 @@ the Clenshaw recurrence at each point instead, as `f(y)` does, which needs no ar
 """
 density_values(f::AbstractDensity, y::AbstractArray) = mask_outside_range(f, y, density_array(f, y))
 
-density_array(f::AbstractDensity, y::AbstractArray) = map(y_j -> density_value(f, y_j), y)
 density_array(f::AbstractDensity, y::AbstractArray, ::FinancialMonteCarlo.AbstractMode) = density_array(f, y)

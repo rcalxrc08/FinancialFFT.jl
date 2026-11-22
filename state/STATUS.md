@@ -32,7 +32,7 @@ Release 0.7.0 (2026-11-22): #95, #72, #89, #93, #51, #40 (docs part); #93 and #8
 - #64 differentiate the COS range; #48 Lewis and COS from a tolerance; #38 point 1 (`value_model`).
 - #100 the remaining real multiply-adds; #43 complex-to-real FFT for Carr-Madan; #42
   complex arrays on the GPU.
-- #78 coverage gaps; #49 docs on the Dual Spectral Theorem.
+- #49 docs on the Dual Spectral Theorem.
 
 ## Working notes
 

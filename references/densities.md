@@ -9,7 +9,7 @@ _The density interface, `CosDensity`, `FFTDensity` and the density pricer._ (Lay
   `log(S_T / S_0)`, independent of `S_0`, zero outside `[a, b]`.
 - The interface defines `f(y)` (a number, on the CPU) and `density_values(f, y)` (an array) for every density, from two
   functions a density type implements without the mask: `density_value(f, y)` at a number and
-  `density_array(f, y[, mode])` at an array (default: `density_value` at each point; the mode lets a pricer pick the CPU
+  `density_array(f, y[, mode])` at an array (required since #78, no default map over `density_value`; the mode lets a pricer pick the CPU
   kernel). `mask_outside_range` (in `utils_density.jl`) zeroes them outside the range.
 - A method that computes a density subtypes `AbstractDensityMethod` and adds a `density` method; with an `M` field it
   also prices through the one `pricer` of `utils_density.jl`, `density_integral_price`: Simpson's rule for the put on a

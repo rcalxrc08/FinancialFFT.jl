@@ -16,7 +16,8 @@ The `density` interface, `CosDensity`, `FFTDensity` and the pricer of every dens
 
 ## Process
 
-- A density type implements `density_value` and `density_array` without the mask; the interface applies it.
+- A density type implements `density_value` (the scalar kernel of `f(y)`) and `density_array` (required, no default,
+  #78) without the mask; the interface applies it.
 - A density method with an `M` field prices through `density_integral_price` (Simpson, put, parity).
 - The grid of `FFTDensity` stays a constant for AD (`ignore_derivatives_mod`).
 - VibratoMonteCarlo consumes `density` (its FFT density will be removed in favour of this one, Vibrato#37).
