@@ -2,21 +2,22 @@
 # `Broken(...)` marks combinations that run but are known to fail: see the manual, "Automatic differentiation".
 
 # `dual` is either one tolerance or a NamedTuple with one tolerance per Black Scholes input (see BS_ARG_NAMES).
-# `mooncake_gpu` is Broken by default: Mooncake's CUDA rules reject broadcasts mixing real and complex arrays, the extrema
-# of a CuArray and Ref arguments (chalk-lab/Mooncake.jl#1450), which leaves the binary Lewis option only.
+# `mooncake_gpu` is Broken by default. Mooncake 0.5.72 (chalk-lab/Mooncake.jl#1450 fixed) differentiates Lewis, COS and
+# CosDensityMethod on the GPU (checked 2026-11-22, CUDA 6.5.1): they have a tolerance. Still Broken: the Carr-Madan
+# methods and FFTDensityInverter (its broadcasts take Ref(model), a guard of Mooncake, #63).
 tolerances(; price, dual = price, hyper = dual, taylor = hyper, taylorn = taylor, forwarddiff = dual, hessian = taylor, reversediff = dual, zygote = dual, mooncake = dual, mooncake_gpu = Broken(mooncake), enzyme = mooncake) = (; price, dual, hyper, taylor, taylorn, forwarddiff, hessian, reversediff, zygote, mooncake, mooncake_gpu, enzyme)
 dual_tolerance(toll, name) = toll isa NamedTuple ? toll[name] : toll
 
 # The TaylorSeries checks and the ForwardDiff Hessian include second derivatives, hence their looser tolerances.
-const lewis_tolerances = tolerances(price = 1e-10, taylor = 1e-9)
+const lewis_tolerances = tolerances(price = 1e-10, taylor = 1e-9, mooncake_gpu = 1e-10)
 const lewis_binary_tolerances = tolerances(price = 1e-10, taylor = 1e-9, mooncake_gpu = 1e-10)
-const cos_tolerances = tolerances(price = 1e-10, taylor = 1e-9, reversediff = 1e-9, zygote = 1e-9)
+const cos_tolerances = tolerances(price = 1e-10, taylor = 1e-9, reversediff = 1e-9, zygote = 1e-9, mooncake_gpu = 1e-10)
 const cml_tolerances = tolerances(price = 1e-8, dual = 1e-7, taylor = 1e-6, hessian = 5e-6)
 const cml_binary_tolerances = tolerances(price = 1e-9, dual = 1e-8, hyper = 1e-7)
 const cm_tolerances = tolerances(price = 1e-7, dual = 5e-7, hyper = 5e-6, hessian = 1e-5)
 const cm_binary_tolerances = tolerances(price = 1e-8, dual = 1e-7, hyper = 1e-6)
 const density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6)
-const cos_density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6)
+const cos_density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6, mooncake_gpu = 1e-8)
 
 const METHOD_CASES = [
     (name = "LewisMethod", method = LewisMethod(600.0, 20000), payoffs = Dict(kind => kind == :binary ? lewis_binary_tolerances : lewis_tolerances for kind in PAYOFF_KINDS)),

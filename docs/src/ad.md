@@ -137,11 +137,10 @@ Which back-end to use:
 ## Known limitations
 
 - ReverseDiff.jl requires version 1.18 or later.
-- On the GPU only ForwardDiff.jl and Zygote.jl are supported, see [GPU](@ref). Mooncake.jl differentiates the binary
-  Lewis option there, and no other kernel: its CUDA rules do not take broadcasts that mix real and complex arrays, nor
-  the `extrema` of a `CuArray`
-  ([Mooncake.jl#1450](https://github.com/chalk-lab/Mooncake.jl/issues/1450),
-  [#63](https://github.com/rcalxrc08/FinancialFFT.jl/issues/63)).
+- On the GPU ForwardDiff.jl and Zygote.jl differentiate every method, see [GPU](@ref). Mooncake.jl (0.5.72 and later,
+  since [Mooncake.jl#1450](https://github.com/chalk-lab/Mooncake.jl/issues/1450) was fixed) differentiates
+  `LewisMethod`, `CosMethod` and `CosDensityMethod` there, not yet the Carr-Madan methods and `FFTDensityInverter`
+  ([#63](https://github.com/rcalxrc08/FinancialFFT.jl/issues/63)).
 - Enzyme.jl differentiates every method and density on the CPU, in forward and reverse mode, through an extension
   on EnzymeCore that marks the constants of the methods inactive and gives the rules of the FFTs
   ([#62](https://github.com/rcalxrc08/FinancialFFT.jl/issues/62)). Pass the function to differentiate as `Const(f)`,

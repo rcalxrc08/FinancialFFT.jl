@@ -12,11 +12,11 @@ _What runs on the device and what each back-end cannot do there._ (Layer 3 refer
 - Zygote cannot differentiate broadcasts whose intermediate results are tuples: pass real and imaginary parts as
   separate arrays (#42 proposes complex arrays now that Zygote handles tuple broadcasts).
 - ReverseDiff cannot store tracked reals in GPU arrays.
-- Mooncake's CUDA broadcast rules reject arrays mixing real and complex element types (every kernel but the binary
-  Lewis integrand), `mapreduce` other than `+` (the `extrema` of the strikes of a COS smile, inside
-  `@ignore_derivatives`, which Mooncake does not see) and a differentiable `Ref` argument (the FFT density): reported
-  upstream as chalk-lab/Mooncake.jl#1450, tracked in #63, and recorded in the `gpu` suite as `mooncake_gpu` in
-  `cases.jl` (a tolerance for the binary Lewis option, `Broken` elsewhere).
+- Mooncake's CUDA broadcast rules rejected arrays mixing real and complex element types and `mapreduce` other than `+`
+  (chalk-lab/Mooncake.jl#1450, fixed upstream): with Mooncake 0.5.72 (2026-11-22, CUDA 6.5.1) Lewis, COS and
+  `CosDensityMethod` differentiate on the GPU (22 Unexpected Passes, now tolerances of `mooncake_gpu` in `cases.jl`).
+  Still `Broken`: the Carr-Madan methods, and `FFTDensityInverter`, whose broadcasts take a differentiable
+  `Ref(model)`, a deliberate guard of Mooncake (#63).
 - Enzyme does not work on the GPU: reverse mode on broadcasts over `CuArray`s (EnzymeAD/Enzyme.jl#3451), forward mode
   needs runtime activity (EnzymeAD/Enzyme.jl#4017) and has no derivative of the CUDA `__nv_sincos` of complex `exp`
   (EnzymeAD/Enzyme#2552, #3307). With CUDA < 6.5 forward mode is also silently wrong, primal included, after a

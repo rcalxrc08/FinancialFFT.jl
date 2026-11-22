@@ -24,7 +24,7 @@ Upstream workarounds (cite issue and version; recheck on every upstream release,
 |:--|:--|:--|:--|
 | comprehension grids instead of float ranges | EnzymeAD/Enzyme.jl#4016 | Enzyme 0.13 | 2026-11-21 |
 | Float32 Heston wrong under Enzyme (documented, not fixed) | EnzymeAD/Enzyme.jl#4108 | Enzyme 0.13.221 | 2026-11-21 |
-| `mooncake_gpu` `Broken` cases | chalk-lab/Mooncake.jl#1450 (tracked in #63) | Mooncake 0.5 | 2026-11-21 |
+| `mooncake_gpu` `Broken` cases (Carr-Madan, `FFTDensityInverter`) | #63 (chalk-lab/Mooncake.jl#1450 fixed: Lewis, COS, `CosDensityMethod` pass) | Mooncake 0.5.72 | 2026-11-22 |
 | `sqrt_mod` overlay for Mooncake | Mooncake bitcasts Base's complex `sqrt` | Mooncake 0.5.72 | 2026-11-21 |
 | phases folded into complex `exp` for TaylorN | JuliaDiff/TaylorSeries.jl#445 (no `cis`) | TaylorSeries 0.23 | 2026-11-19 |
 | Enzyme not supported on the GPU | EnzymeAD/Enzyme.jl#3451, #4017, #2552, #3307, #4094; JuliaGPU/CUDA.jl#3332 | Enzyme 0.13, CUDA 6.5 | 2026-11-21 |

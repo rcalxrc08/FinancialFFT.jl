@@ -17,7 +17,7 @@ Release 0.7.0 (2026-11-22): #95, #72, #89, #93, #51, #40 (docs part); #93 and #8
 
 | Issue | Symptom | Workaround |
 |:--|:--|:--|
-| #63, chalk-lab/Mooncake.jl#1450 | Mooncake on the GPU: 2 of 48 cases work | `Broken` in `mooncake_gpu` |
+| #63 | Mooncake on the GPU: Lewis, COS, `CosDensityMethod` work (Mooncake 0.5.72); Carr-Madan and `FFTDensityInverter` do not | `Broken` in `mooncake_gpu` |
 | EnzymeAD/Enzyme.jl#4108 | Enzyme silently wrong on Float32 Heston (complex `sqrt`/`inv`) | use Float64 |
 | #96 | COS on Heston: Float32 2.2x slower than Float64 on the host | — |
 | #88 | density pricers and Carr-Madan stop at 1e-8 to 1e-10 | larger `M` / `A` |

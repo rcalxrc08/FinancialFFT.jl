@@ -104,7 +104,7 @@ pricer(model, zero_rate, CosMethod(2^12; mode = FinancialMonteCarlo.CudaMode()),
 - Every method runs on the GPU, with the accuracy it has on the CPU.
 - `density(model, zero_rate, FFTDensityInverter(; mode = FinancialMonteCarlo.CudaMode()), T)` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
 - The strikes of a smile are moved to the device of the mode, wherever they are; the prices of a smile stay on the GPU.
-- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU. ReverseDiff.jl is not supported on the GPU, and Mooncake.jl differentiates only the binary Lewis option there, see [Known limitations](ad.md#Known-limitations).
+- ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU. ReverseDiff.jl is not supported on the GPU, and Mooncake.jl differentiates Lewis, COS and the COS density there, see [Known limitations](ad.md#Known-limitations).
 
 ## Quick start
 
