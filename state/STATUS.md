@@ -5,14 +5,14 @@ the index an agent reads first._ Updated: 2026-11-22
 
 ## Current focus
 
-Six small issues on branch `easy-fixes`, one commit each, for review: #95, #72, #89, #93, #51, #40 (docs part). #93 and
-#89 are breaking (0.7, `NEWS.md`). Last release 0.6.3 (Enzyme on COS without float ranges, Mooncake `sqrt_mod` for any real complex).
+Release 0.7: `master` has #95, #72, #89, #93, #51, #40 (docs part); #93 and #89 are breaking, notes in `NEWS.md`. Last
+release 0.6.3 (Enzyme on COS without float ranges, Mooncake `sqrt_mod` for any real complex).
 
 ## Active work
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Easy fixes | `easy-fixes` | #95 #72 #89 #93 #51 #40 | review, then release 0.7 |
+| Release 0.7 | `master` | #95 #72 #89 #93 #51 #40 | CI green, bump to 0.7.0 (self-compat in docs/test), register, tag |
 
 ## Known issues
 
