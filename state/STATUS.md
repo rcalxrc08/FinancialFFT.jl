@@ -6,14 +6,14 @@ the index an agent reads first._ Updated: 2026-11-22
 ## Current focus
 
 0.7.0 released 2026-11-22 (localregistry, tag `v0.7.0`; #95, #72, #89, #93, #51, #40; breaking #89, #93, `NEWS.md`);
-VibratoMonteCarlo and FinancialCalibrator take it. On branch `easy-fixes-2`, for review: #74, #78, #100, Mooncake on the
-GPU (#63).
+VibratoMonteCarlo and FinancialCalibrator take it. On `master` since, for the next release (`NEWS.md`, Unreleased): #74,
+#78, #100, Mooncake on the GPU (#63).
 
 ## Active work
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Easy fixes 2 | `easy-fixes-2` | #74 #78 #100 #63 | review, merge, push |
+| — | — | — | — |
 
 ## Known issues
 
