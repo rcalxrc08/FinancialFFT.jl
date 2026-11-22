@@ -33,7 +33,7 @@ Six small issues on branch `easy-fixes`, one commit each, for review: #95, #72, 
 - #64 differentiate the COS range; #48 Lewis and COS from a tolerance; #38 point 1 (`value_model`).
 - #74 Clenshaw pullback without imaginary terms; #100 the remaining real multiply-adds; #43 complex-to-real FFT for Carr-Madan; #42
   complex arrays on the GPU.
-- #78 coverage gaps; #51 TaylorSeries JetSpace warnings; #49 docs on the Dual Spectral Theorem.
+- #78 coverage gaps; #49 docs on the Dual Spectral Theorem.
 
 ## Working notes
 

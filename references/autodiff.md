@@ -25,8 +25,10 @@ _The hooks, what each back-end needs, the upstream issues._ (Layer 3 reference; 
 - TaylorSeries covers `Taylor1` and `TaylorN`, for which there is no `cis` (JuliaDiff/TaylorSeries.jl#445): the kernels
   fold phases into a complex `exp` instead. Its element type says neither the order nor the `JetSpace`, so build
   constants from a value, with `zero(x)`, not from a type; the zero of a common type comes from `zero_promoted(x...)`,
-  which the extension builds from the values for series. #51: TaylorSeries 0.23 warns when the TaylorN variables change
-  the default JetSpace.
+  which the extension builds from the values for series. Series of an explicit `JetSpace` (TaylorSeries 0.23) go
+  through every method (checked on the TaylorN cases of `black_scholes`), but FinancialToolbox's TaylorSeries extension,
+  the reference of the tests, builds its polynomials in the default space and fails on them (FinancialToolbox.jl#91):
+  the tests keep the global space, `variables!(…; nowarn = true)` against its warning (#51), `set_variables` before 0.23.
 - DualNumbers and HyperDualNumbers have no `sincos`, hence `sincos_mod`, overloaded with one `sincos` of the value.
 
 ## ReverseDiff

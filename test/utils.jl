@@ -34,8 +34,14 @@ components(x::TaylorN) = reduce(vcat, [collect(p.coeffs) for p in x.coeffs])
 max_abs_diff(x, y) = maximum(abs.(components(x) .- components(y)))
 max_abs_diff(x::AbstractArray, y::AbstractArray) = maximum(abs.(x .- y))
 
-# TaylorSeries 0.23 renamed set_variables to variables!
-taylorn_variables(names; order) = isdefined(TaylorSeries, :variables!) ? TaylorSeries.variables!(names; order = order) : TaylorSeries.set_variables(names; order = order)
+# TaylorN variables in the global default space. TaylorSeries 0.23 renamed set_variables to variables!, which replaces the
+# default JetSpace through set_default_space! and warns when it changes (#51): nowarn = true. A JetSpace of their own would
+# leave the default alone, but FinancialToolbox's TaylorSeries extension builds its polynomials in the default space, so the
+# references (blsprice) fail on such series (FinancialToolbox.jl#91); the package itself goes through.
+function taylorn_variables(names; order)
+    isdefined(TaylorSeries, :set_default_space!) && return TaylorSeries.variables!(names; order = order, nowarn = true)
+    return isdefined(TaylorSeries, :variables!) ? TaylorSeries.variables!(names; order = order) : TaylorSeries.set_variables(names; order = order)
+end
 
 # Reverse mode gradient of a scalar function of a vector with Mooncake.
 mooncake_gradient(f, x) = Mooncake.value_and_gradient!!(Mooncake.prepare_gradient_cache(f, x), f, x)[2][2]
