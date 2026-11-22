@@ -135,8 +135,10 @@ imaginary_cotangent(::Nothing, T) = nothing
 imaginary_cotangent(c_im, T) = similar(c_im, T)
 # The cotangent b̄ cos kθ - ā sin kθ of c_im_k, computed only when there are imaginary coefficients.
 set_imaginary_cotangent!(::Nothing, i, ā, b̄, co, si) = nothing
-set_imaginary_cotangent!(c̄_im, i, ā, b̄, co, si) = (c̄_im[i] = b̄ * co - ā * si)
-function clenshaw_exp_sum_pullback(c_re, c_im, θ, ā, b̄)
+@muladd set_imaginary_cotangent!(c̄_im, i, ā, b̄, co, si) = (c̄_im[i] = b̄ * co - ā * si)
+# Real throughout: @muladd fuses the cotangents, the derivative sums (written d = d ± k * (…), which the macro fuses, unlike
+# -= and +=) and the rotation, which can only reduce its drift between the refreshes (#72).
+@muladd function clenshaw_exp_sum_pullback(c_re, c_im, θ, ā, b̄)
     n = length(c_re)
     T = float(promote_type(typeof(θ), eltype(c_re), typeof(ā)))
     c̄_re, c̄_im = similar(c_re, T), imaginary_cotangent(c_im, T)
@@ -150,8 +152,8 @@ function clenshaw_exp_sum_pullback(c_re, c_im, θ, ā, b̄)
         a_k, b_k = c_re[i], imaginary_coefficient(c_im, i)
         c̄_re[i] = ā * co + b̄ * si
         set_imaginary_cotangent!(c̄_im, i, ā, b̄, co, si)
-        d_re -= k * (a_k * si + b_k * co)
-        d_im += k * (a_k * co - b_k * si)
+        d_re = d_re - k * (a_k * si + b_k * co)
+        d_im = d_im + k * (a_k * co - b_k * si)
         co, si = co * c_1 - si * s_1, si * c_1 + co * s_1
     end
     return c̄_re, c̄_im, ā * d_re + b̄ * d_im

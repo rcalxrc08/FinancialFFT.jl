@@ -31,7 +31,7 @@ Six small issues on branch `easy-fixes`, one commit each, for review: #95, #72, 
 - #92 surfaces in one call; #91 barriers for Lévy models; #90 Heston from an arbitrary starting variance; #82
   LogNormalMixture exponent and ShiftedProcess.
 - #64 differentiate the COS range; #48 Lewis and COS from a tolerance; #38 point 1 (`value_model`).
-- #74, #72 Clenshaw pullback; #43 complex-to-real FFT for Carr-Madan; #42
+- #74 Clenshaw pullback without imaginary terms; #100 the remaining real multiply-adds; #43 complex-to-real FFT for Carr-Madan; #42
   complex arrays on the GPU.
 - #78 coverage gaps; #51 TaylorSeries JetSpace warnings; #49 docs on the Dual Spectral Theorem.
 

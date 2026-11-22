@@ -12,7 +12,8 @@ _Coding standards that hold in every stage._ (Layer 3 reference.)
 - No element-wise indexing of arrays that may live on the device; one strike per column through a lazy `transpose`.
 - Pricing paths are type stable (`@inferred` in the `types` suite; Mooncake fails on small `Union`s).
 - Every quadrature has a comment naming the rule and its order (#88).
-- `@muladd` for every `a * b + c` (open: #72 in the Clenshaw pullback).
+- `@muladd` for every `a * b + c`, real numbers only (complex kernels stay as they are); `@muladd` does not fuse `-=`/`+=`,
+  write `d = d - k * x`; keep a fusion only if it does not measure slower (#72; open: #100).
 - Validation by `ArgumentError`/`DomainError`, not `@assert` (#89 open).
 - Reuse before writing: FinancialMonteCarlo, FinancialToolbox, PatternVectors, then established libraries.
 - Formatting: JuliaFormatter with `.JuliaFormatter.toml` (margin=1200, effectively no line wrapping).

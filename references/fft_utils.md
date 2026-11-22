@@ -50,8 +50,11 @@ _Grids and float types, the FFT functions, Clenshaw, interpolation, payoff conve
 - Both have ChainRules `rrule`s (#47): Zygote differentiated the element reads of their loops with a dense cotangent
   per read, O(N²) per call (26 s and 26 GiB for a COS smile of 101 strikes); the rules make one pass over `k`, with
   `cos kθ`, `sin kθ` by rotation refreshed every 32 terms, giving the coefficient cotangents `(ā + i b̄) e^{-ikθ}` and θ̄
-  from the plain sums of `S' = Σ i k c_k e^{ikθ}` (no second recurrence). Only Zygote uses them. Open: #72 (muladd in
-  the pullback), #74 (no imaginary terms for real series).
+  from the plain sums of `S' = Σ i k c_k e^{ikθ}` (no second recurrence). Only Zygote uses them. The pullback is real
+  and fully `@muladd` (#72; `d = d - k * (…)`, since the macro does not fuse `-=`): measured 2026-11-22 (Julia 1.13.4,
+  Windows laptop, old and new in one process) 14-26% faster on real series, 0-14% on complex ones, n = 257 and 2048.
+  The `@muladd` of the Lewis binary coefficients measured 3% slower at n = 2048 and was not kept. Open: #74 (no
+  imaginary terms for real series), #100 (the remaining real multiply-adds).
 
 ## Interpolation at the strikes
 
