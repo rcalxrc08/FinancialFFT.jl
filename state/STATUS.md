@@ -5,14 +5,14 @@ the index an agent reads first._ Updated: 2026-11-22
 
 ## Current focus
 
-Layered context (#97) on branch `context-layers`: done when `test/context.jl` and the full suite are green and the
-branch is merged. Last release 0.6.3 (Enzyme on COS without float ranges, Mooncake `sqrt_mod` for any real complex).
+Six small issues on branch `easy-fixes`, one commit each, for review: #95, #72, #89, #93, #51, #40 (docs part). #93 and
+#89 are breaking (0.7, `NEWS.md`). Last release 0.6.3 (Enzyme on COS without float ranges, Mooncake `sqrt_mod` for any real complex).
 
 ## Active work
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Layered context | `context-layers` | #97 | review, merge, push |
+| Easy fixes | `easy-fixes` | #95 #72 #89 #93 #51 #40 | review, then release 0.7 |
 
 ## Known issues
 
@@ -31,7 +31,7 @@ branch is merged. Last release 0.6.3 (Enzyme on COS without float ranges, Moonca
 - #92 surfaces in one call; #91 barriers for Lévy models; #90 Heston from an arbitrary starting variance; #82
   LogNormalMixture exponent and ShiftedProcess.
 - #64 differentiate the COS range; #48 Lewis and COS from a tolerance; #38 point 1 (`value_model`).
-- #95 trapezoid weights as a PatternVector; #74, #72 Clenshaw pullback; #43 complex-to-real FFT for Carr-Madan; #42
+- #74, #72 Clenshaw pullback; #43 complex-to-real FFT for Carr-Madan; #42
   complex arrays on the GPU.
 - #78 coverage gaps; #51 TaylorSeries JetSpace warnings; #49 docs on the Dual Spectral Theorem.
 

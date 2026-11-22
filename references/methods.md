@@ -59,14 +59,15 @@ derivative of the Lewis formula: one kernel, with `lewis_denominator` and `carr_
   `b_min` through `ignore_derivatives_mod` (ReverseDiff would track the Chernoff bound, Mooncake would differentiate
   `A`): the parameters are constants on every back-end (tested).
 - Interpolation and truncation: `scale/π ∫ |ψ(v)| w(2πv/A) dv` with `w = min(L₆ θ⁶, 1 + Λ₆)` below `A` and 1 above (L₆,
-  Λ₆ of the six-point stencil at t = 1/2), trapezoid in log v, `≤ ε/2`, bisection for `A_min`; measured it binds the
+  Λ₆ of the six-point stencil at t = 1/2), trapezoid in log v (PatternVectors weights 1, 2, …, 2, 1 times `du / 2`,
+  #95: no grid of the `fft_parameters` suite moved), `≤ ε/2`, bisection for `A_min`; measured it binds the
   error, not the truncation, which this weight bounds too.
 - Aliasing: Simpson's weights are the trapezoidal ones times `1 - (-1)^j/3`, so besides the Poisson copies at `2b` there
   are copies at `±b` (half period = half-width of the strike grid) with weight `-1/3`, almost independent of `k`
   (checked numerically); each side `≤ ε/4`, from closed forms (`G ≤ F0`, `≤ e^{-rT}`, `≤ K e^{-rT}`) or a Chernoff
   bound (`AliasingExponent`, minimised with `chernoff_optimum`, shared with the COS range).
 - Then `Npow = ceil(log2(A_min b_min / π))`, `A = π 2^Npow / b_min`. Measured errors are 0.25-0.57 ε on six models.
-- Open: #95 (trapezoid weights of E(A) as a PatternVector), #48 (Lewis and COS from a tolerance).
+- Open: #48 (Lewis and COS from a tolerance).
 
 ## Lewis (`lewis.jl`)
 

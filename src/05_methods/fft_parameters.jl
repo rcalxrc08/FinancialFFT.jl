@@ -40,7 +40,7 @@ function aliasing_chernoff_bound(model, T, c, γ, k_min, drift, corr, log_epss)
     return compute_ts(s_opt, exponent, log_epss)
 end
 
-# Quadrature nodes of E(A): trapezoidal rule in log v, on [1e-3, 1e6].
+# Quadrature nodes of E(A): trapezoidal rule in log v (order du², weights from PatternVectors), on [1e-3, 1e6].
 fft_error_nodes(FT) = exp.(range(log(one(FT) / 1000), log(FT(10)^6), length = 2048))
 
 # The smallest A with E(A) <= ε, by bisection in log A; throws if not reached at A = 1e6 (tolerance: the one asked for,
@@ -48,7 +48,9 @@ fft_error_nodes(FT) = exp.(range(log(one(FT) / 1000), log(FT(10)^6), length = 20
 function interpolation_frequency_bound(modulus, scale::FT, ε::FT, tolerance) where {FT}
     u = fft_error_nodes(FT)
     du = log(u[2]) - log(u[1])
-    m = @. scale * du * u * modulus(u) * invπ
+    # trapezoidal weights in log v: du / 2 times 1, 2, …, 2, 1
+    trapezoid = PatternVector(length(u), PaddedFillPattern(Int8(1), Int8(2), Int8(1)))
+    m = @. scale * (du / 2) * trapezoid * u * modulus(u) * invπ
     L6, cap = FT(lagrange_error_constant), 1 + FT(lagrange_lebesgue_constant)
     weight(θ) = θ < twoπ ? min(L6 * θ^6, cap) : one(θ)
     E(A) = sum(m[i] * weight(twoπ * u[i] / A) for i in eachindex(u))
