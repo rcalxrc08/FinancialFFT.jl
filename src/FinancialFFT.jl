@@ -5,6 +5,7 @@ import FinancialMonteCarlo: BinaryEuropeanOptionSmile, EuropeanOptionSmile
 using IrrationalConstants: twoπ, invπ
 include("01_hooks/abstracts.jl")
 include("01_hooks/mods.jl")
+include("01_hooks/checks.jl")
 include("02_range/extrema_computation_opt.jl")
 include("03_utils/utils.jl")
 include("04_charexp/charexp.jl")

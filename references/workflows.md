@@ -43,7 +43,8 @@ is in General); add it when setting up a fresh environment. Default branch `mast
 ## Release
 
 Bump `version`, push to `master`, wait for CI, register (General), then make sure the tag `vX.Y.Z` and the GitHub
-release exist (TagBot).
+release exist (TagBot). `NEWS.md` collects the release notes of the next version as changes land (breaking changes
+first); the GitHub release copies its section.
 
 ## Working tree
 

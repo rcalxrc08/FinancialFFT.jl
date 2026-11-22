@@ -14,7 +14,7 @@ struct CosMethod{num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
     N::num_1
     mode::modeType
     function CosMethod(N::num_1, mode::modeType) where {num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
-        ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
+        check_nodes(N)
         return new{num_1, modeType}(N, mode)
     end
 end

@@ -33,6 +33,7 @@ Rules for every change (details in `references/conventions.md` and `references/a
   constants for AD inside `@ignore_derivatives ignore_derivatives_mod.(…)`.
 - No element-wise indexing of arrays that may live on the device; pricing paths type stable.
 - Every quadrature names its rule and order; `@muladd` for every `a * b + c`.
+- Invalid arguments throw `DomainError`/`ArgumentError` through `src/01_hooks/checks.jl`, never `@assert` (#89).
 - Reuse the author's packages and established libraries before writing new code.
 - Format with `.JuliaFormatter.toml`; update the CONTEXT.md, references and `state/STATUS.md` a change touches in the
   same commit (a new rule also gets an entry in `references/decisions.md`); default branch `master`; push to `origin`.

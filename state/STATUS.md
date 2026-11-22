@@ -27,7 +27,7 @@ Six small issues on branch `easy-fixes`, one commit each, for review: #95, #72, 
 
 ## Enhancements and technical debt
 
-- #93 remove the five-argument `pricer`/`density`; #89 explicit exceptions instead of `@assert`.
+- #93 remove the five-argument `pricer`/`density`; #98 `@ignore_derivatives` closures on the pricing paths (Zygote).
 - #92 surfaces in one call; #91 barriers for Lévy models; #90 Heston from an arbitrary starting variance; #82
   LogNormalMixture exponent and ShiftedProcess.
 - #64 differentiate the COS range; #48 Lewis and COS from a tolerance; #38 point 1 (`value_model`).

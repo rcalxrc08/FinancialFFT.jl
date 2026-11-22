@@ -36,3 +36,12 @@
         end
     end
 end
+
+# Invalid arguments throw a DomainError with the offending value (#89), not an AssertionError.
+@testset "Invalid arguments" begin
+    @testset "$name" for (name, ctor) in ("CarrMadanMethod A" => () -> CarrMadanMethod(-1.0, 10), "CarrMadanMethod Npow small" => () -> CarrMadanMethod(100.0, 2), "CarrMadanMethod Npow large" => () -> CarrMadanMethod(100.0, 24), "CarrMadanMethod α" => () -> CarrMadanMethod(100.0, 10, 0.0), "CarrMadanMethod ε" => () -> CarrMadanMethod(0.0), "CarrMadanMethod Npow_max" => () -> CarrMadanMethod(1e-6; Npow_max = 24), "CarrMadanLewisMethod A" => () -> CarrMadanLewisMethod(0.0, 10), "CarrMadanLewisMethod ε" => () -> CarrMadanLewisMethod(-1e-6), "LewisMethod A" => () -> LewisMethod(-1.0, 100), "LewisMethod N" => () -> LewisMethod(100.0, 2), "CosMethod N" => () -> CosMethod(2), "CosDensityMethod N" => () -> CosDensityMethod(2), "CosDensityMethod M odd" => () -> CosDensityMethod(64, 1001), "FFTDensityInverter N" => () -> FFTDensityInverter(2), "FFTDensityInverter M" => () -> FFTDensityInverter(10, 2))
+        @test_throws DomainError ctor()
+    end
+    @test_throws "Npow must be greater than 2" CarrMadanMethod(100.0, 2)
+    @test (@test_throws DomainError LewisMethod(100.0, 1)).value.val == 1
+end

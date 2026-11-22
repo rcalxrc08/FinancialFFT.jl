@@ -4,9 +4,7 @@ struct FFTGrid{num <: Number, num_1 <: Integer}
     A::num
     Npow::num_1
     function FFTGrid(A::num, Npow::num_1) where {num <: Number, num_1 <: Integer}
-        ChainRulesCore.@ignore_derivatives @assert(A > 0.0, "A must be positive")
-        ChainRulesCore.@ignore_derivatives @assert(Npow > 2, "Npow must be greater than 2")
-        ChainRulesCore.@ignore_derivatives @assert(Npow < 24, "Npow will cause overflow")
+        check_fft_grid(A, Npow)
         return new{num, num_1}(A, Npow)
     end
 end
@@ -14,8 +12,7 @@ struct FFTTolerance{num <: Real, num_1 <: Integer}
     ε::num
     Npow_max::num_1
     function FFTTolerance(ε::num, Npow_max::num_1) where {num <: Real, num_1 <: Integer}
-        ChainRulesCore.@ignore_derivatives @assert(ε > 0, "the tolerance must be positive")
-        ChainRulesCore.@ignore_derivatives @assert(2 < Npow_max < 24, "Npow_max must be between 3 and 23")
+        check_fft_tolerance(ε, Npow_max)
         return new{num, num_1}(ε, Npow_max)
     end
 end
@@ -49,7 +46,7 @@ struct CarrMadanMethod{G <: Union{FFTGrid, FFTTolerance}, num_2 <: Number, modeT
     α::num_2
     mode::modeType
     function CarrMadanMethod(grid::G, α::num_2, mode::modeType) where {G <: Union{FFTGrid, FFTTolerance}, num_2 <: Number, modeType <: FinancialMonteCarlo.AbstractMode}
-        ChainRulesCore.@ignore_derivatives @assert(α > 0.0, "α must be positive")
+        check_damping(α)
         return new{G, num_2, modeType}(grid, α, mode)
     end
 end

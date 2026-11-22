@@ -14,6 +14,8 @@ _Coding standards that hold in every stage._ (Layer 3 reference.)
 - Every quadrature has a comment naming the rule and its order (#88).
 - `@muladd` for every `a * b + c`, real numbers only (complex kernels stay as they are); `@muladd` does not fuse `-=`/`+=`,
   write `d = d - k * x`; keep a fusion only if it does not measure slower (#72; open: #100).
-- Validation by `ArgumentError`/`DomainError`, not `@assert` (#89 open).
+- Validation by `DomainError` (a number out of its domain) or `ArgumentError` (an invalid combination), not `@assert`,
+  which is kept for internal invariants (#89); constructors call one `@non_differentiable` validation function from
+  `src/01_hooks/checks.jl`, without an `@ignore_derivatives` closure (FinancialMonteCarlo#80).
 - Reuse before writing: FinancialMonteCarlo, FinancialToolbox, PatternVectors, then established libraries.
 - Formatting: JuliaFormatter with `.JuliaFormatter.toml` (margin=1200, effectively no line wrapping).

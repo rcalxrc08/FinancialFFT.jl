@@ -69,3 +69,15 @@ _Architecture decisions, oldest first. Append; a reversed decision gets a new en
   VibratoMonteCarlo.
 - **Consequences:** `src/methods/` split into stage folders; every source file belongs to a contract.
 - **Status:** active
+
+## D-010 (#89) Explicit exceptions for invalid arguments
+
+- **Decision:** constructors throw `DomainError(value, msg)` for a number out of its domain (`ArgumentError` for an
+  invalid combination, as `fft_parameters.jl` already did), through one validation function per constructor in
+  `src/01_hooks/checks.jl`, marked `@non_differentiable` and called without `@ignore_derivatives`; `@assert` stays for
+  internal invariants (the NaN check of `fft_density_values`).
+- **Why:** an `AssertionError` cannot be told apart from a bug and may be disabled, so FinancialCalibrator could not catch
+  invalid parameters (same change as FinancialMonteCarlo#71); an `@ignore_derivatives` block is a closure whose captures
+  Zygote traces, ~11 μs each (FinancialMonteCarlo#80).
+- **Consequences:** breaking for callers catching `AssertionError` (0.7, `NEWS.md`).
+- **Status:** active

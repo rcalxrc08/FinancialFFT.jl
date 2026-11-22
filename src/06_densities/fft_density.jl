@@ -24,8 +24,7 @@ struct FFTDensityInverter{num_1 <: Integer, num_2 <: Integer, modeType <: Financ
     M::num_2
     mode::modeType
     function FFTDensityInverter(N::num_1, M::num_2, mode::modeType) where {num_1 <: Integer, num_2 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
-        ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
-        ChainRulesCore.@ignore_derivatives @assert(M > 2 && iseven(M), "M must be even and greater than 2")
+        check_density_method(N, M)
         return new{num_1, num_2, modeType}(N, M, mode)
     end
 end

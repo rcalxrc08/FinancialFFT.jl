@@ -15,8 +15,7 @@ struct LewisMethod{num <: Number, num_1 <: Integer, modeType <: FinancialMonteCa
     N::num_1
     mode::modeType
     function LewisMethod(A::num, N::num_1, mode::modeType) where {num <: Number, num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
-        ChainRulesCore.@ignore_derivatives @assert(A > 0.0, "A must be positive")
-        ChainRulesCore.@ignore_derivatives @assert(N > 2, "N must be greater than 2")
+        check_lewis(A, N)
         return new{num, num_1, modeType}(A, N, mode)
     end
 end
