@@ -77,7 +77,9 @@ Evaluates the exponent on the nodes `v >= 0` only (the integrand is even: `ψ(1/
 is `exp(c_k / 2) Σ_j a_j cos(v_j c_k + b_j)` through `phased_cos_sum`, the kernel of COS: one `cos` per term and strike
 (one strike per column through a lazy `transpose(x)`, not a `reshape`), everything real, `lewis_amplitudes_phases`
 (#46), with the nodes `v_j = v_0 + j h` and coefficients from `lewis_coefficients`; smiles return vectors in every mode.
-The error rises at the last point of the convergence figure: Float64 rounding floor (#40).
+Below about `eps(S0) ≈ 1.4e-14` its error alternates with `N` on a Float64 rounding floor (one ulp of the integral times
+`√(S0 K) / π`, subtracted from `S0 e^{-dT}`): the convergence figure draws that floor as a dashed line (#40). A Black
+Scholes control variate would lower it (#99).
 
 ## COS (`cos.jl`)
 

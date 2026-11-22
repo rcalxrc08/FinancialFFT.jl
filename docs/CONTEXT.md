@@ -7,7 +7,7 @@ The Documenter site (`DeployPage.yml`).
 | Load | Why |
 |:--|:--|
 | `make.jl` | runs `figures.jl` first, then the pages (Guides and Reference) |
-| `figures.jl` | figures in light and dark SVG, `calibration_data()`, `hero_figure`, the `chernoff` figure |
+| `figures.jl` | figures in light and dark SVG, `calibration_data()`, `hero_figure`, the `chernoff` figure, the Float64 floor of the `convergence` figure (#40) |
 | `references/docs_design.md` | the shared design, the calibration example, what must stay in step with the code |
 | `references/public_api.md` | every exported name is documented |
 | `references/workflows.md` | how to build the docs |

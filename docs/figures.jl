@@ -94,6 +94,9 @@ function convergence_figure(theme)
         y = [error(method) for (_, method) in family]
         plot!(p, x, y; label = name, color = theme.series[j], linewidth = 2, marker = MARKERS[j], markersize = 5, markerstrokewidth = 0)
     end
+    # Float64 rounding floor (#40): the Lewis and COS prices subtract an integral from S0 e^{-dT} ≈ 99, so their last
+    # bit is about eps(S0); below this line the differences between N are rounding, not convergence.
+    hline!(p, [eps(S0)]; label = "Float64 rounding, eps(S0)", color = theme.muted, linewidth = 1.5, linestyle = :dash)
     return p
 end
 

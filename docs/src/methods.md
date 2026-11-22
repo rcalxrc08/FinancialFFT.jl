@@ -47,7 +47,9 @@ methods = [LewisMethod(600.0, 20000), CosMethod(2^12), CarrMadanLewisMethod(600.
 The error depends on how many times a method evaluates the characteristic exponent, which is most of its cost. COS
 converges exponentially and reaches the rounding floor with a few dozen terms; Lewis does too, once its nodes cover
 the decay of the integrand; the Carr-Madan methods stop at the error of the interpolation on the strike grid, and the two
-density methods at the error of Simpson's rule on `M` intervals:
+density methods at the error of Simpson's rule on `M` intervals. Below the dashed line, about `eps(S0) ≈ 1.4e-14`, the
+differences are Float64 rounding, not convergence: the prices subtract an integral from a number of the order of `S0`,
+so their last bit moves with `N`, the CPU and the Julia version:
 
 ![Error against Black and Scholes as a function of the evaluations of the characteristic exponent](assets/figures/convergence-light.svg)![Error against Black and Scholes as a function of the evaluations of the characteristic exponent](assets/figures/convergence-dark.svg)
 

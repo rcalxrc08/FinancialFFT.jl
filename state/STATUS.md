@@ -22,7 +22,7 @@ Six small issues on branch `easy-fixes`, one commit each, for review: #95, #72, 
 | EnzymeAD/Enzyme.jl#4108 | Enzyme silently wrong on Float32 Heston (complex `sqrt`/`inv`) | use Float64 |
 | #96 | COS on Heston: Float32 2.2x slower than Float64 on the host | — |
 | #88 | density pricers and Carr-Madan stop at 1e-8 to 1e-10 | larger `M` / `A` |
-| #40 | Lewis error rises at the last convergence point (rounding floor) | — |
+| #99 | Lewis, COS and the other methods sit on a Float64 floor of about `eps(S0)` (the subtraction from `S0 e^{-dT}`) | the convergence figure draws it (#40); control variate open |
 | #81 | test suite 30-38 minutes on CI (~50 locally) | select suites with `test_args` |
 
 ## Enhancements and technical debt
