@@ -35,7 +35,7 @@ function draw_butterfly()
     gsave()
     setline(0.6 * STROKE)
     for (stage, partner) in enumerate(partners), (row, y) in enumerate(rows)
-        left, right = columns[stage], columns[stage + 1]
+        left, right = columns[stage], columns[stage+1]
         draw_line([Point(left, y), Point(right, y)])
         draw_line([Point(left, y), Point(right, rows[partner[row]])])
     end
@@ -51,12 +51,12 @@ end
 # The arrows are its gradient with respect to the jump intensity, what AD carries through the pricer.
 function draw_characteristic_function()
     radius, intensity, arrow_length, offset = 98, 0.85, 36, 0.3
-    merton(λ) = MertonProcess(1e-3, λ, 3.0, 1e-3, Underlying(100.0, 0.0))
-    φ(v, λ = intensity) = exp(-im * v + characteristic_exponent_i(im * v, merton(λ), 1.0))
+    merton(λ) = MertonProcess(1e-3, λ, 3.0, 1e-3)
+    φ(v, λ = intensity) = exp(-im * v + characteristic_exponent_i(im * v, merton(λ)))
     ∂φ(v) = ForwardDiff.derivative(λ -> φ(v, λ), intensity)
     plane(z) = Point(-imag(z), -real(z))
     draw_line(plane.(radius .* φ.(range(0, 2π, length = 600))))
-    for lobe in 0:2, side in (-1, 1)
+    for lobe = 0:2, side in (-1, 1)
         v = 2π * lobe / 3 + side * offset
         start = radius * φ(v)
         arrow(plane(start), plane(start + arrow_length * ∂φ(v) / abs(∂φ(v))), arrowheadlength = 14, arrowheadangle = π / 6, linewidth = 3)
@@ -66,10 +66,10 @@ end
 # Implied volatilities of Heston, priced by this package from out of the money options.
 function heston_smile(log_strikes)
     S0, r, d, T = 100.0, 0.0, 0.0, 0.25
-    model = HestonProcess(1.0, 0.2, 0.0, 1.5, -0.4, 0.04, Underlying(S0, d))
+    model = HestonProcess(1.0, 0.2, 0.0, 1.5, -0.4, 0.04)
     strikes = S0 .* exp.(log_strikes)
     calls = collect(strikes .>= S0)
-    prices = pricer(model, ZeroRate(r), CarrMadanMethod(400.0, 18), EuropeanOptionSmile(T, strikes, calls))
+    prices = pricer(model, Underlying(S0, d), ZeroRate(r), CarrMadanMethod(400.0, 18), EuropeanOptionSmile(T, strikes, calls))
     return blsimpv.(S0, strikes, r, T, prices, d, calls)
 end
 
