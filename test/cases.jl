@@ -19,20 +19,7 @@ const cm_binary_tolerances = tolerances(price = 1e-8, dual = 1e-7, hyper = 1e-6)
 const density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6)
 const cos_density_tolerances = tolerances(price = 1e-8, taylor = 1e-7, hessian = 1e-6, mooncake_gpu = 1e-8)
 
-const METHOD_CASES = [
-    (name = "LewisMethod", method = LewisMethod(600.0, 20000), payoffs = Dict(kind => kind == :binary ? lewis_binary_tolerances : lewis_tolerances for kind in PAYOFF_KINDS)),
-    (name = "CosMethod", method = CosMethod(2^12), payoffs = Dict(kind => cos_tolerances for kind in PAYOFF_KINDS)),
-    (name = "CarrMadanLewisMethod", method = CarrMadanLewisMethod(600.0, 16), payoffs = Dict(:european => cml_tolerances, :european_smile => cml_tolerances, :binary => cml_binary_tolerances, :binary_smile => cml_binary_tolerances)),
-    (name = "CarrMadanMethod", method = CarrMadanMethod(400.0, 18), payoffs = Dict(:european => cm_tolerances, :european_smile => cm_tolerances, :binary => cm_binary_tolerances, :binary_smile => cm_binary_tolerances)),
-    (name = "FFTDensityInverter", method = FFTDensityInverter(), payoffs = Dict(kind => density_tolerances for kind in PAYOFF_KINDS)),
-    (name = "CosDensityMethod", method = CosDensityMethod(), payoffs = Dict(kind => cos_density_tolerances for kind in PAYOFF_KINDS)),
-]
+const METHOD_CASES = [(name = "LewisMethod", method = LewisMethod(600.0, 20000), payoffs = Dict(kind => kind == :binary ? lewis_binary_tolerances : lewis_tolerances for kind in PAYOFF_KINDS)), (name = "CosMethod", method = CosMethod(2^12), payoffs = Dict(kind => cos_tolerances for kind in PAYOFF_KINDS)), (name = "CarrMadanLewisMethod", method = CarrMadanLewisMethod(600.0, 16), payoffs = Dict(:european => cml_tolerances, :european_smile => cml_tolerances, :binary => cml_binary_tolerances, :binary_smile => cml_binary_tolerances)), (name = "CarrMadanMethod", method = CarrMadanMethod(400.0, 18), payoffs = Dict(:european => cm_tolerances, :european_smile => cm_tolerances, :binary => cm_binary_tolerances, :binary_smile => cm_binary_tolerances)), (name = "FFTDensityInverter", method = FFTDensityInverter(), payoffs = Dict(kind => density_tolerances for kind in PAYOFF_KINDS)), (name = "CosDensityMethod", method = CosDensityMethod(), payoffs = Dict(kind => cos_density_tolerances for kind in PAYOFF_KINDS))]
 
 # Non Black Scholes models, with the parameters used across the package examples.
-model_cases(S0, d) = [
-    "Merton" => MertonProcess(0.2, 5.0, 0.03, 0.02, Underlying(S0, d)),
-    "Kou" => KouProcess(0.2, 5.0, 0.3, 30.0, 20.0, Underlying(S0, d)),
-    "VarianceGamma" => VarianceGammaProcess(0.2, 0.03, 0.01, Underlying(S0, d)),
-    "NormalInverseGaussian" => NormalInverseGaussianProcess(0.2, 0.01, 0.01, Underlying(S0, d)),
-    "Heston" => HestonProcess(0.3, 0.2, 0.0, 1.5, -0.7, 0.04, Underlying(S0, d)),
-]
+model_cases() = ["Merton" => MertonProcess(0.2, 5.0, 0.03, 0.02), "Kou" => KouProcess(0.2, 5.0, 0.3, 30.0, 20.0), "VarianceGamma" => VarianceGammaProcess(0.2, 0.03, 0.01), "NormalInverseGaussian" => NormalInverseGaussianProcess(0.2, 0.01, 0.01), "Heston" => HestonProcess(0.3, 0.2, 0.0, 1.5, -0.7, 0.04)]

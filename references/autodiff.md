@@ -84,6 +84,6 @@ _The hooks, what each back-end needs, the upstream issues._ (Layer 3 reference; 
 - It also fails on `map` over a constant array storing active values (`density_values` of a `CosDensity` broadcasts
   `density_value.(f, y)`: `Base.broadcastable` of an `AbstractDensity` is a `Ref`, so no `Ref` at the call), on splatted
   calls `x -> f(x...)` and on payoff types chosen at run time (the suite's `enzyme_bs_pricer`).
-- Models on a dividend curve (`Underlying(S0, curve)`, an `UnderlyingVec`, what FinancialCalibrator's `adapter`
+- Models on a dividend curve (`Underlying(S0, curve)`, what FinancialCalibrator's `adapter`
   builds) need `set_runtime_activity` in reverse mode: the `Curve` holds `Vector`s next to the active parameters
   (rcalxrc08/FinancialMonteCarlo.jl#79, Enzyme 0.13.221; the tests use scalar dividends).

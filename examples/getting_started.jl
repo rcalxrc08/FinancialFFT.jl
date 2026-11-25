@@ -26,9 +26,10 @@ rfCurve = ZeroRate(r);
 # Define The Option
 EuOption = EuropeanOption(T, K)
 # Define the Model of the Underlying
-Model = BlackScholesProcess(σ, Underlying(S0, d));
+Model = BlackScholesProcess(σ);
+und = Underlying(S0, d);
 # Call the pricer metric
-@show EuPrice = pricer(Model, rfCurve, method_lewis, EuOption);
+@show EuPrice = pricer(Model, und, rfCurve, method_lewis, EuOption);
 # ## Using Other Models and Options
 # The package contains a large number of models of three main types:
 # * `Ito Process`

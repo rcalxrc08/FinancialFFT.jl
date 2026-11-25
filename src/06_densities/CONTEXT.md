@@ -28,8 +28,8 @@ The `density` interface, `CosDensity`, `FFTDensity` and the pricer of every dens
 
 ## Verify (Kaimon)
 
-Setup: `using FinancialFFT, FinancialMonteCarlo`; `bs = BlackScholesProcess(0.2, Underlying(100.0, 0.0))`,
-`f = density(bs, ZeroRate(0.01), CosDensityMethod(), 1.0)`.
+Setup: `using FinancialFFT, FinancialMonteCarlo`; `bs, und = BlackScholesProcess(0.2), Underlying(100.0, 0.0)`,
+`f = density(bs, und, ZeroRate(0.01), CosDensityMethod(), 1.0)`.
 
 | Check | Expect |
 |:--|:--|

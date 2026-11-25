@@ -50,17 +50,17 @@ struct FFTDensity{num_1, num_2} <: AbstractDensity
 end
 Adapt.@adapt_structure FFTDensity
 
-function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FFTDensityInverter, T)
+function density(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FFTDensityInverter, T)
     mode = FinancialMonteCarlo.execution_mode(method)
     N = method.N
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
-    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     # the range is a constant for differentiation: a grid moving with the parameters would add the derivative of the
     # interpolation error to the scores (Mooncake ignores @ignore_derivatives, hence the hook)
     a, b = ChainRulesCore.@ignore_derivatives ignore_derivatives_mod.(compute_chernorff_limits(mcProcess, rT, dT, T))
     n = ChainRulesCore.@ignore_derivatives 2^N
     A = (b - a) / 2
-    values = fft_density_values(mcProcess, zero_rate, N, A, a, T, mode)
+    values = fft_density_values(mcProcess, und, zero_rate, N, A, a, T, mode)
     dx = 2 * A / n
     return FFTDensity(values, a, @muladd(a + (n - 1) * dx), dx)
 end
@@ -81,15 +81,15 @@ end
 # as DataType, and the grid as a Vector of unknown element type.
 function fft_density_nodes(A, n2, mode)
     zero_FT = zero(float_type(A))
-    return adapt_array([complex(zero_FT, -k * (π / A)) for k in 0:n2], mode)
+    return adapt_array([complex(zero_FT, -k * (π / A)) for k = 0:n2], mode)
 end
 
-function fft_density_values(mcProcess, r, N, A, a, T, mode)
+function fft_density_values(mcProcess, und, r, N, A, a, T, mode)
     n2 = ChainRulesCore.@ignore_derivatives 2^(N - 1)
     FT = float_type(A)
     u_im = ChainRulesCore.@ignore_derivatives fft_density_nodes(A, n2, mode)
     # the integrals of the rate and of the dividend, each a number or a curve (#94)
-    drift_rd = FinancialMonteCarlo.integral(r.r, T) - FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    drift_rd = FinancialMonteCarlo.integral(r.r, T) - FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     phase = drift_rd - corr - a
     char_exp = characteristic_exponent_i.(u_im, mcProcess, T)

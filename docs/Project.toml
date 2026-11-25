@@ -13,8 +13,8 @@ FinancialFFT = {path = ".."}
 
 [compat]
 Documenter = "1"
-FinancialFFT = "0.7"
-FinancialMonteCarlo = "0.7, 0.8, 0.9"
+FinancialFFT = "0.8"
+FinancialMonteCarlo = "0.10"
 FinancialToolbox = "0.7, 0.8"
 ForwardDiff = "0.10, 1"
 Plots = "1"

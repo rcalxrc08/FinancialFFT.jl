@@ -16,7 +16,7 @@ abstract type AbstractDensity end
 Base.broadcastable(x::AbstractDensity) = Ref(x)
 
 """
-    density(mcProcess, zero_rate, method, T)
+    density(mcProcess, underlying, zero_rate, method, T)
 
 Density of the log-return `log(S_T / S_0)` of `mcProcess` at the horizon `T`, under the risk-neutral measure of
 `zero_rate`, computed with `method` (`CosDensityMethod` or `FFTDensityInverter`). Returns an [`AbstractDensity`](@ref),

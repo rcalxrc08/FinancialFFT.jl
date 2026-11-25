@@ -76,11 +76,11 @@ function fft_grid_parameters(A_min, b_min, Npow_max, ε)
 end
 
 # Strikes, maturity and market quantities of a payoff, without derivatives, and the tolerance, in the float type FT.
-function fft_error_setup(model, zero_rate, opt, ε)
+function fft_error_setup(model, und, zero_rate, opt, ε)
     T = v_value_mod(opt.T)
-    S0 = v_value_mod(model.underlying.S0)
+    S0 = v_value_mod(und.S0)
     rT = v_value_mod(FinancialMonteCarlo.integral(zero_rate.r, T))
-    dT = v_value_mod(FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(model), T))
+    dT = v_value_mod(FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T))
     FT = float_type(S0, rT, dT, T)
     K = to_float_type.(FT, v_value_mod.(opt.K))
     corr = to_float_type(FT, v_value_mod(FinancialFFT.characteristic_exponent_i(1, model, T)))
@@ -88,8 +88,8 @@ function fft_error_setup(model, zero_rate, opt, ε)
 end
 
 # The grid of CarrMadanMethod(ε): A and Npow for the model and the strikes of opt.
-function fft_grid(grid::FFTTolerance, method::CarrMadanMethod, model, zero_rate, opt)
-    FT, T, S0, rT, dT, K_min, _, corr, ε = fft_error_setup(model, zero_rate, opt, grid.ε)
+function fft_grid(grid::FFTTolerance, method::CarrMadanMethod, model, und, zero_rate, opt)
+    FT, T, S0, rT, dT, K_min, _, corr, ε = fft_error_setup(model, und, zero_rate, opt, grid.ε)
     drift = rT - dT
     F0 = S0 * exp(-dT)
     α_d = to_float_type(FT, v_value_mod(carr_madan_damping(model, T, to_float_type(FT, method.α))))
@@ -106,8 +106,8 @@ function fft_grid(grid::FFTTolerance, method::CarrMadanMethod, model, zero_rate,
 end
 
 # The grid of CarrMadanLewisMethod(ε).
-function fft_grid(grid::FFTTolerance, ::CarrMadanLewisMethod, model, zero_rate, opt)
-    FT, T, S0, rT, dT, K_min, K_max, corr, ε = fft_error_setup(model, zero_rate, opt, grid.ε)
+function fft_grid(grid::FFTTolerance, ::CarrMadanLewisMethod, model, und, zero_rate, opt)
+    FT, T, S0, rT, dT, K_min, K_max, corr, ε = fft_error_setup(model, und, zero_rate, opt, grid.ε)
     drift = rT - dT
     F0 = S0 * exp(-dT)
     correction = drift - corr

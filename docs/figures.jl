@@ -48,6 +48,7 @@ function calibration_figure(theme, (quote_T, quote_K, market_vols, model_vols))
 end
 
 const S0, r, d = 100.0, 0.02, 0.01
+const und = Underlying(S0, d)
 const zero_rate = ZeroRate(r)
 underlying() = Underlying(S0, d)
 # Parameters chosen for visibly different shapes, not calibrated to a market.
@@ -60,7 +61,7 @@ function smiles_figure(theme)
     p = base_plot(theme; title = "Implied volatility at T = 1, from one smile per model", xlabel = "strike", ylabel = "implied volatility", legend = :outerright, size = (900, 430))
     for (j, (name, model)) in enumerate(showcase_models())
         calls = strikes .>= S0
-        prices = pricer(model, zero_rate, CosMethod(2^10), FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, calls))
+        prices = pricer(model, und, zero_rate, CosMethod(2^10), FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, calls))
         vols = blsimpv.(S0, strikes, r, T, prices, d, calls)
         # markers every 15 strikes only: the line carries the data, the markers the identity
         plot!(p, strikes, vols; label = nothing, color = theme.series[j], linewidth = 2)
@@ -78,7 +79,7 @@ function convergence_figure(theme)
     option = EuropeanOption(T, K)
     exact = blsprice(S0, K, r, T, 0.2, d)
     floor_error = 1e-16
-    error(method) = max(abs(pricer(model, zero_rate, method, option) - exact), floor_error)
+    error(method) = max(abs(pricer(model, und, zero_rate, method, option) - exact), floor_error)
     families = [
         # LewisMethod evaluates the exponent on the nodes in [0, A] only
         "LewisMethod(100, N)" => [(n ÷ 2, LewisMethod(100.0, n)) for n in 2 .^ (4:14)],
@@ -106,7 +107,7 @@ function densities_figure(theme)
     y = range(-1.2, 0.8, length = 801)
     p = base_plot(theme; title = "Density of log(S_T / S_0) at T = 1, FFTDensityInverter()", xlabel = "log-return", ylabel = "density", yscale = :log10, ylims = (1e-6, 10), yticks = 10.0 .^ (-6:1), legend = :outerright, size = (900, 430))
     for (j, (name, model)) in enumerate(showcase_models())
-        f = FinancialFFT.density(model, zero_rate, FFTDensityInverter(), T)
+        f = FinancialFFT.density(model, und, zero_rate, FFTDensityInverter(), T)
         values = f.(y)
         plot!(p, y, values; label = nothing, color = theme.series[j], linewidth = 2)
         scatter!(p, y[41:80:end], values[41:80:end]; label = name, color = theme.series[j], marker = MARKERS[j], markersize = 5, markerstrokewidth = 0)
@@ -123,13 +124,13 @@ function scores_figure(theme)
     σ = 0.2
     p = base_plot(theme; title = "Score ∂σ log f(y) at T = 1, ForwardDiff through FFTDensityInverter()", xlabel = "log-return", ylabel = "score", legend = :outerright, size = (900, 430))
     for (j, (name, model)) in enumerate(models)
-        scores = ForwardDiff.derivative(s -> log.(FinancialFFT.density_values(FinancialFFT.density(model(s), zero_rate, FFTDensityInverter(), T), collect(y))), σ)
+        scores = ForwardDiff.derivative(s -> log.(FinancialFFT.density_values(FinancialFFT.density(model(s), und, zero_rate, FFTDensityInverter(), T), collect(y))), σ)
         plot!(p, y, scores; label = nothing, color = theme.series[j], linewidth = 2)
         scatter!(p, y[21:40:end], scores[21:40:end]; label = name, color = theme.series[j], marker = MARKERS[j], markersize = 5, markerstrokewidth = 0)
     end
     # the same score from the cosine expansion of the density
     model = last(first(models))
-    cos_scores = ForwardDiff.derivative(s -> log.(FinancialFFT.density_values(FinancialFFT.density(model(s), zero_rate, CosDensityMethod(), T), collect(y))), σ)
+    cos_scores = ForwardDiff.derivative(s -> log.(FinancialFFT.density_values(FinancialFFT.density(model(s), und, zero_rate, CosDensityMethod(), T), collect(y))), σ)
     plot!(p, y, cos_scores; label = "Black Scholes, CosDensityMethod", color = theme.muted, linewidth = 1.5, linestyle = :dash)
     return p
 end
@@ -168,7 +169,7 @@ function hero_figure(theme)
     p = plot(; size = (760, 600), background_color = :transparent, foreground_color_text = theme.muted, foreground_color_axis = theme.axis, foreground_color_border = theme.axis, framestyle = :none, grid = false, legend = false, fontfamily = "sans-serif", left_margin = 0Plots.mm, right_margin = 0Plots.mm)
     for (k, (name, model)) in enumerate(reverse(models))
         j = length(models) - k + 1
-        f = FinancialFFT.density(model, zero_rate, FFTDensityInverter(), T)
+        f = FinancialFFT.density(model, und, zero_rate, FFTDensityInverter(), T)
         values = f.(y)
         base = (k - 1) * step
         plot!(p, y, base .+ values; fillrange = base, fillalpha = 0.28, color = theme.series[j], linewidth = 2.2)

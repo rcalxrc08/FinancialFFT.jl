@@ -36,14 +36,14 @@ binary_lewis_inverse_denominator(x) = inv_denominator(1 // 2 + x * im)
 lewis_inverse_denominator(::VanillaPayoff) = vanilla_lewis_inverse_denominator
 lewis_inverse_denominator(::BinaryPayoff) = binary_lewis_inverse_denominator
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, opt_::FourierPayoff)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanLewisMethod, opt_::FourierPayoff)
     mode = FinancialMonteCarlo.execution_mode(method)
     opt = FinancialMonteCarlo.to_mode(opt_, mode)
     T = opt.T
-    A_grid, Npow = ChainRulesCore.@ignore_derivatives fft_grid(method.grid, method, mcProcess, zero_rate, opt)
+    A_grid, Npow = ChainRulesCore.@ignore_derivatives fft_grid(method.grid, method, mcProcess, und, zero_rate, opt)
     N = ChainRulesCore.@ignore_derivatives 2^Npow
-    S0 = mcProcess.underlying.S0
-    dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    S0 = und.S0
+    dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     A = to_float_type(float_type(S0, rT, dT, T), A_grid)
     correction = rT + dT - FinancialFFT.characteristic_exponent_i(1, mcProcess, T)

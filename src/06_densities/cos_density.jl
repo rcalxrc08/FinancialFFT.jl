@@ -43,11 +43,11 @@ struct CosDensity{num_1, num_2, num_3} <: AbstractDensity
     end
 end
 
-function density(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosDensityMethod, T)
+function density(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosDensityMethod, T)
     mode = FinancialMonteCarlo.execution_mode(method)
     N = method.N
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
-    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     a, b = ChainRulesCore.@ignore_derivatives v_value_mod.(compute_chernorff_limits(mcProcess, rT, dT, T))
     bma = b - a
     # A vector, not a float range: Enzyme, which ignores @ignore_derivatives, has no derivative for the TwicePrecision of

@@ -1,6 +1,16 @@
 # FinancialFFT.jl release notes
 
-## Unreleased
+## 0.8.0 (2026-11-25)
+
+### Breaking
+
+- FinancialMonteCarlo 0.10 (FinancialMonteCarlo#72): the models hold only their parameters, and the underlying is an
+  argument: `pricer(model, underlying, zero_rate, method, payoff)` and `density(model, underlying, zero_rate, method, T)`,
+  with `underlying = Underlying(S0, d)`. `ZeroRate` takes a number or a curve (`ZeroRate(FinancialMonteCarlo.Curve(r, T))`,
+  `ZeroRate(FinancialMonteCarlo.ImpliedCurve(r, T))`); `ZeroRateCurve` and `ImpliedZeroRate` are gone. The
+  characteristic exponents and the truncation range take the model alone.
+
+### Other
 
 - Real-series pullback of `clenshaw_cos_sum` (CosDensity under Zygote), 4-14% faster (#74).
 - `density_array` is required of a density type, no default (#78).

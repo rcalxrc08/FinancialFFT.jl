@@ -143,32 +143,33 @@ function lewis_clenshaw(c_re, c_im, v_0, h, c)
 end
 
 """
-    pricer(mcProcess, zero_rate, method, payoff)
+    pricer(mcProcess, underlying, zero_rate, method, payoff)
 
 Prices `payoff` under `mcProcess` with the Fourier method `method`
 (`LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CarrMadanMethod`, `CosDensityMethod` or `FFTDensityInverter`).
 
 # Arguments
-- `mcProcess`: a `FinancialMonteCarlo.BaseProcess`, e.g. `BlackScholesProcess(σ, Underlying(S0, d))`.
+- `mcProcess`: a `FinancialMonteCarlo.BaseProcess`, e.g. `BlackScholesProcess(σ)`.
+- `underlying`: the `Underlying(S0, d)` (spot and dividends) priced under it.
 - `zero_rate`: a `FinancialMonteCarlo.AbstractZeroRateCurve`, e.g. `ZeroRate(r)`.
 - `method`: the configuration of the numerical method.
 - `payoff`: an `EuropeanOption` or a `BinaryEuropeanOption`, a smile (`EuropeanOptionSmile`,
   `BinaryEuropeanOptionSmile`, several strikes sharing the same maturity). Options with different maturities are
-  priced by broadcasting, `pricer.(mcProcess, zero_rate, method, payoffs)`.
+  priced by broadcasting, `pricer.(mcProcess, underlying, zero_rate, method, payoffs)`.
 
 The method carries the execution mode (the `mode` keyword of its constructor): in `FinancialMonteCarlo.CudaMode()` the
 strikes of a smile are moved to the GPU, wherever they are, and its prices stay there.
 
 Returns a price, or a vector of prices for smiles.
 """
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff_::FourierPayoff)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::FinancialFFT.LewisMethod, abstractPayoff_::FourierPayoff)
     mode = FinancialMonteCarlo.execution_mode(method)
     abstractPayoff = FinancialMonteCarlo.to_mode(abstractPayoff_, mode)
     T = abstractPayoff.T
     N = method.N
-    S0 = mcProcess.underlying.S0
+    S0 = und.S0
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
-    dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     FT = float_type(S0, rT, dT, corr)
     A = to_float_type(FT, method.A)

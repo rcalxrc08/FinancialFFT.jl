@@ -51,13 +51,13 @@ cos_phased_series(coefficient, phase, u, x, ::FinancialMonteCarlo.AbstractMode) 
 # Re Σ_k (c_re_k + i c_im_k) exp(i k θ) = Σ_k c_re_k cos(k θ) - c_im_k sin(k θ).
 cos_clenshaw(c_re, c_im, θ) = clenshaw_exp_sum(c_re, c_im, θ, Val(true))
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, opt_::FourierPayoff)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::CosMethod, opt_::FourierPayoff)
     mode = FinancialMonteCarlo.execution_mode(method)
     opt = FinancialMonteCarlo.to_mode(opt_, mode)
     T = opt.T
     N = method.N
-    S0 = mcProcess.underlying.S0
-    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    S0 = und.S0
+    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     rT = FinancialMonteCarlo.integral(r.r, T)
     K = opt.K
     # The limits are for log(S_T / S0): on y = log(S_T / K) they move with the strike, and the range covers all of them.

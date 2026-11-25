@@ -18,7 +18,7 @@ is_binary(kind) = kind in (:binary, :binary_smile)
 # Price as a scalar function of the Black Scholes inputs, so that every AD back-end can differentiate it.
 function fft_bs_pricer(method, kind, iscall)
     return function (S0, K, r, T, sigma, d)
-        price = pricer(BlackScholesProcess(sigma, Underlying(S0, d)), ZeroRate(r), method, build_payoff(kind, T, K, iscall))
+        price = pricer(BlackScholesProcess(sigma), Underlying(S0, d), ZeroRate(r), method, build_payoff(kind, T, K, iscall))
         return price isa AbstractArray ? price[1] : price
     end
 end

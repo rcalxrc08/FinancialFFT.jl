@@ -35,13 +35,14 @@ All of them agree with the closed formula of Black and Scholes:
 using FinancialFFT, FinancialMonteCarlo, FinancialToolbox
 
 S0, K, r, d, T, σ = 100.0, 105.0, 0.02, 0.01, 1.1, 0.2
-model = BlackScholesProcess(σ, Underlying(S0, d))
+und = Underlying(S0, d)
+model = BlackScholesProcess(σ)
 zero_rate = ZeroRate(r)
 option = EuropeanOption(T, K)
 exact = blsprice(S0, K, r, T, σ, d)
 
 methods = [LewisMethod(600.0, 20000), CosMethod(2^12), CarrMadanLewisMethod(600.0, 16), CarrMadanMethod(400.0, 18), CosDensityMethod(), FFTDensityInverter()]
-[nameof(typeof(method)) => abs(pricer(model, zero_rate, method, option) - exact) for method in methods]
+[nameof(typeof(method)) => abs(pricer(model, und, zero_rate, method, option) - exact) for method in methods]
 ```
 
 The error depends on how many times a method evaluates the characteristic exponent, which is most of its cost. COS
@@ -63,8 +64,8 @@ so their last bit moves with `N`, the CPU and the Julia version:
 - `CosDensityMethod` and `FFTDensityInverter` price with their [`density`](@ref), the cosine expansion and the FFT inversion: they need no range parameter, and the strikes of a smile share the density, so a smile costs one density and one Simpson's rule per strike. Their error is the one of Simpson's rule on `M` intervals (about `1e-9` with the default `M = 2^10`), and they are slower than `CosMethod`, which integrates the payoff exactly against the cosine expansion: their purpose is to price with the densities that other estimators use.
 
 ```@example methods
-model = MertonProcess(σ, 5.0, 0.03, 0.02, Underlying(S0, d))
-pricer(model, zero_rate, FFTDensityInverter(), option) - pricer(model, zero_rate, LewisMethod(600.0, 20000), option)
+model = MertonProcess(σ, 5.0, 0.03, 0.02)
+pricer(model, und, zero_rate, FFTDensityInverter(), option) - pricer(model, und, zero_rate, LewisMethod(600.0, 20000), option)
 ```
 
 
@@ -106,8 +107,8 @@ In Black and Scholes ``\kappa(s) = \sigma^2 T s^2 / 2``, so the minimum is at ``
 hand.
 
 ```@example methods
-model = BlackScholesProcess(σ, Underlying(S0, d))
-f = density(model, zero_rate, CosDensityMethod(), T)
+model = BlackScholesProcess(σ)
+f = density(model, und, zero_rate, CosDensityMethod(), T)
 (f.b - f.a) / 2, σ * sqrt(2 * T * log(1e14))
 ```
 
@@ -166,9 +167,9 @@ FFT methods:
 characteristic function, and their error is typically a quarter to a half of `ε`:
 
 ```@example methods
-model = BlackScholesProcess(σ, Underlying(S0, d))
+model = BlackScholesProcess(σ)
 smile = FinancialMonteCarlo.EuropeanOptionSmile(T, collect(50.0:5.0:200.0), fill(true, 31))
-maximum(abs.(pricer(model, zero_rate, CarrMadanMethod(1e-8), smile) .- blsprice.(S0, smile.K, r, T, σ, d)))
+maximum(abs.(pricer(model, und, zero_rate, CarrMadanMethod(1e-8), smile) .- blsprice.(S0, smile.K, r, T, σ, d)))
 ```
 
 The parameters are constants for differentiation. Choosing them costs about one price, at every price: when the same
@@ -181,8 +182,8 @@ Prices have the floating-point type of the model, the rates and the payoff: the 
 
 ```julia
 setprecision(BigFloat, 128) do
-    model = BlackScholesProcess(BigFloat(0.2), Underlying(BigFloat(100), BigFloat(0.01)))
-    pricer(model, ZeroRate(BigFloat(0.02)), CosMethod(2^10), EuropeanOption(BigFloat(1), BigFloat(100)))
+    model = BlackScholesProcess(BigFloat(0.2))
+    pricer(model, Underlying(BigFloat(100), BigFloat(0.01)), ZeroRate(BigFloat(0.02)), CosMethod(2^10), EuropeanOption(BigFloat(1), BigFloat(100)))
 end
 ```
 
@@ -201,7 +202,7 @@ The setup runs once, then the density is evaluated at any number of points: `f(y
 density of `log(S_T)` given `S_t` is `f(x - log(S_t))`; outside its range `[f.a, f.b]` it is zero.
 
 ```@example methods
-f = density(model, zero_rate, FFTDensityInverter(), T)
+f = density(model, Underlying(BigFloat(100), BigFloat(0.01)), zero_rate, FFTDensityInverter(), T)
 f(0.1), f.a, f.b
 ```
 
@@ -213,8 +214,8 @@ come from automatic differentiation of `log(f(y))`; the range is a constant for 
 ```@example methods
 using ForwardDiff
 
-merton(s) = MertonProcess(s, 5.0, 0.03, 0.02, Underlying(S0, d))
-score(y) = ForwardDiff.derivative(s -> log(density(merton(s), zero_rate, FFTDensityInverter(), T)(y)), σ)
+merton(s) = MertonProcess(s, 5.0, 0.03, 0.02)
+score(y) = ForwardDiff.derivative(s -> log(density(merton(s), und, zero_rate, FFTDensityInverter(), T)(y)), σ)
 score(0.1)
 ```
 

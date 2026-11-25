@@ -12,9 +12,9 @@
 <a class="fc-btn fc-btn-primary" href="#Quick-start">Get Started <span aria-hidden="true">→</span></a>
 <a class="fc-btn" href="https://github.com/rcalxrc08/FinancialFFT.jl"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> View on GitHub</a>
 </nav>
-<pre class="fc-hero-code"><code><span class="k">model</span> = HestonProcess(0.4, 0.2, 0.0, 1.5, -0.7, 0.04, Underlying(S0, d))
-<span class="k">price</span> = pricer(model, ZeroRate(r), CosMethod(2^10), EuropeanOption(T, K))
-<span class="k">smile</span> = pricer(model, ZeroRate(r), CosMethod(2^10), smile_of_strikes)  <span class="c"># one call</span></code></pre>
+<pre class="fc-hero-code"><code><span class="k">model</span> = HestonProcess(0.4, 0.2, 0.0, 1.5, -0.7, 0.04)
+<span class="k">price</span> = pricer(model, und, ZeroRate(r), CosMethod(2^10), EuropeanOption(T, K))
+<span class="k">smile</span> = pricer(model, und, ZeroRate(r), CosMethod(2^10), smile_of_strikes)  <span class="c"># one call</span></code></pre>
 </div>
 <figure class="fc-hero-figure">
 <img src="assets/figures/hero-densities-dark.svg" alt="Densities of the log-return of six models, from their characteristic functions">
@@ -98,11 +98,11 @@ The execution mode is part of the method, as in FinancialMonteCarlo.jl: with CUD
 ```julia
 using CUDA
 smile = FinancialMonteCarlo.EuropeanOptionSmile(T, [90.0, 100.0, 110.0], [true, true, false])
-pricer(model, zero_rate, CosMethod(2^12; mode = FinancialMonteCarlo.CudaMode()), smile)
+pricer(model, und, zero_rate, CosMethod(2^12; mode = FinancialMonteCarlo.CudaMode()), smile)
 ```
 
 - Every method runs on the GPU, with the accuracy it has on the CPU.
-- `density(model, zero_rate, FFTDensityInverter(; mode = FinancialMonteCarlo.CudaMode()), T)` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
+- `density(model, und, zero_rate, FFTDensityInverter(; mode = FinancialMonteCarlo.CudaMode()), T)` computes the density on the GPU with `FFTDensityInverter` and `CosDensityMethod`, and [`FinancialFFT.density_values`](@ref) evaluates it there at a `CuArray` of points, differentiable with ForwardDiff.jl and Zygote.jl.
 - The strikes of a smile are moved to the device of the mode, wherever they are; the prices of a smile stay on the GPU.
 - ForwardDiff.jl and Zygote.jl differentiate the prices on the GPU. ReverseDiff.jl is not supported on the GPU, and Mooncake.jl differentiates Lewis, COS and the COS density there, see [Known limitations](ad.md#Known-limitations).
 
@@ -129,7 +129,8 @@ pricer(model, zero_rate, CosMethod(2^12; mode = FinancialMonteCarlo.CudaMode()),
 using FinancialFFT, FinancialMonteCarlo
 
 S0, K, r, d, T, σ = 100.0, 100.0, 0.02, 0.01, 1.0, 0.2
-model = BlackScholesProcess(σ, Underlying(S0, d))
+und = Underlying(S0, d)
+model = BlackScholesProcess(σ)
 zero_rate = ZeroRate(r)
 option = EuropeanOption(T, K)
 nothing # hide
@@ -140,7 +141,7 @@ nothing # hide
 ```
 
 ```@example quickstart
-pricer(model, zero_rate, LewisMethod(600.0, 20000), option)
+pricer(model, und, zero_rate, LewisMethod(600.0, 20000), option)
 ```
 
 ```@raw html
@@ -148,8 +149,8 @@ pricer(model, zero_rate, LewisMethod(600.0, 20000), option)
 ```
 
 ```@example quickstart
-merton = MertonProcess(σ, 5.0, 0.03, 0.02, Underlying(S0, d))
-pricer(merton, zero_rate, CosMethod(2^12), option)
+merton = MertonProcess(σ, 5.0, 0.03, 0.02)
+pricer(merton, und, zero_rate, CosMethod(2^12), option)
 ```
 
 ```@raw html
@@ -159,7 +160,7 @@ pricer(merton, zero_rate, CosMethod(2^12), option)
 ```@example quickstart
 strikes = [80.0, 90.0, 100.0, 110.0, 120.0]
 smile = FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, strikes .>= S0)
-pricer(merton, zero_rate, CosMethod(2^12), smile)
+pricer(merton, und, zero_rate, CosMethod(2^12), smile)
 ```
 
 ```@raw html

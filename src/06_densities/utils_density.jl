@@ -15,11 +15,11 @@ end
 density_put_payoff(::VanillaPayoff) = z -> 1 - exp(z)
 density_put_payoff(::BinaryPayoff) = z -> one(z)
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractDensityMethod, opt_::FourierPayoff)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, r::FinancialMonteCarlo.AbstractZeroRateCurve, method::AbstractDensityMethod, opt_::FourierPayoff)
     mode = FinancialMonteCarlo.execution_mode(method)
     opt = FinancialMonteCarlo.to_mode(opt_, mode)
-    f = density(mcProcess, r, method, opt.T)
-    return density_integral_price(mcProcess, r, f, method.M, opt, mode)
+    f = density(mcProcess, und, r, method, opt.T)
+    return density_integral_price(mcProcess, und, r, f, method.M, opt, mode)
 end
 
 # Log-moneyness z = log(S_T / K) from the left end a of the range of a density to the strike, M Simpson intervals for each
@@ -42,11 +42,11 @@ end
 # integration domain ends at the strike, so that the kink of the payoff is an endpoint; the call by parity. Quadrature:
 # Simpson's rule, weights (1, 4, 2, 4, …, 2, 4, 1) h / 3, error O(M⁻⁴): it sets the accuracy of the density pricers,
 # about 5e-10 at the default M = 2^10 on a Black Scholes call, whatever the accuracy of the density (#88).
-function density_integral_price(mcProcess, r, f, M, opt, mode)
+function density_integral_price(mcProcess, und, r, f, M, opt, mode)
     T = opt.T
-    S0 = mcProcess.underlying.S0
+    S0 = und.S0
     rT = FinancialMonteCarlo.integral(r.r, T)
-    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     K = opt.K
     # one strike per column
     log_K_S0 = transpose(@. log(K / S0))

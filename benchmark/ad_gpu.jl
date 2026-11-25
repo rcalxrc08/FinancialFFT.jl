@@ -11,11 +11,11 @@ BenchmarkTools.DEFAULT_PARAMETERS.seconds = 1.0
 const T, d = 1.0, 0.01
 const Ks = collect(range(60.0, 160.0, length = 101))
 const COS = CosMethod(2^10; mode = FinancialMonteCarlo.CudaMode())
-heston(x) = HestonProcess(x[3], x[4], zero(x[3]), x[5], x[6], x[7], Underlying(x[1], d))
+heston(x) = HestonProcess(x[3], x[4], zero(x[3]), x[5], x[6], x[7])
 const X = [100.0, 0.02, 0.3, 0.2, 1.5, -0.7, 0.04]
 const smile_payoff = FinancialMonteCarlo.EuropeanOptionSmile(T, CuArray(Ks), CuArray(Ks .>= 100.0))
-heston_price(x) = pricer(heston(x), ZeroRate(x[2]), COS, EuropeanOption(T, 105.0))
-heston_smile(x) = pricer(heston(x), ZeroRate(x[2]), COS, smile_payoff)
+heston_price(x) = pricer(heston(x), Underlying(x[1], d), ZeroRate(x[2]), COS, EuropeanOption(T, 105.0))
+heston_smile(x) = pricer(heston(x), Underlying(x[1], d), ZeroRate(x[2]), COS, smile_payoff)
 heston_smile_sum(x) = sum(heston_smile(x))
 
 timed(thunk) = (thunk(); @belapsed CUDA.@sync $thunk())

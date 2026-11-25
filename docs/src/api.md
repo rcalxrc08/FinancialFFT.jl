@@ -39,7 +39,7 @@ FinancialFFT.CosDensity
 ## Pricing
 
 ```@docs
-pricer(::FinancialMonteCarlo.BaseProcess, ::FinancialMonteCarlo.AbstractZeroRateCurve, ::LewisMethod, ::FinancialFFT.FourierPayoff)
+pricer(::FinancialMonteCarlo.BaseProcess, ::FinancialMonteCarlo.AbstractUnderlying, ::FinancialMonteCarlo.AbstractZeroRateCurve, ::LewisMethod, ::FinancialFFT.FourierPayoff)
 ```
 
 ## Index

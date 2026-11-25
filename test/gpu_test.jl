@@ -14,7 +14,7 @@ end
 # A smile has a single strike here: its prices are summed, since scalar indexing is disallowed on the GPU.
 function gpu_bs_pricer(method, kind, iscall)
     return function (S0, K, r, T, sigma, d)
-        price = pricer(BlackScholesProcess(sigma, Underlying(S0, d)), ZeroRate(r), FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), gpu_payoff(kind, T, K, iscall))
+        price = pricer(BlackScholesProcess(sigma), und, ZeroRate(r), FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), gpu_payoff(kind, T, K, iscall))
         return price isa AbstractArray ? sum(price) : price
     end
 end
@@ -52,11 +52,12 @@ end
         # The characteristic exponents of the other models, evaluated on the device.
         @testset "Other models, GPU vs CPU" begin
             S0, r, d, T, K = 100.0, 0.02, 0.01, 1.0, 105.0
-            for (model_name, model) in model_cases(S0, d), case in METHOD_CASES, kind in keys(case.payoffs)
+            und = Underlying(S0, d)
+            for (model_name, model) in model_cases(), case in METHOD_CASES, kind in keys(case.payoffs)
                 method = case.method
                 @testset "$model_name $(case.name) $kind" begin
-                    gpu_price = sum(pricer(model, ZeroRate(r), FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), gpu_payoff(kind, T, K, true)))
-                    cpu_price = sum(pricer(model, ZeroRate(r), method, build_payoff(kind, T, K, true)))
+                    gpu_price = sum(pricer(model, und, ZeroRate(r), FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), gpu_payoff(kind, T, K, true)))
+                    cpu_price = sum(pricer(model, und, ZeroRate(r), method, build_payoff(kind, T, K, true)))
                     @test abs(gpu_price - cpu_price) < 1e-10
                 end
             end
@@ -65,15 +66,16 @@ end
         # Densities computed and evaluated on the device, against the CPU; scores with ForwardDiff and Zygote.
         @testset "Densities, GPU vs CPU" begin
             r, d, T, σ = 0.02, 0.01, 1.1, 0.2
+            und = Underlying(100.0, d)
             y = collect(range(-1.0, 1.0, length = 101))
             y_cu = CuArray(y)
             for (name, method) in ("FFTDensityInverter" => FFTDensityInverter(), "CosDensityMethod" => CosDensityMethod())
-                @testset "$name $model_name" for (model_name, model) in vcat(["BlackScholes" => BlackScholesProcess(σ, Underlying(100.0, d))], model_cases(100.0, d))
-                    f_gpu = density(model, ZeroRate(r), FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), T)
-                    f_cpu = density(model, ZeroRate(r), method, T)
+                @testset "$name $model_name" for (model_name, model) in vcat(["BlackScholes" => BlackScholesProcess(σ)], model_cases())
+                    f_gpu = density(model, und, ZeroRate(r), FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), T)
+                    f_cpu = density(model, und, ZeroRate(r), method, T)
                     @test max_abs_diff(Array(FinancialFFT.density_values(f_gpu, y_cu)), f_cpu.(y)) < 1e-12
                 end
-                scores(s, mode, points) = sum(log.(FinancialFFT.density_values(density(BlackScholesProcess(s[1], Underlying(100.0, d)), ZeroRate(r), FinancialMonteCarlo.with_mode(method, mode), T), points)))
+                scores(s, mode, points) = sum(log.(FinancialFFT.density_values(density(BlackScholesProcess(s[1]), Underlying(100.0, d), ZeroRate(r), FinancialMonteCarlo.with_mode(method, mode), T), points)))
                 reference = ForwardDiff.gradient(s -> scores(s, FinancialMonteCarlo.SerialMode(), y), [σ])
                 @testset "$name ForwardDiff" begin
                     @test ForwardDiff.gradient(s -> scores(s, FinancialMonteCarlo.CudaMode(), y_cu), [σ]) ≈ reference rtol = 1e-10
@@ -83,26 +85,26 @@ end
                 end
             end
             # a density computed on the device is evaluated on the host after adapt
-            f_gpu = density(BlackScholesProcess(σ, Underlying(100.0, d)), ZeroRate(r), FFTDensityInverter(; mode = FinancialMonteCarlo.CudaMode()), T)
-            @test FinancialFFT.adapt(Array, f_gpu)(0.1) ≈ density(BlackScholesProcess(σ, Underlying(100.0, d)), ZeroRate(r), FFTDensityInverter(), T)(0.1) rtol = 1e-12
+            f_gpu = density(BlackScholesProcess(σ), Underlying(100.0, d), ZeroRate(r), FFTDensityInverter(; mode = FinancialMonteCarlo.CudaMode()), T)
+            @test FinancialFFT.adapt(Array, f_gpu)(0.1) ≈ density(BlackScholesProcess(σ), Underlying(100.0, d), ZeroRate(r), FFTDensityInverter(), T)(0.1) rtol = 1e-12
         end
 
         @testset "Smiles, GPU vs CPU" begin
-            model = MertonProcess(0.2, 5.0, 0.03, 0.02, Underlying(100.0, 0.01))
+            model = MertonProcess(0.2, 5.0, 0.03, 0.02)
             zero_rate = ZeroRate(0.02)
             Ks = [80.0, 90.0, 100.0, 110.0, 120.0]
             calls = [true, false, true, false, true]
             @testset "Smiles, $(case.name)" for case in filter(case -> haskey(case.payoffs, :european_smile), METHOD_CASES)
                 method = case.method
                 smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, CuArray(Ks), CuArray(calls))
-                cpu = pricer(model, zero_rate, method, FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls))
-                @test max_abs_diff(Array(pricer(model, zero_rate, FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), smile)), cpu) < 1e-10
+                cpu = pricer(model, Underlying(100.0, 0.01), zero_rate, method, FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls))
+                @test max_abs_diff(Array(pricer(model, Underlying(100.0, 0.01), zero_rate, FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), smile)), cpu) < 1e-10
                 # the strikes go to the device of the mode, wherever they are
                 host_smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, Ks, calls)
-                gpu_prices = pricer(model, zero_rate, FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), host_smile)
+                gpu_prices = pricer(model, Underlying(100.0, 0.01), zero_rate, FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), host_smile)
                 @test gpu_prices isa CuArray
                 @test max_abs_diff(Array(gpu_prices), cpu) < 1e-10
-                serial_prices = pricer(model, zero_rate, method, smile)
+                serial_prices = pricer(model, Underlying(100.0, 0.01), zero_rate, method, smile)
                 @test serial_prices isa Array
                 @test max_abs_diff(serial_prices, cpu) < 1e-12
             end

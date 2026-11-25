@@ -22,12 +22,12 @@ and the dividend yield.
 
 | Process | Constructor |
 |:--|:--|
-| Black–Scholes | `BlackScholesProcess(σ, underlying)` |
-| Merton jump diffusion | `MertonProcess(σ, λ, μ_jump, σ_jump, underlying)` |
-| Kou double exponential | `KouProcess(σ, λ, p, λ₊, λ₋, underlying)` |
-| Variance Gamma | `VarianceGammaProcess(σ, θ, κ, underlying)` |
-| Normal Inverse Gaussian | `NormalInverseGaussianProcess(σ, θ, κ, underlying)` |
-| Heston | `HestonProcess(σ, σ₀, λ, κ, ρ, θ, underlying)` |
+| Black–Scholes | `BlackScholesProcess(σ)` |
+| Merton jump diffusion | `MertonProcess(σ, λ, μ_jump, σ_jump)` |
+| Kou double exponential | `KouProcess(σ, λ, p, λ₊, λ₋)` |
+| Variance Gamma | `VarianceGammaProcess(σ, θ, κ)` |
+| Normal Inverse Gaussian | `NormalInverseGaussianProcess(σ, θ, κ)` |
+| Heston | `HestonProcess(σ, σ₀, λ, κ, ρ, θ)` |
 
 ## Curves
 

@@ -12,7 +12,7 @@ _Architecture decisions, oldest first. Append; a reversed decision gets a new en
 
 ## D-002 (#55) The execution mode is a field of the method
 
-- **Decision:** `pricer` always takes four arguments; `mode` is a keyword of every constructor; `with_mode` rebuilds.
+- **Decision:** `pricer` always takes five arguments (four before 0.8: the underlying was a field of the model, FinancialMonteCarlo#72); `mode` is a keyword of every constructor; `with_mode` rebuilds.
 - **Why:** FinancialMonteCarlo 0.6 moved modes into methods; one dispatch path for CPU and GPU.
 - **Consequences:** the five-argument forms, deprecated in 0.4, were removed in 0.7 (#93).
 - **Status:** active

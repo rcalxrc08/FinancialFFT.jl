@@ -33,7 +33,7 @@ TaylorSeries covers both `Taylor1` and `TaylorN`, which gives the mixed derivati
 ```@example ad
 using FinancialFFT, FinancialMonteCarlo, ForwardDiff
 
-price(x) = pricer(BlackScholesProcess(x[3], Underlying(x[1], x[4])), ZeroRate(x[2]), LewisMethod(600.0, 20000), EuropeanOption(1.0, 100.0))
+price(x) = pricer(BlackScholesProcess(x[3]), Underlying(x[1], x[4]), ZeroRate(x[2]), LewisMethod(600.0, 20000), EuropeanOption(1.0, 100.0))
 ForwardDiff.gradient(price, [100.0, 0.02, 0.2, 0.01])
 ```
 
@@ -43,7 +43,7 @@ ForwardDiff.gradient(price, [100.0, 0.02, 0.2, 0.01])
 using TaylorSeries
 
 δS, δσ = TaylorSeries.variables!("δS δσ"; order = 2)
-pricer(BlackScholesProcess(0.2 + δσ, Underlying(100.0 + δS, 0.01)), ZeroRate(0.02), LewisMethod(600.0, 20000), EuropeanOption(1.0, 100.0))
+pricer(BlackScholesProcess(0.2 + δσ), Underlying(100.0 + δS, 0.01), ZeroRate(0.02), LewisMethod(600.0, 20000), EuropeanOption(1.0, 100.0))
 ```
 
 Densities are differentiated in the same way, through `log(f(y))` (see [Densities](methods.md#Densities)):

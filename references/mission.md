@@ -7,7 +7,7 @@ in `decisions.md`.)
 
 FinancialFFT.jl prices European options (vanilla, binary, smiles) and computes densities of the log-return with
 Fourier methods (Carr-Madan, Carr-Madan-Lewis, Lewis, COS, FFT and COS densities) for the processes of
-FinancialMonteCarlo.jl, through the same `pricer(process, zero_rate, method, payoff)` call, differentiable by every AD
+FinancialMonteCarlo.jl, through the same `pricer(process, underlying, zero_rate, method, payoff)` call, differentiable by every AD
 back-end and runnable on the GPU.
 
 ## Goals

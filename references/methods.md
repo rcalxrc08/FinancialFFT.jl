@@ -8,7 +8,7 @@ reference.)
 - Each method is a configurator struct subtyping `FinancialMonteCarlo.AbstractMethod` via `AbstractFFTMethod`
   (Carr-Madan, Carr-Madan-Lewis; use `fft`) or `AbstractIntegralMethod` (Lewis, COS; direct quadrature/cosine sums),
   `AbstractDensityMethod <: AbstractIntegralMethod` for the density methods (`src/01_hooks/abstracts.jl`).
-- Pricing is `pricer(process, zero_rate, method, payoff)`, extending `FinancialMonteCarlo.pricer`, always with four
+- Pricing is `pricer(process, underlying, zero_rate, method, payoff)`, extending `FinancialMonteCarlo.pricer`, always with five
   arguments: the execution mode is a field of the method (FinancialMonteCarlo 0.6, #55), `mode` as a keyword of every
   public constructor (default `SerialMode()`), and the inner constructors take every field positionally, so that
   `FinancialMonteCarlo.with_mode(method, mode)` (`Accessors.@set`) rebuilds the method.

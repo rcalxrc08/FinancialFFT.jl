@@ -29,7 +29,8 @@ barrier option, raises a `MethodError`.
 ```@setup payoffs
 using FinancialFFT, FinancialMonteCarlo
 S0, r, d, σ = 100.0, 0.02, 0.01, 0.2
-model = BlackScholesProcess(σ, Underlying(S0, d))
+und = Underlying(S0, d)
+model = BlackScholesProcess(σ)
 zero_rate = ZeroRate(r)
 method = CosMethod(2^12)
 ```
@@ -37,7 +38,7 @@ method = CosMethod(2^12)
 ## Single options
 
 ```@example payoffs
-pricer(model, zero_rate, method, EuropeanOption(1.0, 105.0)), pricer(model, zero_rate, method, BinaryEuropeanOption(1.0, 105.0, false))
+pricer(model, und, zero_rate, method, EuropeanOption(1.0, 105.0)), pricer(model, und, zero_rate, method, BinaryEuropeanOption(1.0, 105.0, false))
 ```
 
 ## Smiles
@@ -47,12 +48,12 @@ A smile has one maturity and several strikes, each with its own call or put flag
 
 ```@example payoffs
 smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, [90.0, 100.0, 110.0], [false, true, true])
-pricer(model, zero_rate, method, smile)
+pricer(model, und, zero_rate, method, smile)
 ```
 
 ```@example payoffs
 smile = FinancialMonteCarlo.BinaryEuropeanOptionSmile(1.0, [90.0, 100.0, 110.0], [false, true, true])
-pricer(model, zero_rate, method, smile)
+pricer(model, und, zero_rate, method, smile)
 ```
 
 ## Different maturities
@@ -61,7 +62,7 @@ Options with different maturities are priced by broadcasting, and `pricer` does 
 
 ```@example payoffs
 options = [EuropeanOption(0.5, 100.0), BinaryEuropeanOption(1.0, 105.0), EuropeanOption(2.0, 110.0, false)]
-pricer.(model, zero_rate, method, options)
+pricer.(model, und, zero_rate, method, options)
 ```
 
 ## Puts

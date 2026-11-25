@@ -70,7 +70,7 @@ function clenshaw_exp_sum(c_re, c_im, θ, ::Val{only_real} = Val(false)) where {
     if abs(v_value_mod(c)) <= 19 // 20
         t = 2 * c
         b_1r = b_2r = b_1i = b_2i = zero_typed
-        for k in lastindex(c_re):-1:(firstindex(c_re)+1)
+        for k = lastindex(c_re):-1:(firstindex(c_re)+1)
             b_1r, b_2r = @muladd(t * b_1r + (c_re[k] - b_2r)), b_1r
             b_1i, b_2i = @muladd(t * b_1i + (c_im[k] - b_2i)), b_1i
         end
@@ -83,7 +83,7 @@ function clenshaw_exp_sum(c_re, c_im, θ, ::Val{only_real} = Val(false)) where {
     g = ifelse(near_zero, 2 * s_h^2, -2 * c_h^2)
     γ = -2 * g
     b_r = d_r = b_i = d_i = zero_typed
-    for k in lastindex(c_re):-1:(firstindex(c_re)+1)
+    for k = lastindex(c_re):-1:(firstindex(c_re)+1)
         d_r = @muladd(c_re[k] + γ * b_r + σ * d_r)
         b_r = @muladd(d_r + σ * b_r)
         d_i = @muladd(c_im[k] + γ * b_i + σ * d_i)
@@ -101,7 +101,7 @@ function clenshaw_cos_sum(coefficients, θ)
     if abs(v_value_mod(c)) <= 19 // 20
         t = 2 * c
         b_1 = b_2 = zero_typed
-        for k in lastindex(coefficients):-1:(firstindex(coefficients)+1)
+        for k = lastindex(coefficients):-1:(firstindex(coefficients)+1)
             b_1, b_2 = @muladd(t * b_1 + (coefficients[k] - b_2)), b_1
         end
         return @muladd(first(coefficients) + c * b_1 - b_2)
@@ -111,7 +111,7 @@ function clenshaw_cos_sum(coefficients, θ)
     g = ifelse(near_zero, 2 * s_h^2, -2 * c_h^2)
     γ = -2 * g
     b = d = zero_typed
-    for k in lastindex(coefficients):-1:(firstindex(coefficients)+1)
+    for k = lastindex(coefficients):-1:(firstindex(coefficients)+1)
         d = @muladd(coefficients[k] + γ * b + σ * d)
         b = @muladd(d + σ * b)
     end

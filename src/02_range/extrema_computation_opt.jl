@@ -221,7 +221,7 @@ end
 # Float64 on each side.
 function compute_chernorff_limits(Model::FinancialMonteCarlo.BaseProcess, rT, dT, T)
     drift = rT - dT
-    FT = float_type(drift, T, Model.underlying.S0)
+    FT = float_type(drift, T)
     # the tail is weighted by the scores in the derivatives: the error of the second one in σ is about 2500 ε (1e-14
     # in Float64, scaled by the machine epsilon of the other types)
     epss = scaled_tolerance(FT, 1e-14)

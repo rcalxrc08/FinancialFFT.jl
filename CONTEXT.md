@@ -25,5 +25,5 @@ stage `range.md`, `fft_utils.md`, `charexp.md`, `methods.md`, `densities.md`.
 
 The stages communicate through Julia values: 01 defines the method hierarchy and hooks; 02 returns the range `[a, b]`
 of a process at `T`; 03 provides grids, transforms and sums; 04 the exponent `ψ_i(imv, process, T)`; 05 returns prices
-from `pricer(process, zero_rate, method, payoff)`; 06 returns an `AbstractDensity` from `density(process, zero_rate,
+from `pricer(process, underlying, zero_rate, method, payoff)`; 06 returns an `AbstractDensity` from `density(process, underlying, zero_rate,
 method, T)` and prices through it.

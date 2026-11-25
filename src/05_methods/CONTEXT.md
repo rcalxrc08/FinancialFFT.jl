@@ -32,11 +32,11 @@ Prices in the float type of the inputs, smiles as vectors. Checked by `test/blac
 
 ## Verify (Kaimon)
 
-Setup: `using FinancialFFT, FinancialMonteCarlo, FinancialToolbox`; `bs = BlackScholesProcess(0.2, Underlying(100.0, 0.0))`,
+Setup: `using FinancialFFT, FinancialMonteCarlo, FinancialToolbox`; `bs, und = BlackScholesProcess(0.2), Underlying(100.0, 0.0)`,
 `r = ZeroRate(0.01)`, `opt = EuropeanOption(1.0, 100.0)`.
 
 | Check | Expect |
 |:--|:--|
-| `pricer(bs, r, CosMethod(256), opt) - blsprice(100.0, 100.0, 0.01, 1.0, 0.2, 0.0)` | below 1e-10 |
-| `@inferred pricer(bs, r, LewisMethod(400.0, 2^12), opt)` | `Float64` |
+| `pricer(bs, und, r, CosMethod(256), opt) - blsprice(100.0, 100.0, 0.01, 1.0, 0.2, 0.0)` | below 1e-10 |
+| `@inferred pricer(bs, und, r, LewisMethod(400.0, 2^12), opt)` | `Float64` |
 | `run_tests()` with `test_args = ["black_scholes", "fft_parameters"]` | pass |

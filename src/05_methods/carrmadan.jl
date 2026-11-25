@@ -16,7 +16,7 @@ struct FFTTolerance{num <: Real, num_1 <: Integer}
         return new{num, num_1}(ε, Npow_max)
     end
 end
-fft_grid(grid::FFTGrid, method, mcProcess, zero_rate, opt) = (grid.A, grid.Npow)
+fft_grid(grid::FFTGrid, method, mcProcess, und, zero_rate, opt) = (grid.A, grid.Npow)
 
 """
     CarrMadanMethod(A, Npow, α = 0.75; mode = SerialMode())
@@ -79,16 +79,16 @@ function carr_madan_weights(v, alfa, dx, den)
     return @. one_minus_one * simpson * dx_3 * inv_denominator(den(v * im + alfa) * (alfa + 1 + v * im))
 end
 
-function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt_::FourierPayoff)
+function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt_::FourierPayoff)
     mode = FinancialMonteCarlo.execution_mode(method)
     # the strikes of a smile go to the device of the mode, wherever they are
     opt = FinancialMonteCarlo.to_mode(opt_, mode)
     T = opt.T
-    A_grid, Npow = ChainRulesCore.@ignore_derivatives fft_grid(method.grid, method, mcProcess, zero_rate, opt)
+    A_grid, Npow = ChainRulesCore.@ignore_derivatives fft_grid(method.grid, method, mcProcess, und, zero_rate, opt)
     N = 2^Npow
-    S0 = mcProcess.underlying.S0
+    S0 = und.S0
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
-    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(mcProcess), T)
+    dT = FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     FT = float_type(S0, rT, dT, T)
     A = to_float_type(FT, A_grid)
     #* v-> compute integral as a summation

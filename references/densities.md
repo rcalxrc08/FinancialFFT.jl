@@ -4,7 +4,7 @@ _The density interface, `CosDensity`, `FFTDensity` and the density pricer._ (Lay
 
 ## Interface (`density.jl`)
 
-- `density(process, zero_rate, method, T)` is the interface, like `pricer`, for callers that need a density without a
+- `density(process, underlying, zero_rate, method, T)` is the interface, like `pricer`, for callers that need a density without a
   closed formula (Vibrato, likelihood ratio method): it returns an `AbstractDensity` of the log-return
   `log(S_T / S_0)`, independent of `S_0`, zero outside `[a, b]`.
 - The interface defines `f(y)` (a number, on the CPU) and `density_values(f, y)` (an array) for every density, from two
@@ -16,7 +16,7 @@ _The density interface, `CosDensity`, `FFTDensity` and the density pricer._ (Lay
   log-moneyness grid ending at the strike (constant for differentiation: `ignore_derivatives_mod`), call by parity; a
   smile shares the density, so its prices are the ones of the single options. `density_integral_price` builds its
   nodes × strikes matrix through a lazy `transpose(x)`.
-- `pricer` and `density` take four arguments: the five-argument forms with a trailing mode, deprecated since 0.4, were
+- `pricer` and `density` take five arguments (model, underlying, rate, method, payoff or T): the forms with a trailing mode, deprecated since 0.4, were
   removed in 0.7 (#93).
 
 ## `CosDensityMethod(N, M)` (`cos_density.jl`)

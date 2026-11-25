@@ -62,6 +62,7 @@ underlying)` with no market price of volatility risk (``\lambda = 0``). Its char
 using FinancialFFT, FinancialMonteCarlo, FinancialToolbox, ForwardDiff, LinearAlgebra
 
 S0, r, d = 100.0, 0.02, 0.01
+und = Underlying(S0, d)
 zero_rate = ZeroRate(r)
 maturities = [0.25, 0.5, 1.0, 2.0]
 strikes = collect(70.0:5.0:130.0)
@@ -73,8 +74,8 @@ quote_K = repeat(strikes, length(maturities))
 quote_call = quote_K .>= forward.(quote_T)
 
 method = CosMethod(2^9)
-heston(p) = HestonProcess(p[1], p[2], zero(p[1]), p[3], p[4], p[5], Underlying(S0, d))
-model_prices(p) = reduce(vcat, pricer.(heston(p), zero_rate, method, smiles))
+heston(p) = HestonProcess(p[1], p[2], zero(p[1]), p[3], p[4], p[5])
+model_prices(p) = reduce(vcat, pricer.(heston(p), und, zero_rate, method, smiles))
 implied_vols(prices) = blsimpv.(S0, quote_K, r, quote_T, prices, d, quote_call)
 
 p_market = [0.5, 0.2, 1.5, -0.7, 0.04]

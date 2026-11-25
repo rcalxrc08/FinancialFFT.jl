@@ -8,7 +8,7 @@ enzyme_payoff(::Val{:european}, T, K, iscall) = EuropeanOption(T, K, iscall)
 enzyme_payoff(::Val{:binary}, T, K, iscall) = BinaryEuropeanOption(T, K, iscall)
 enzyme_payoff(::Val{:european_smile}, T, K, iscall) = FinancialMonteCarlo.EuropeanOptionSmile(T, [K], [iscall])
 enzyme_payoff(::Val{:binary_smile}, T, K, iscall) = FinancialMonteCarlo.BinaryEuropeanOptionSmile(T, [K], [iscall])
-enzyme_bs_pricer(method, kind::Val, iscall) = x -> first(pricer(BlackScholesProcess(x[5], Underlying(x[1], x[6])), ZeroRate(x[3]), method, enzyme_payoff(kind, x[4], x[2], iscall)))
+enzyme_bs_pricer(method, kind::Val, iscall) = x -> first(pricer(BlackScholesProcess(x[5]), Underlying(x[1], x[6]), ZeroRate(x[3]), method, enzyme_payoff(kind, x[4], x[2], iscall)))
 
 @testset "Enzyme" begin
     args = bs_args()
@@ -24,8 +24,8 @@ enzyme_bs_pricer(method, kind::Val, iscall) = x -> first(pricer(BlackScholesProc
     # Scores of the densities, at a point and at an array of points, against ForwardDiff.
     y = collect(range(-0.5, 0.5, length = 11))
     @testset "$(nameof(typeof(method))) $task $mode_name" for method in (FFTDensityInverter(), CosDensityMethod()), task in ("f(y)", "density_values"), (mode_name, mode) in ("Forward" => Enzyme.Forward, "Reverse" => Enzyme.Reverse)
-        merton(s) = MertonProcess(s[1], 5.0, 0.03, 0.02, Underlying(100.0, 0.01))
-        score = task == "f(y)" ? (s -> log(density(merton(s), ZeroRate(0.02), method, 1.0)(0.1))) : (s -> sum(log.(FinancialFFT.density_values(density(merton(s), ZeroRate(0.02), method, 1.0), y))))
+        merton(s) = MertonProcess(s[1], 5.0, 0.03, 0.02)
+        score = task == "f(y)" ? (s -> log(density(merton(s), Underlying(100.0, 0.01), ZeroRate(0.02), method, 1.0)(0.1))) : (s -> sum(log.(FinancialFFT.density_values(density(merton(s), Underlying(100.0, 0.01), ZeroRate(0.02), method, 1.0), y))))
         @test only(Enzyme.gradient(mode, Const(score), [0.2])) ≈ ForwardDiff.gradient(score, [0.2]) rtol = 1e-10
     end
 end
