@@ -73,17 +73,17 @@ underlying=Underlying(S0,d); #Underlying relative data
 #Define The Option
 EU_payoff=EuropeanOption(T,K)
 #Define the Model
-Model=BlackScholesProcess(σ,underlying);
+Model=BlackScholesProcess(σ);
 
 #Price
-@show EuPrice=pricer(Model,zeroRate,method_cm,EU_payoff);
+@show EuPrice=pricer(Model,underlying,zeroRate,method_cm,EU_payoff);
 ```
 
 ## Execution modes
 The execution mode is part of the method, as in FinancialMonteCarlo.jl (`mode` keyword of every constructor, default `SerialMode()`); with CUDA.jl loaded the same call runs on the GPU:
 ```julia
 using CUDA
-pricer(Model, zeroRate, CarrMadanMethod(A, N; mode = FinancialMonteCarlo.CudaMode()), EU_payoff)
+pricer(Model, underlying, zeroRate, CarrMadanMethod(A, N; mode = FinancialMonteCarlo.CudaMode()), EU_payoff)
 ```
 `FinancialMonteCarlo.with_mode(method, mode)` gives a copy of a method in another mode.
 

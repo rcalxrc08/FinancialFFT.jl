@@ -25,7 +25,7 @@ and `test/black_scholes_test.jl`.
 
 ## Verify (Kaimon)
 
-Setup: `using FinancialFFT, FinancialMonteCarlo`; `bs = BlackScholesProcess(0.2, Underlying(100.0, 0.0))`.
+Setup: `using FinancialFFT, FinancialMonteCarlo`; `bs = BlackScholesProcess(0.2)`.
 
 | Check | Expect |
 |:--|:--|

@@ -50,9 +50,8 @@ end
 const S0, r, d = 100.0, 0.02, 0.01
 const und = Underlying(S0, d)
 const zero_rate = ZeroRate(r)
-underlying() = Underlying(S0, d)
 # Parameters chosen for visibly different shapes, not calibrated to a market.
-showcase_models() = ["Black Scholes" => BlackScholesProcess(0.2, underlying()), "Merton" => MertonProcess(0.15, 0.5, -0.1, 0.15, underlying()), "Kou" => KouProcess(0.15, 1.0, 0.3, 20.0, 10.0, underlying()), "Variance Gamma" => VarianceGammaProcess(0.2, -0.15, 0.2, underlying()), "NIG" => NormalInverseGaussianProcess(0.15, -0.3, 0.5, underlying()), "Heston" => HestonProcess(0.4, 0.2, 0.0, 1.5, -0.7, 0.04, underlying())]
+showcase_models() = ["Black Scholes" => BlackScholesProcess(0.2), "Merton" => MertonProcess(0.15, 0.5, -0.1, 0.15), "Kou" => KouProcess(0.15, 1.0, 0.3, 20.0, 10.0), "Variance Gamma" => VarianceGammaProcess(0.2, -0.15, 0.2), "NIG" => NormalInverseGaussianProcess(0.15, -0.3, 0.5), "Heston" => HestonProcess(0.4, 0.2, 0.0, 1.5, -0.7, 0.04)]
 
 # Implied volatility smiles: one CosMethod smile per model, inverted with blsimpv.
 function smiles_figure(theme)
@@ -74,7 +73,7 @@ end
 # Absolute error against the formula of Black and Scholes, as a function of the number of evaluations of the
 # characteristic exponent.
 function convergence_figure(theme)
-    model = BlackScholesProcess(0.2, underlying())
+    model = BlackScholesProcess(0.2)
     T, K = 1.0, 105.0
     option = EuropeanOption(T, K)
     exact = blsprice(S0, K, r, T, 0.2, d)
@@ -120,7 +119,7 @@ end
 function scores_figure(theme)
     T = 1.0
     y = range(-0.8, 0.6, length = 401)
-    models = ["Black Scholes" => σ -> BlackScholesProcess(σ, underlying()), "Merton" => σ -> MertonProcess(σ, 0.5, -0.1, 0.15, underlying()), "Heston (σ₀)" => σ -> HestonProcess(0.4, σ, 0.0, 1.5, -0.7, 0.04, underlying())]
+    models = ["Black Scholes" => σ -> BlackScholesProcess(σ), "Merton" => σ -> MertonProcess(σ, 0.5, -0.1, 0.15), "Heston (σ₀)" => σ -> HestonProcess(0.4, σ, 0.0, 1.5, -0.7, 0.04)]
     σ = 0.2
     p = base_plot(theme; title = "Score ∂σ log f(y) at T = 1, ForwardDiff through FFTDensityInverter()", xlabel = "log-return", ylabel = "score", legend = :outerright, size = (900, 430))
     for (j, (name, model)) in enumerate(models)

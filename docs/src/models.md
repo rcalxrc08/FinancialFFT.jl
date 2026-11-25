@@ -17,8 +17,8 @@
 ```
 ## Supported processes
 
-Every process is defined in FinancialMonteCarlo.jl and wraps an `Underlying(S0, d)` holding the spot
-and the dividend yield.
+Every process is defined in FinancialMonteCarlo.jl and holds only its parameters: the spot and the dividend yield
+are an `Underlying(S0, d)`, passed to `pricer` and `density` right after the model.
 
 | Process | Constructor |
 |:--|:--|

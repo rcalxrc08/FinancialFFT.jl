@@ -1,5 +1,11 @@
 # FinancialFFT.jl release notes
 
+## 0.8.1 (2026-11-25)
+
+- 0.8.0 committed a `[sources]` path to a local FinancialMonteCarlo in `Project.toml`, which broke CI (installs from a
+  registry were not affected); removed. The README, the docs figures and the docs text still built the models with an
+  underlying; converted to FinancialMonteCarlo 0.10.
+
 ## 0.8.0 (2026-11-25)
 
 ### Breaking
