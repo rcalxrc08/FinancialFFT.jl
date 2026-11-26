@@ -21,6 +21,7 @@ FinancialFFT = {path = ".."}
 Aqua = "0.8"
 DualNumbers = "0.5, 0.6"
 Enzyme = "0.13"
+FinancialFFT = "0.8"
 FinancialMonteCarlo = "0.10"
 FinancialToolbox = "0.7, 0.8"
 ForwardDiff = "0.10, 1"
