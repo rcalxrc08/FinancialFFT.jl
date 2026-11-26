@@ -23,8 +23,8 @@ reference.)
 
 ## Quadratures and accuracy floors (#88)
 
-Every quadrature has a comment naming the rule and its order: Simpson in Carr-Madan and Carr-Madan-Lewis (an even
-number of nodes, the last panel not closed), Simpson on `M` intervals in the density pricers
+Every quadrature has a comment naming the rule and its order: the trapezoidal rule in Carr-Madan and Carr-Madan-Lewis
+(half weight at `v = 0`, Simpson until #104), Simpson on `M` intervals in the density pricers
 (`density_integral_price`), the rectangle rule of Lewis, the trapezoidal rule behind the FFT density, the trapezoidal
 rule in `log v` of `fft_parameters.jl`; COS has none. The floors of the convergence figure are not from the Fourier
 quadrature: Simpson with the default `M = 2^10` limits the density pricers to ~5e-10 (O(M⁻⁴)), and the fixed
@@ -38,7 +38,7 @@ Quadrature weights come from PatternVectors.
 - The binary call is minus the strike derivative of the call: `α + iv` leaves the denominator, and the price is divided
   by `K`.
 - Both Carr-Madan kernels transform `w .* exp.(ψ(…) .+ v_im .* c)` (#45): the factors that do not depend on the model
-  (signs `(-1)^j`, Simpson weights, `dx/3`, the inverse of the denominator with one real division, `inv_denominator`)
+  (signs `(-1)^j`, trapezoidal weights, `dx/2`, the inverse of the denominator with one real division, `inv_denominator`)
   are floats even when the exponent is a dual, the drift is a phase in the exponent, and the real constant of the
   exponent (`-(1 + α) corr`, `correction / 2`) leaves the FFT for the scalar factor of the prices.
 - Carr-Madan computes the weights in a loop of their own (`carr_madan_weights`, inside `@ignore_derivatives`), which
@@ -62,11 +62,14 @@ derivative of the Lewis formula: one kernel, with `lewis_denominator` and `carr_
   Λ₆ of the six-point stencil at t = 1/2), trapezoid in log v (PatternVectors weights 1, 2, …, 2, 1 times `du / 2`,
   #95: no grid of the `fft_parameters` suite moved), `≤ ε/2`, bisection for `A_min`; measured it binds the
   error, not the truncation, which this weight bounds too.
-- Aliasing: Simpson's weights are the trapezoidal ones times `1 - (-1)^j/3`, so besides the Poisson copies at `2b` there
-  are copies at `±b` (half period = half-width of the strike grid) with weight `-1/3`, almost independent of `k`
-  (checked numerically); each side `≤ ε/4`, from closed forms (`G ≤ F0`, `≤ e^{-rT}`, `≤ K e^{-rT}`) or a Chernoff
+- Aliasing (#104): the trapezoidal rule (weight 1/2 at `v = 0`, the integrand is even) has only the Poisson copies at
+  the multiples of `2b` (period of the strike grid), weight 1; the bound takes weight 2 on the copies at `±2b`
+  (covering the rest) and `b_min = D_min / 2`. Simpson's weights, before, added copies at `±b` with weight `-1/3` and
+  needed `b_min = D_min`: one more power of two, measured on six models (#104). Each side `≤ ε/4`, from closed forms (`G ≤ F0`, `≤ e^{-rT}`, `≤ K e^{-rT}`) or a Chernoff
   bound (`AliasingExponent`, minimised with `chernoff_optimum`, shared with the COS range).
-- Then `Npow = ceil(log2(A_min b_min / π))`, `A = π 2^Npow / b_min`. Measured errors are 0.25-0.57 ε on six models.
+- Then `Npow = ceil(log2(A_min b_min / π))`, `A = π 2^Npow / b_min`. Measured errors 0.13-0.31 ε on six models, both
+  methods, T ∈ {0.1, 1}, ε ∈ {1e-6, 1e-9}, vanilla and binary (2026-11-26, #104; Simpson: 0.25-0.57 ε with one more
+  power of two in most cases).
 - `LewisMethod(ε; N_max = 2^20 + 1)` (#48): `QuadratureGrid(A, N)` / `QuadratureTolerance(ε, N_max)` in the `grid` field
   (`lewis.jl`), `quadrature_grid` resolves them (inactive for Enzyme). Truncation: the same modulus and scale as
   Carr-Madan-Lewis (`lewis_error_setup`, the Lewis integrand on `1/2 + iv`), `truncation_frequency_bound` (no interpolation: the tail
@@ -78,7 +81,6 @@ derivative of the Lewis formula: one kernel, with `lewis_denominator` and `carr_
   `LewisMethod(600, 20000)` (2.4 ms), choosing the grid 93 μs (270 μs with the bisection of Carr-Madan, 30 sums of 2048
   terms; the modulus itself 45 μs); the low-variance Heston of #48 gets A = 2278
   (Heston's exponent decays only exponentially in v, slowly with a small variance).
-- Simpson vs trapezoid for the Carr-Madan methods: #104 (trapezoid reaches the same accuracy with half the nodes).
 - Open: #48 for COS (and the densities).
 
 ## Lewis (`lewis.jl`)

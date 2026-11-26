@@ -3,11 +3,11 @@
 # - interpolation and truncation: the FFT samples (1/π) Re ∫₀^A exp(-ivk) ψ(v) dv; six-point Lagrange interpolation errs on
 #   exp(-ivk) by at most min(L₆ (v dk)⁶, 1 + Λ₆), and the truncation drops the v > A, so both are bounded by
 #   E(A) = scale / π ∫₀^∞ |ψ(v)| w(v dk) dv, with w = 1 beyond A. E decreases with A: A_min solves E(A) = ε / 2.
-# - aliasing: by Poisson's formula the trapezoidal rule adds the copies of the transformed function at the multiples of
-#   2b, and the Simpson weights, the trapezoidal ones times 1 - (-1)^j / 3, the copies at the odd multiples of b with weight
-#   -1/3. The copies at ±b give an error (1/3) exp(γ s) G(k + s), s = ±b, with G a price (call, binary, or the forward
-#   minus the call) and γ its damping in the transform: each side gets ε / 4, from a closed form or from a Chernoff bound
-#   on G, which gives b_min.
+# - aliasing: by Poisson's formula the trapezoidal rule (#104) adds the copies of the transformed function at the multiples
+#   of the period 2b. The copies at ±2b give an error exp(γ s) G(k + s), s = ±2b, with G a price (call, binary, or the
+#   forward minus the call) and γ its damping in the transform; weight 2 on them covers the further copies. Each side gets
+#   ε / 4, from a closed form or from a Chernoff bound on G: the distance D_min, and b_min = D_min / 2. (Simpson's weights,
+#   used before #104, added copies at ±b with weight 1/3, so b had to reach the distance itself: one more power of two.)
 # Then N = 2^Npow >= A_min b_min / π, and A = π N / b_min: the spare nodes go to A, which reduces the first error.
 
 # Every quantity is in the float type FT of the model, the rates and the payoff (float_type), so that the parameters of a
@@ -116,9 +116,10 @@ function fft_grid(grid::FFTTolerance, method::CarrMadanMethod, model, und, zero_
     modulus(v) = v_value_mod(exp(real_mod(FinancialFFT.characteristic_exponent_i(v * im + 1 + α_d, model, T)) - (1 + α_d) * corr) / sqrt(den(α_d^2 + v^2) * ((1 + α_d)^2 + v^2)))
     # the price is F0 exp(-α (k - drift)) times the damped call, divided by K for a binary
     scale, P, c, γ = opt isa BinaryPayoff ? (F0 * exp(-α_d * (k_min - drift)) / K_min, exp(-rT), zero(FT), 1 + α_d) : (F0 * exp(-α_d * (k_min - drift)), F0, one(FT), α_d)
-    log_epss = log(3 * ε / 4 / P)
-    # copy at -b: G <= P; copy at +b: Chernoff
-    b_min = max(-log_epss / γ, aliasing_chernoff_bound(model, T, c, γ, k_min, drift, corr, log_epss))
+    # weight 2 on the copies at ±2b
+    log_epss = log(ε / 8 / P)
+    # copy at -2b: G <= P; copy at +2b: Chernoff
+    b_min = max(-log_epss / γ, aliasing_chernoff_bound(model, T, c, γ, k_min, drift, corr, log_epss)) / 2
     return fft_grid_parameters(interpolation_frequency_bound(modulus, scale, ε / 2, ε), b_min, grid.Npow_max, ε)
 end
 
@@ -150,9 +151,9 @@ function lewis_aliasing_distance(setup, model, opt, w)
     return 2 * log(4 * w * max(F0, K_max * exp(-rT)) / ε)
 end
 
-# The grid of CarrMadanLewisMethod(ε): Simpson's copies at ±b, weight 1/3.
+# The grid of CarrMadanLewisMethod(ε): trapezoidal copies at ±2b, weight 2 (covering the further ones).
 function fft_grid(grid::FFTTolerance, ::CarrMadanLewisMethod, model, und, zero_rate, opt)
     setup = lewis_error_setup(model, und, zero_rate, opt, grid.ε)
-    b_min = lewis_aliasing_distance(setup, model, opt, one(setup.FT) / 3)
+    b_min = lewis_aliasing_distance(setup, model, opt, 2 * one(setup.FT)) / 2
     return fft_grid_parameters(interpolation_frequency_bound(setup.modulus, setup.scale, setup.ε / 2, setup.ε), b_min, grid.Npow_max, setup.ε)
 end

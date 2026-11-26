@@ -64,7 +64,7 @@ function quadrature_grid(grid::QuadratureTolerance, ::LewisMethod, model, und, z
     setup = lewis_error_setup(model, und, zero_rate, opt, grid.ε)
     A_min = truncation_frequency_bound(setup.modulus, setup.scale, setup.ε / 2, setup.ε)
     # The rule is trapezoidal (weight 1 on every node), so its copies sit at the multiples of L = 2π / h, h = 2A / (N - 1),
-    # with weight 1, and none at half the period as for Simpson's rule. Weight 2 on the first copy covers the others: for
+    # with weight 1, as for the Carr-Madan methods (#104). Weight 2 on the first copy covers the others: for
     # a vanilla option they decrease geometrically, by exp(-L / 2) < 1/2.
     L_min = lewis_aliasing_distance(setup, model, opt, 2 * one(setup.FT))
     # constants for differentiation (ReverseDiff and Mooncake do not honor @ignore_derivatives), before the integer conversion

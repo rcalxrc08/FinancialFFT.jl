@@ -22,7 +22,7 @@ fft_grid(grid::FFTGrid, method, mcProcess, und, zero_rate, opt) = (grid.A, grid.
     CarrMadanMethod(A, Npow, α = 0.75; mode = SerialMode())
     CarrMadanMethod(ε; α = 0.75, Npow_max = 23, mode = SerialMode())
 
-Carr–Madan (1999) FFT method. The damped call transform is integrated with Simpson weights
+Carr–Madan (1999) FFT method. The damped call transform is integrated with the trapezoidal rule
 on the frequency grid `v ∈ [0, A)` with `2^Npow` nodes, a single FFT returns call prices on a
 log-strike grid, and prices at the requested strikes are interpolated on it with six-point Lagrange polynomials.
 Supports `EuropeanOption`, `BinaryEuropeanOption` and their smiles.
@@ -64,19 +64,23 @@ carr_madan_call(price, ::VanillaPayoff) = price
 carr_madan_call(price, opt::BinaryPayoff) = @. price / opt.K
 # 1 / z as conj(z) / |z|², with one real division: z is a denominator of the transforms, far from 0 and from overflow.
 inv_denominator(z) = conj(z) * inv(abs2(z))
-# Quadrature: Simpson's rule on the nodes v_j = j dx, weights (1, 4, 2, 4, …, 4, 2, 1) dx / 3 (2^Npow nodes, an even number:
-# the last panel is not closed as Simpson's, harmless where the integrand has decayed), error O(dx⁴) on the
-# transform. It is not what limits the prices: the log-strike step 2π / A, fixed by A whatever Npow, sets the error of the
+# Quadrature: the trapezoidal rule on the nodes v_j = j dx, weights (1/2, 1, 1, …) dx (the end weight 1/2 at A is dropped,
+# where the integrand has decayed). The real part of the integrand is even in v, so this is the trapezoidal rule on the
+# whole line, which for an integrand analytic in a strip and decayed at A errs only by aliasing: copies of the price at the
+# multiples of the period 2b = 2π / dx of the strike grid, decreasing exponentially in b. Simpson's weights, which this
+# replaced (#104), are (4 T_dx - T_2dx) / 3 and add copies at the odd multiples of b with weight -1/3: they needed one
+# more power of two for the same accuracy (measured on six models, #104). Neither rule is what limits the prices at a
+# fixed A: the log-strike step 2π / A sets the error of the 6-point interpolation in the strike (#88). It is not what limits the prices: the log-strike step 2π / A, fixed by A whatever Npow, sets the error of the
 # 6-point interpolation in the strike (#88).
-# The constant weights of the Carr-Madan transform on the nodes v: signs (-1)^j, Simpson weights, dx / 3 and
+# The constant weights of the Carr-Madan transform on the nodes v: signs (-1)^j, trapezoidal weights, dx / 2 and
 # 1 / ((α + iv) (1 + α + iv)), with α + iv dropped by den = one for a binary. In a loop of their own, which vectorises:
 # faster, as measured, than computing them in the broadcast of the exponential.
 function carr_madan_weights(v, alfa, dx, den)
     N = length(v)
     one_minus_one = PatternVector(N, EvenOddPattern(Int8(1), Int8(-1)))
-    simpson = PatternVector(N, PaddedEvenOddPattern(Int8(1), Int8(4), Int8(2), Int8(1)))
-    dx_3 = dx / 3
-    return @. one_minus_one * simpson * dx_3 * inv_denominator(den(v * im + alfa) * (alfa + 1 + v * im))
+    trapezoid = PatternVector(N, InitialValuePattern(Int8(1), Int8(2)))
+    dx_2 = dx / 2
+    return @. one_minus_one * trapezoid * dx_2 * inv_denominator(den(v * im + alfa) * (alfa + 1 + v * im))
 end
 
 function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::CarrMadanMethod, opt_::FourierPayoff)
@@ -104,7 +108,7 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteC
     alfa = ChainRulesCore.@ignore_derivatives carr_madan_damping(mcProcess, T, to_float_type(FT, method.α))
     # transform of exp(α k) C(k): E[exp((1 + α + iv) X)] / ((α + iv) (1 + α + iv)), i.e. the exponent evaluated in
     # 1 + α + iv. The factors that do not depend on the model are constant weights (the signs (-1)^j that centre the strike
-    # grid, the Simpson weights, dx / 3, the inverse of the denominator with one real division), on floats even when the
+    # grid, the trapezoidal weights, dx / 2, the inverse of the denominator with one real division), on floats even when the
     # exponent is a dual.
     weights = ChainRulesCore.@ignore_derivatives carr_madan_weights(v, alfa, dx, carr_madan_factor(opt))
     # exponent ψ(1 + α + iv) - (1 + α + iv) corr + i v drift: its real constant -(1 + α) corr leaves the FFT (which is

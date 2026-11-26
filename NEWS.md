@@ -1,5 +1,12 @@
 # FinancialFFT.jl release notes
 
+## Unreleased
+
+- `CarrMadanMethod` and `CarrMadanLewisMethod` integrate with the trapezoidal rule (half weight at `v = 0`) instead of
+  Simpson's (#104): the integrand is even and has decayed at `A`, so the rule errs only by aliasing at the period `2b`,
+  while Simpson's added copies at half the period. Same accuracy with half the nodes; with a tolerance, `Npow` is one
+  smaller in most cases (errors 0.13-0.31 ε measured). Prices with given `(A, Npow)` change, towards the exact ones.
+
 ## 0.9.0 (2026-11-26)
 
 ### Breaking

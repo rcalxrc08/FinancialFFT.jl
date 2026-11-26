@@ -83,16 +83,17 @@
         @test first(FinancialFFT.quadrature_grid(method.grid, method, model, und0, zr0, opt)) > 2000
         @test maximum(abs.(pricer(model, und0, zr0, method, opt) .- pricer(model, und0, zr0, CosMethod(2^14), opt))) < 1e-8
     end
-    # The aliasing bound rests on this: Simpson's weights are the trapezoidal ones times 1 - (-1)^j / 3, so besides the
-    # copies of the damped call at the multiples of 2b (b = π 2^Npow / A, the half-width of the strike grid) there are
-    # copies at the odd multiples of b with weight -1/3. A small b makes them dominate the error, which they predict up to
-    # the interpolation error.
-    @testset "Simpson copies at half the period" begin
-        sigma, T, α, A, Npow = 0.2, 1.0, 0.75, 100.0, 8
+    # The aliasing bound rests on this: the trapezoidal weights (#104) add copies of the damped call at the multiples of 2b
+    # (b = π 2^Npow / A, the half-width of the strike grid), with weight 1, and none at the odd multiples of b, which
+    # Simpson's weights added with weight -1/3. A small b makes them dominate the error, which they predict up to the
+    # interpolation error.
+    @testset "trapezoidal copies at the period" begin
+        # b = 4.02; A = 200 keeps the interpolation error of the copies (which vary fast in k) at 4e-7 (3e-5 at A = 100)
+        sigma, T, α, A, Npow = 0.2, 1.0, 0.75, 200.0, 8
         model = BlackScholesProcess(sigma)
         b = π * 2^Npow / A
         call(k) = blsprice(S0, S0 * exp(k), r, T, sigma, d)
-        copies(k) = sum(exp(α * 2b * m) * call(k + 2b * m) for m = -6:6 if m != 0) - sum(exp(α * (2m - 1) * b) * call(k + (2m - 1) * b) for m = -6:6) / 3
+        copies(k) = sum(exp(α * 2b * m) * call(k + 2b * m) for m = -6:6 if m != 0)
         ks = collect(range(-0.6b, 0.6b, length = 13))
         opt = FinancialMonteCarlo.EuropeanOptionSmile(T, S0 .* exp.(ks), fill(true, length(ks)))
         error = pricer(model, und, zero_rate, CarrMadanMethod(A, Npow, α), opt) .- call.(ks)

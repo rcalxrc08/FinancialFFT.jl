@@ -167,8 +167,8 @@ spaced nodes of `[-A, A]`, and it has two errors, each set by the characteristic
   log-strike distances that are multiples of `2π / h`. For vanilla options they are bounded in closed form, without the
   model (prices are below the forward and the discounted strike); for binaries one side needs a
   [Chernoff bound](#Chernoff-bounds), which uses `φ` on the imaginary axis, i.e. the exponential moments `E[exp(p X_T)]`.
-  Each side gets `ε / 4`. The weights are trapezoidal, not Simpson's: on an integrand that has decayed at `±A` the
-  trapezoidal rule converges geometrically, and Simpson's would add copies at half the period (see below).
+  Each side gets `ε / 4`. The weights are trapezoidal, as in the Carr-Madan methods: on an integrand that has decayed at
+  `±A` the trapezoidal rule converges geometrically, and Simpson's would add copies at half the period.
 
 On these Black–Scholes smiles the error is about half of `ε`, with some hundreds of nodes instead of the
 `LewisMethod(600.0, 20000)` of the examples:
@@ -189,13 +189,14 @@ FFT methods:
 - **Interpolation and truncation:** the FFT samples the integral up to the frequency `A` on a strike grid of step
   `2π / A`, and the six-point Lagrange interpolation errs on a frequency `v` by at most `L₆ (2π v / A)⁶`. Weighting the
   modulus of the integrand with this error (with a cap, and with 1 beyond `A`) gives a bound decreasing in `A`, solved for `A`.
-- **Aliasing:** the result is periodic in the log-strike. Simpson's weights also add copies at half the period, which
-  is the half-width `b = π 2^Npow / A` of the strike grid, so `b` must reach the distance at which the damped price is below
-  `ε`. It is a closed form on one side, and on the other, where the price can have a heavy tail, a [Chernoff bound](#Chernoff-bounds) minimised
+- **Aliasing:** the result is periodic in the log-strike, with period `2b`, twice the half-width `b = π 2^Npow / A` of
+  the strike grid: the trapezoidal rule adds copies of the damped price at `±2b`, so `2b` must reach the distance at which
+  the damped price is below `ε`. (Simpson's weights, used up to 0.9.0, also added copies at `±b`, which needed one more
+  power of two for the same accuracy.) It is a closed form on one side, and on the other, where the price can have a heavy tail, a [Chernoff bound](#Chernoff-bounds) minimised
   as for the range of `CosMethod`.
 
 `2^Npow` is the smallest power of two with both, and the spare nodes go to `A`. The bounds are model-free apart from the
-characteristic function, and their error is typically a quarter to a half of `ε`:
+characteristic function, and their error is typically a tenth to a third of `ε`:
 
 ```@example methods
 maximum(abs.(pricer(model, und, zero_rate, CarrMadanMethod(1e-8), smile) .- blsprice.(S0, smile.K, r, T, σ, d)))
