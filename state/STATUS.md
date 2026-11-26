@@ -1,7 +1,7 @@
 # Status
 
 _What is in flight. Layer 4: volatile, rewritten freely; GitHub issues are the source of truth for tasks, this file is
-the index an agent reads first._ Updated: 2026-11-25
+the index an agent reads first._ Updated: 2026-11-26
 
 ## Current focus
 
@@ -9,7 +9,8 @@ the index an agent reads first._ Updated: 2026-11-25
 `pricer(model, underlying, zero_rate, method, payoff)` and `density(model, underlying, zero_rate, method, T)`
 (FinancialMonteCarlo#72); also #74, #78, #100 and Mooncake on the GPU (#63). VibratoMonteCarlo 0.7 and FinancialCalibrator
 0.3 take it. 0.8.1: the local `[sources]` path committed in 0.8.0 removed (CI), README and docs converted. Open: #101
-(Kou Chernoff range with rare up jumps), #102 (the calibration page's Levenberg–Marquardt stops on a damped step).
+(Kou Chernoff range with rare up jumps). #102 done on `master` (2026-11-26): the calibration page's Levenberg–Marquardt
+stops on the gradient and accepts a step within the rounding of the loss that halves the gradient.
 
 0.7.0 released 2026-11-22 (localregistry, tag `v0.7.0`; #95, #72, #89, #93, #51, #40; breaking #89, #93, `NEWS.md`);
 VibratoMonteCarlo and FinancialCalibrator take it. On `master` since, for the next release (`NEWS.md`, Unreleased): #74,

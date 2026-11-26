@@ -1,5 +1,12 @@
 # FinancialFFT.jl release notes
 
+## Unreleased
+
+- Docs, calibration page (#102): the Levenberg–Marquardt loop stops on the gradient (`norm(Jᵀe) < 1e-12`) instead of
+  a damped step, and accepts a step that leaves the loss within its rounding if it halves the gradient; it reaches the
+  stationary point in 6 steps instead of stopping 2e-8 from it after 18 rejected steps.
+- `test/Project.toml`: compat entry for FinancialFFT itself.
+
 ## 0.8.1 (2026-11-25)
 
 - 0.8.0 committed a `[sources]` path to a local FinancialMonteCarlo in `Project.toml`, which broke CI (installs from a

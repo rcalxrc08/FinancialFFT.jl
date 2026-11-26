@@ -120,26 +120,36 @@ increase the loss. Levenberg and Marquardt add a damping ``\mu > 0``:
 For ``\mu \to 0`` the step is the Gauss–Newton one; for a large ``\mu`` it is a short step along the gradient
 ``-J^\top e`` of the loss, scaled by ``D`` (Marquardt's choice, which makes the step independent of the units of the
 parameters), and decreases the loss. ``\mu`` is adapted: divided after a step that decreases the loss, which is
-accepted, and multiplied after one that does not, which is rejected. From a starting point far from the quotes the
-method converges in fewer than 20 iterations, each a Jacobian and a pricing.
+accepted, and multiplied after one that does not, which is rejected.
+
+The method stops where the gradient ``J^\top e`` vanishes, not on a short step: with a large ``\mu`` a step is short
+because of the damping, wherever it starts. Near the optimum the loss cannot tell the last steps apart: the
+decrease a Gauss–Newton step promises there (about ``10^{-18}``) is far below the rounding of the loss (about
+``10^{-16}``, from implied volatilities inverted to about ``10^{-13}``), so a test on the loss alone rejects every
+step and stops up to ``10^{-8}`` from the optimum along the weakest direction (see below). The gradient is resolved
+far better, so a step that leaves the loss within its rounding is accepted if it halves the gradient. From a starting
+point far from the quotes the method converges in 6 steps, each a pricing and a Jacobian.
 
 ```@example calibration
 to_p(x) = [exp(x[1]), exp(x[2]), exp(x[3]), tanh(x[4]), exp(x[5])]
 to_x(p) = [log(p[1]), log(p[2]), log(p[3]), atanh(p[4]), log(p[5])]
 vol_errors(x, v) = implied_vols(model_prices(to_p(x))) .- v
+jacobian(x, v) = ForwardDiff.jacobian(t -> vol_errors(t, v), x)
 function calibrate(v; x = to_x([0.3, 0.25, 1.0, -0.3, 0.06]), μ = 1e-2, iterations = 100)
-    e = vol_errors(x, v)
+    e, J = vol_errors(x, v), jacobian(x, v)
     for _ in 1:iterations
-        J = ForwardDiff.jacobian(t -> vol_errors(t, v), x)
-        A = Array(transpose(J) * J)   # the 5 × 5 system on the CPU, also when J is on the GPU
-        δ = -(A + μ * Diagonal(diag(A))) \ Array(transpose(J) * e)
-        e_new = vol_errors(x + δ, v)
-        if sum(abs2, e_new) < sum(abs2, e)
-            x, e, μ = x + δ, e_new, μ / 3   # accepted: closer to Gauss-Newton
-            norm(δ) < 1e-12 && break        # converged
+        g = Array(transpose(J) * e)     # the gradient of the loss
+        norm(g) < 1e-12 && break        # converged: a stationary point
+        A = Array(transpose(J) * J)     # the 5 × 5 system on the CPU, also when J is on the GPU
+        δ = -(A + μ * Diagonal(diag(A))) \ g
+        e_new, J_new = vol_errors(x + δ, v), jacobian(x + δ, v)
+        S, S_new = sum(abs2, e), sum(abs2, e_new)
+        # a lower loss, or one within its rounding and half the gradient
+        if S_new < S || (S_new < (1 + sqrt(eps(S))) * S && norm(transpose(J_new) * e_new) < norm(g) / 2)
+            x, e, J, μ = x + δ, e_new, J_new, μ / 3   # accepted: closer to Gauss-Newton
         else
-            μ *= 4                          # rejected: closer to gradient descent
-            μ > 1e12 && break               # no step decreases the loss: at the rounding floor
+            μ *= 4                                     # rejected: closer to gradient descent
+            μ > 1e12 && break                          # no step decreases the loss
         end
     end
     return x
@@ -228,10 +238,10 @@ gauss_newton = ∂p_∂x * (((transpose(J) * J) \ transpose(J)) ./ transpose(veg
 (implicit = ∂p_∂m[:, i], recalibrated = recalibrated, gauss_newton = gauss_newton[:, i])
 ```
 
-The implicit derivatives match the recalibration to about five digits, the accuracy of the finite difference: a
-recalibration stops at the rounding floor of the volatilities (about ``10^{-13}``), where the loss no longer decreases
-measurably, and along the weakest direction, where the loss is flattest, that leaves its solution uncertain to about
-``10^{-8}``; a smaller move of the price would magnify that, a larger one the curvature. The implicit derivatives have
+The implicit derivatives match the recalibration to about five digits, the accuracy of the central difference with a
+move of a cent (a tenth of a cent gives six). Each recalibration stops where its gradient vanishes; one that stopped
+when the loss no longer decreased measurably would leave its solution uncertain to about ``10^{-8}`` along the weakest
+direction, where the loss is flattest, and a small move of the price would magnify that. The implicit derivatives have
 neither error, and cost one Hessian instead of two calibrations per quote. When the model fits the quotes exactly the
 errors vanish, ``H = J^\top J`` and the sensitivities are the pseudo-inverse of ``J``; with the 1% noise of these quotes
 the second term moves them by about half a percent.
