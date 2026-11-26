@@ -21,6 +21,13 @@ enzyme_bs_pricer(method, kind::Val, iscall) = x -> first(pricer(BlackScholesProc
             test_within(() -> max_abs_diff(collect(only(Enzyme.gradient(mode, Const(price), args))), reference), toll.enzyme)
         end
     end
+    # LewisMethod(ε): the grid comes from quadrature_grid, inactive for Enzyme (#48)
+    @testset "LewisMethod(ε) $(kind) $mode_name" for kind in (:european, :binary), (mode_name, mode) in ("Forward" => Enzyme.Forward, "Reverse" => Enzyme.Reverse)
+        price = enzyme_bs_pricer(LewisMethod(1e-10), Val(kind), true)
+        g = analytic_bs_pricer(kind, true)
+        reference = ForwardDiff.gradient(x -> g(x...), args)
+        test_within(() -> max_abs_diff(collect(only(Enzyme.gradient(mode, Const(price), args))), reference), 1e-7)
+    end
     # Scores of the densities, at a point and at an array of points, against ForwardDiff.
     y = collect(range(-0.5, 0.5, length = 11))
     @testset "$(nameof(typeof(method))) $task $mode_name" for method in (FFTDensityInverter(), CosDensityMethod()), task in ("f(y)", "density_values"), (mode_name, mode) in ("Forward" => Enzyme.Forward, "Reverse" => Enzyme.Reverse)

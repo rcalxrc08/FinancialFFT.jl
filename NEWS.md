@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Breaking
+
+- `LewisMethod` holds its parameters in a `grid` field (`QuadratureGrid(A, N)` or `QuadratureTolerance(ε, N_max)`), as
+  the Carr-Madan methods: `method.A` and `method.N` are now `method.grid.A` and `method.grid.N`. The constructors
+  `LewisMethod(A, N; mode)` are unchanged.
+
+### New
+
+- `LewisMethod(ε; N_max = 2^20 + 1)` (#48): `A` and `N` chosen at pricing time from a price tolerance, for the model,
+  the maturity and the strikes. `A` from the tail of the modulus of the characteristic function on the line
+  `Im(u) = 1/2`, the step from the aliasing copies (closed form for vanilla options, a Chernoff bound for binaries).
+  Errors 0.23-0.6 ε measured; a Black–Scholes smile at ε = 1e-9 takes 547 nodes instead of the 20000 of
+  `LewisMethod(600, 20000)`. `FinancialFFT.quadrature_grid` returns the chosen `(A, N)` for repeated pricing.
+
+### Other
+
 - Docs, calibration page (#102): the Levenberg–Marquardt loop stops on the gradient (`norm(Jᵀe) < 1e-12`) instead of
   a damped step, and accepts a step that leaves the loss within its rounding if it halves the gradient; it reaches the
   stationary point in 6 steps instead of stopping 2e-8 from it after 18 rejected steps.

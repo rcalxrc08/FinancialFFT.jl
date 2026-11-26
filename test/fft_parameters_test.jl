@@ -1,15 +1,19 @@
-# CarrMadanMethod(ε) and CarrMadanLewisMethod(ε): A and Npow chosen at pricing time from a price tolerance (issue #41).
+# CarrMadanMethod(ε) and CarrMadanLewisMethod(ε): A and Npow chosen at pricing time from a price tolerance (issue #41);
+# LewisMethod(ε): A and N (#48).
 @testset "FFT parameters from a tolerance" begin
     S0, r, d = 100.0, 0.02, 0.01
     und = Underlying(S0, d)
     zero_rate = ZeroRate(r)
     Ks = collect(range(50.0, 200.0, length = 31))
     iscall = [isodd(i) for i in eachindex(Ks)]
-    constructors = ("CarrMadanMethod" => CarrMadanMethod, "CarrMadanLewisMethod" => CarrMadanLewisMethod)
+    constructors = ("CarrMadanMethod" => CarrMadanMethod, "CarrMadanLewisMethod" => CarrMadanLewisMethod, "LewisMethod" => LewisMethod)
+    # a node budget too small for ε = 1e-10
+    too_few_nodes = Dict("CarrMadanMethod" => (Npow_max = 8,), "CarrMadanLewisMethod" => (Npow_max = 8,), "LewisMethod" => (N_max = 101,))
     smiles(T) = (:vanilla => FinancialMonteCarlo.EuropeanOptionSmile(T, Ks, iscall), :binary => FinancialMonteCarlo.BinaryEuropeanOptionSmile(T, Ks, iscall))
     # the method with the grid that the tolerance gives for this model and payoff
     resolved(method::CarrMadanMethod, model, zr, opt; und) = CarrMadanMethod(FinancialFFT.fft_grid(method.grid, method, model, und, zr, opt)..., method.α)
     resolved(method::CarrMadanLewisMethod, model, zr, opt; und) = CarrMadanLewisMethod(FinancialFFT.fft_grid(method.grid, method, model, und, zr, opt)...)
+    resolved(method::LewisMethod, model, zr, opt; und) = LewisMethod(FinancialFFT.quadrature_grid(method.grid, method, model, und, zr, opt)...)
     @testset "Black Scholes, $name, $payoff, T = $T, ε = $ε" for (name, ctor) in constructors, T in (0.1, 2.0), ε in (1e-5, 1e-9), (payoff, opt) in smiles(T)
         sigma = 0.2
         model = BlackScholesProcess(sigma)
@@ -28,7 +32,7 @@
     end
     @testset "too many nodes, $name" for (name, ctor) in constructors
         model = BlackScholesProcess(0.2)
-        @test_throws ArgumentError pricer(model, und, zero_rate, ctor(1e-10; Npow_max = 8), EuropeanOption(1.0, 100.0))
+        @test_throws ArgumentError pricer(model, und, zero_rate, ctor(1e-10; too_few_nodes[name]...), EuropeanOption(1.0, 100.0))
     end
     # The parameters are constants: the gradients are those of the method with the same parameters, given, on every
     # back-end.
@@ -56,6 +60,28 @@
         @test eltype(prices) == Float32
         exact = payoff == :vanilla ? blsprice.(S0, Ks, r, 1.0, 0.2, d, iscall) : blsbin.(S0, Ks, r, 1.0, 0.2, d, iscall)
         @test maximum(abs.(prices .- exact)) < 1e-3
+    end
+    # LewisMethod(ε) is not wasteful: on Black Scholes its error is above ε / 10 (0.4-0.6 ε measured, 2026-11-26), and a
+    # given grid stays the given one.
+    @testset "LewisMethod(ε), error near ε, T = $T, $payoff" for T in (0.1, 2.0), (payoff, opt) in smiles(T)
+        sigma, ε = 0.2, 1e-9
+        exact = payoff == :vanilla ? blsprice.(S0, Ks, r, T, sigma, d, iscall) : blsbin.(S0, Ks, r, T, sigma, d, iscall)
+        error = maximum(abs.(pricer(BlackScholesProcess(sigma), und, zero_rate, LewisMethod(ε), opt) .- exact))
+        @test ε / 10 < error < ε
+    end
+    @test FinancialFFT.quadrature_grid(LewisMethod(600.0, 20000).grid, LewisMethod(600.0, 20000), BlackScholesProcess(0.2), und, zero_rate, EuropeanOption(1.0, 100.0)) == (600.0, 20000)
+    @test LewisMethod(1e-8) isa LewisMethod{<:FinancialFFT.QuadratureTolerance}
+    @test (@inferred pricer(BlackScholesProcess(0.2), und, zero_rate, LewisMethod(1e-8), last(smiles(1.0)[1]))) isa Vector{Float64}
+    @test_throws DomainError LewisMethod(-1e-8)
+    # A low-variance Heston (4% volatility, T = 1/6): its exponent decays slowly along the line 1/2 + iv, so the tolerance
+    # asks for A > 2000, where LewisMethod(100, 4001) was 18% off at the money (#48, FinancialCalibrator tests).
+    @testset "low-variance Heston" begin
+        model = HestonProcess(0.3, 0.04, 1.0, 0.04, -0.5, 0.04)
+        und0, zr0 = Underlying(100.0, 0.0), ZeroRate(0.0)
+        opt = FinancialMonteCarlo.EuropeanOptionSmile(1 / 6, [80.0, 100.0], [false, false])
+        method = LewisMethod(1e-8)
+        @test first(FinancialFFT.quadrature_grid(method.grid, method, model, und0, zr0, opt)) > 2000
+        @test maximum(abs.(pricer(model, und0, zr0, method, opt) .- pricer(model, und0, zr0, CosMethod(2^14), opt))) < 1e-8
     end
     # The aliasing bound rests on this: Simpson's weights are the trapezoidal ones times 1 - (-1)^j / 3, so besides the
     # copies of the damped call at the multiples of 2b (b = π 2^Npow / A, the half-width of the strike grid) there are

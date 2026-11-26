@@ -13,7 +13,7 @@ FinancialMonteCarlo.jl. All of them price every payoff and model of the package.
 <nav class="fc-toc">
 <a href="#Choosing-a-method"><b>01</b>Choosing a method</a>
 <a href="#Truncation-range"><b>02</b>Truncation range</a>
-<a href="#Carr-Madan-parameters-from-a-tolerance"><b>03</b>Carr-Madan parameters from a tolerance</a>
+<a href="#Parameters-from-a-tolerance"><b>03</b>Parameters from a tolerance</a>
 <a href="#Floating-point-types"><b>04</b>Floating-point types</a>
 <a href="#Densities"><b>05</b>Densities</a>
 </nav>
@@ -60,7 +60,7 @@ so their last bit moves with `N`, the CPU and the Julia version:
 - `CosMethod` has no range parameter: its range comes from the tails of the model (see [Truncation range](#Truncation-range)) and covers the forward of every strike. A smile shares one range, so all of its strikes reuse the same coefficients, at the price of a larger `N` when the strikes are many standard deviations apart. It expands the put and recovers the call by parity, so calls stay accurate on models with a heavy right tail. On the CPU the strikes of a smile share the phases of the characteristic function, and each strike sums the series with a Clenshaw recurrence, at the cost of one `sincos` instead of one `cos` per term: in Black Scholes with `N = 2^12`, a smile of 100 strikes costs about 3.5 times a single option, rather than about 18. On the GPU the series stays one broadcast over terms and strikes.
 - `LewisMethod` evaluates the characteristic function on the nodes in `[0, A]` only, since the integrand is even. It prices the strikes of a smile from one set of these evaluations: on the CPU each strike sums the quadrature with a Clenshaw recurrence (in Reinsch's form, which stays accurate at the money), at the cost of one `sincos` per strike instead of an `exp` and a `cos` per node, about 6 times faster for smiles of 100-500 strikes with `N = 20000`.
 - `CarrMadanLewisMethod` and `CarrMadanMethod` run one FFT for all strikes, so their cost does not grow with the number of strikes; prices between the nodes of the strike grid come from Lagrange polynomials on six nodes, of order `h⁶` in the step `h = 2π / A` of the grid, which is what limits their accuracy. The interpolant is continuous but its derivatives in the strike jump at the nodes, by about 1e-8 for `CarrMadanLewisMethod(600, 16)`.
-- `CarrMadanMethod` needs `A / 2^Npow` to be small with respect to the damping, which is capped by the exponential moments of the model. Both Carr-Madan methods can choose `A` and `Npow` from a price tolerance, see [below](#Carr-Madan-parameters-from-a-tolerance).
+- `CarrMadanMethod` needs `A / 2^Npow` to be small with respect to the damping, which is capped by the exponential moments of the model. Both Carr-Madan methods can choose `A` and `Npow` from a price tolerance, and `LewisMethod` its `A` and `N`, see [below](#Parameters-from-a-tolerance).
 - `CosDensityMethod` and `FFTDensityInverter` price with their [`density`](@ref), the cosine expansion and the FFT inversion: they need no range parameter, and the strikes of a smile share the density, so a smile costs one density and one Simpson's rule per strike. Their error is the one of Simpson's rule on `M` intervals (about `1e-9` with the default `M = 2^10`), and they are slower than `CosMethod`, which integrates the payoff exactly against the cosine expansion: their purpose is to price with the densities that other estimators use.
 
 ```@example methods
@@ -147,9 +147,40 @@ The minimum is flat: an error ``\delta`` in ``s`` changes ``t`` by ``O(\delta^2)
 ``\sqrt{\epsilon}`` gives the ends of the range to about the machine epsilon, and since every ``s`` gives a valid bound,
 an inexact search can only widen the range, never narrow it. Both tails take 4 to 26 evaluations of the characteristic
 exponent, a few microseconds, against about 110 for a bisection. The tolerance of the
-[Carr-Madan methods](#Carr-Madan-parameters-from-a-tolerance) uses the same search for its aliasing bound.
+[Carr-Madan methods](#Parameters-from-a-tolerance) uses the same search for its aliasing bound.
 
-## Carr-Madan parameters from a tolerance
+## Parameters from a tolerance
+
+### LewisMethod
+
+`LewisMethod(ε)` chooses the half-width `A` and the number of nodes `N` at pricing time, for the model, the maturity and
+the strikes of the payoff, so that the error of the prices is below `ε`. The rule is the trapezoidal one on `N` equally
+spaced nodes of `[-A, A]`, and it has two errors, each set by the characteristic function `φ` of the log-price:
+
+- **Truncation, `A`:** the integrand beyond `A` is dropped. Its modulus is `|φ(v - i/2)|`, the characteristic function on
+  the line `Im(u) = 1/2`, times the Lewis weights (`1 / (1/4 + v²)` for vanilla options). How fast it decays in `v` is how
+  smooth the density of the log-price is: like `exp(-σ² T v² / 2)` with a diffusion, only like a power of `v` for
+  Variance Gamma, exponentially for Heston, slowly when the variance is small. The tail beyond `A` is integrated
+  numerically at the parameters of the model (a quadrature in `log v` on `[1e-3, 1e6]`, an estimate rather than a
+  rigorous bound), and `A` is the smallest half-width whose tail is below `ε / 2`.
+- **Aliasing, the step `h = 2A / (N - 1)`:** by Poisson's formula the rule adds copies of the price function at
+  log-strike distances that are multiples of `2π / h`. For vanilla options they are bounded in closed form, without the
+  model (prices are below the forward and the discounted strike); for binaries one side needs a
+  [Chernoff bound](#Chernoff-bounds), which uses `φ` on the imaginary axis, i.e. the exponential moments `E[exp(p X_T)]`.
+  Each side gets `ε / 4`. The weights are trapezoidal, not Simpson's: on an integrand that has decayed at `±A` the
+  trapezoidal rule converges geometrically, and Simpson's would add copies at half the period (see below).
+
+On these Black–Scholes smiles the error is about half of `ε`, with some hundreds of nodes instead of the
+`LewisMethod(600.0, 20000)` of the examples:
+
+```@example methods
+model = BlackScholesProcess(σ)
+smile = FinancialMonteCarlo.EuropeanOptionSmile(T, collect(50.0:5.0:200.0), fill(true, 31))
+lewis = LewisMethod(1e-9)
+FinancialFFT.quadrature_grid(lewis.grid, lewis, model, und, zero_rate, smile), maximum(abs.(pricer(model, und, zero_rate, lewis, smile) .- blsprice.(S0, smile.K, r, T, σ, d)))
+```
+
+### Carr-Madan methods
 
 `CarrMadanMethod(ε)` and `CarrMadanLewisMethod(ε)` choose `A` and `Npow` at pricing time, for the model and the strikes
 of the payoff (an option or a smile), so that the error of the prices is below `ε`. They bound the three errors of the
@@ -167,14 +198,14 @@ FFT methods:
 characteristic function, and their error is typically a quarter to a half of `ε`:
 
 ```@example methods
-model = BlackScholesProcess(σ)
-smile = FinancialMonteCarlo.EuropeanOptionSmile(T, collect(50.0:5.0:200.0), fill(true, 31))
 maximum(abs.(pricer(model, und, zero_rate, CarrMadanMethod(1e-8), smile) .- blsprice.(S0, smile.K, r, T, σ, d)))
 ```
 
-The parameters are constants for differentiation. Choosing them costs about one price, at every price: when the same
-model and strikes are priced many times (a calibration), compute `A` and `Npow` once with the tolerance and pass them to
-`CarrMadanMethod(A, Npow)`.
+The parameters of all three methods are constants for differentiation. Choosing them costs about one price, at every
+price: when the same model and strikes are priced many times (a calibration), compute them once with the tolerance
+(`FinancialFFT.quadrature_grid` for Lewis, `FinancialFFT.fft_grid` for Carr-Madan) and pass them to `LewisMethod(A, N)`
+or `CarrMadanMethod(A, Npow)`. The bounds do not cover the rounding: `ε` must stay above the floating-point floor of the
+formula (about `eps() * max(S0, K)` for Lewis).
 
 ## Floating-point types
 

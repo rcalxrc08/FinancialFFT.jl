@@ -8,8 +8,8 @@ The method structs and their `pricer`s: Carr-Madan, Carr-Madan-Lewis, parameters
 |:--|:--|
 | `carrmadan.jl` | `CarrMadanMethod`, `FFTGrid`, `FFTTolerance`, `carr_madan_weights`, `carr_madan_damping`, the kernel |
 | `carrmadan_lewis.jl` | `CarrMadanLewisMethod`, `lewis_denominator`, `carr_madan_lewis_call` |
-| `fft_parameters.jl` | `fft_grid` for `FFTTolerance`: interpolation, truncation and aliasing bounds, `AliasingExponent` |
-| `lewis.jl` | `LewisMethod`, `LewisMethodResult`, `lewis_coefficients`, `lewis_amplitudes_phases`, `lw_integrate` |
+| `fft_parameters.jl` | `fft_grid` for `FFTTolerance`: interpolation, truncation and aliasing bounds, `AliasingExponent`; `lewis_error_setup`, `lewis_aliasing_distance`, `truncation_frequency_bound` for Lewis |
+| `lewis.jl` | `LewisMethod`, `QuadratureGrid`, `QuadratureTolerance`, `quadrature_grid`, `LewisMethodResult`, `lewis_coefficients`, `lewis_amplitudes_phases`, `lw_integrate` |
 | `cos.jl` | `CosMethod`, `cos_phased_series`, `cos_clenshaw` (the GPU kernel `phased_cos_sum` is in `src/03_utils/utils.jl`) |
 | `references/methods.md` | dispatch, quadratures, each method's design and measurements |
 | `references/fft_utils.md` | interpolation, Clenshaw, payoff conversions |

@@ -67,7 +67,19 @@ derivative of the Lewis formula: one kernel, with `lewis_denominator` and `carr_
   (checked numerically); each side `≤ ε/4`, from closed forms (`G ≤ F0`, `≤ e^{-rT}`, `≤ K e^{-rT}`) or a Chernoff
   bound (`AliasingExponent`, minimised with `chernoff_optimum`, shared with the COS range).
 - Then `Npow = ceil(log2(A_min b_min / π))`, `A = π 2^Npow / b_min`. Measured errors are 0.25-0.57 ε on six models.
-- Open: #48 (Lewis and COS from a tolerance).
+- `LewisMethod(ε; N_max = 2^20 + 1)` (#48): `QuadratureGrid(A, N)` / `QuadratureTolerance(ε, N_max)` in the `grid` field
+  (`lewis.jl`), `quadrature_grid` resolves them (inactive for Enzyme). Truncation: the same modulus and scale as
+  Carr-Madan-Lewis (`lewis_error_setup`, the Lewis integrand on `1/2 + iv`), `truncation_frequency_bound` (no interpolation: the tail
+  sum beyond `A`, one reverse cumulative sum over the nodes instead of the bisection of Carr-Madan), `≤ ε/2`. Aliasing: the rule is trapezoidal, copies at the multiples of `L = 2π/h` with weight
+  1 and none at half the period; `lewis_aliasing_distance` with weight 2 (the first copy covers the geometric rest),
+  `ε/4` per side, closed form for vanilla, Chernoff (γ = 1/2) on one side for binaries. `N = 2 ceil(A_min L_min / 2π) + 1`
+  (odd), `A = (N - 1) π / L_min`. Measured 2026-11-26: errors 0.23-0.6 ε on Black–Scholes and the five `model_cases`
+  (T ∈ {0.1, 1, 2}, ε ∈ {1e-5 … 1e-9}, vanilla and binary smiles); a BS smile at ε = 1e-9 takes N = 547 (60 μs) against
+  `LewisMethod(600, 20000)` (2.4 ms), choosing the grid 93 μs (270 μs with the bisection of Carr-Madan, 30 sums of 2048
+  terms; the modulus itself 45 μs); the low-variance Heston of #48 gets A = 2278
+  (Heston's exponent decays only exponentially in v, slowly with a small variance).
+- Simpson vs trapezoid for the Carr-Madan methods: #104 (trapezoid reaches the same accuracy with half the nodes).
+- Open: #48 for COS (and the densities).
 
 ## Lewis (`lewis.jl`)
 

@@ -16,7 +16,7 @@ It currently contains the following capabilities:
     - COS density (`CosDensityMethod`)
     - FFT density inversion (`FFTDensityInverter`)
 - No range parameter for COS and the densities: the truncation range comes from a Chernoff bound on the tails of the model ([theory](https://rcalxrc08.github.io/FinancialFFT.jl/methods/#Truncation-range))
-- Carr-Madan and Carr-Madan-Lewis parameters chosen from a price tolerance, `CarrMadanMethod(1e-8)` ([details](https://rcalxrc08.github.io/FinancialFFT.jl/methods/#Carr-Madan-parameters-from-a-tolerance))
+- Lewis, Carr-Madan and Carr-Madan-Lewis parameters chosen from a price tolerance, `LewisMethod(1e-8)`, `CarrMadanMethod(1e-8)` ([details](https://rcalxrc08.github.io/FinancialFFT.jl/methods/#Parameters-from-a-tolerance))
 - Densities of the log-return, for the likelihood ratio method and Vibrato (`density`):
     - FFT inversion of the characteristic function (`FFTDensityInverter`)
     - COS expansion (`CosDensityMethod`)

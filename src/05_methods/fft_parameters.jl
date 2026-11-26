@@ -43,25 +43,42 @@ end
 # Quadrature nodes of E(A): trapezoidal rule in log v (order du², weights from PatternVectors), on [1e-3, 1e6].
 fft_error_nodes(FT) = exp.(range(log(one(FT) / 1000), log(FT(10)^6), length = 2048))
 
-# The smallest A with E(A) <= ε, by bisection in log A; throws if not reached at A = 1e6 (tolerance: the one asked for,
-# for the message).
-function interpolation_frequency_bound(modulus, scale::FT, ε::FT, tolerance) where {FT}
+# The terms of E(A) = scale / π ∫ |ψ(v)| w(v) dv on the nodes u of fft_error_nodes: trapezoidal rule in log v, weights
+# du / 2 times 1, 2, …, 2, 1 (PatternVectors), and the Jacobian u of v = exp(log v).
+function frequency_error_terms(modulus, scale::FT) where {FT}
     u = fft_error_nodes(FT)
     du = log(u[2]) - log(u[1])
-    # trapezoidal weights in log v: du / 2 times 1, 2, …, 2, 1
     trapezoid = PatternVector(length(u), PaddedFillPattern(Int8(1), Int8(2), Int8(1)))
-    m = @. scale * (du / 2) * trapezoid * u * modulus(u) * invπ
+    return u, @. scale * (du / 2) * trapezoid * u * modulus(u) * invπ
+end
+frequency_bound_error(tolerance) = ArgumentError("a tolerance of $tolerance needs A > 1e6: the characteristic function decays too slowly")
+
+# Carr-Madan methods: the smallest A with E(A) <= ε, where the weight is the six-point interpolation error below A and 1
+# beyond it. E is continuous and decreasing in A, and A enters every term (through 2π v / A): bisection in log A, which
+# needs no derivative. Throws if not reached at A = 1e6 (tolerance: the one asked for, for the message).
+function interpolation_frequency_bound(modulus, scale::FT, ε::FT, tolerance) where {FT}
+    u, m = frequency_error_terms(modulus, scale)
     L6, cap = FT(lagrange_error_constant), 1 + FT(lagrange_lebesgue_constant)
     weight(θ) = θ < twoπ ? min(L6 * θ^6, cap) : one(θ)
     E(A) = sum(m[i] * weight(twoπ * u[i] / A) for i in eachindex(u))
     lo, hi = one(FT), FT(10)^6
-    E(hi) > ε && throw(ArgumentError("a tolerance of $tolerance needs A > 1e6: the characteristic function decays too slowly"))
+    E(hi) > ε && throw(frequency_bound_error(tolerance))
     # 30 halvings of [0, log 1e6] give A to a relative 1e-8
     for _ = 1:30
         mid = sqrt(lo * hi)
         E(mid) > ε ? (lo = mid) : (hi = mid)
     end
     return hi
+end
+
+# LewisMethod, which does not interpolate: the truncation only, E(A) = the sum of the terms at the nodes u >= A, a step
+# function of A. Its smallest node whose tail sum is below ε comes from one reverse cumulative sum, without a search:
+# exact at the resolution of the nodes (1% in A), and conservative (the node, not the step below it). At least 1.
+function truncation_frequency_bound(modulus, scale::FT, ε::FT, tolerance) where {FT}
+    u, m = frequency_error_terms(modulus, scale)
+    tail = reverse(cumsum(reverse(m)))
+    last(tail) > ε && throw(frequency_bound_error(tolerance))
+    return max(one(FT), u[findfirst(<=(ε), tail)])
 end
 
 # A_min and b_min become constants for differentiation here: ReverseDiff tracks the Chernoff bound (it does not honor
@@ -105,24 +122,37 @@ function fft_grid(grid::FFTTolerance, method::CarrMadanMethod, model, und, zero_
     return fft_grid_parameters(interpolation_frequency_bound(modulus, scale, ε / 2, ε), b_min, grid.Npow_max, ε)
 end
 
-# The grid of CarrMadanLewisMethod(ε).
-function fft_grid(grid::FFTTolerance, ::CarrMadanLewisMethod, model, und, zero_rate, opt)
-    FT, T, S0, rT, dT, K_min, K_max, corr, ε = fft_error_setup(model, und, zero_rate, opt, grid.ε)
+# The Lewis integrand on the line 1/2 + iv, shared by CarrMadanLewisMethod(ε) and LewisMethod(ε): the price is
+# scale / π ∫₀^∞ of it (up to terms that do not depend on the quadrature), so its modulus bounds the truncation, and the
+# quantities of the aliasing bounds.
+function lewis_error_setup(model, und, zero_rate, opt, ε)
+    FT, T, S0, rT, dT, K_min, K_max, corr, ε = fft_error_setup(model, und, zero_rate, opt, ε)
     drift = rT - dT
-    F0 = S0 * exp(-dT)
     correction = drift - corr
     den = lewis_denominator(opt)
     # |den(x)| = den(|x|) for both abs2 and identity
     modulus(v) = v_value_mod(exp(real_mod(correction * (1 // 2 + v * im) + FinancialFFT.characteristic_exponent_i(1 // 2 + v * im, model, T))) / den(sqrt(1 // 4 + v^2)))
+    # the integral is exp(k / 2) times the binary, exp(-k / 2) (F0 - C) / S0 for a vanilla option
+    scale = opt isa BinaryPayoff ? sqrt(S0 / K_min) * exp(-rT) : sqrt(S0 * K_max) * exp(-rT)
+    return (; FT, T, S0, rT, F0 = S0 * exp(-dT), K_min, K_max, corr, drift, ε, modulus, scale)
+end
+
+# The smallest log-strike distance at which a copy of the transformed price function, with weight w, is below ε / 4.
+# - binary: exp(k / 2) times the binary; the copy at -L is below w exp(-rT) exp(-L / 2), the one at +L from a Chernoff
+#   bound on the binary.
+# - vanilla: exp(-k / 2) (F0 - C) / S0, with F0 - C below F0 and K exp(-rT): closed forms on both sides, no model.
+function lewis_aliasing_distance(setup, model, opt, w)
+    (; FT, T, S0, rT, F0, K_min, K_max, corr, drift, ε) = setup
     if opt isa BinaryPayoff
-        # the integral is exp(k / 2) times the binary: copy at -b below exp(-rT), Chernoff at +b
-        scale = sqrt(S0 / K_min) * exp(-rT)
-        log_epss = log(3 * ε / 4 / exp(-rT))
-        b_min = max(-2 * log_epss, aliasing_chernoff_bound(model, T, zero(FT), one(FT) / 2, log(K_min / S0), drift, corr, log_epss))
-    else
-        # the integral is exp(-k / 2) (F0 - C) / S0, with F0 - C below F0 and K exp(-rT): closed forms on both sides
-        scale = sqrt(S0 * K_max) * exp(-rT)
-        b_min = 2 * log(4 * max(F0, K_max * exp(-rT)) / (3 * ε))
+        log_epss = log(ε / 4 / w / exp(-rT))
+        return max(-2 * log_epss, aliasing_chernoff_bound(model, T, zero(FT), one(FT) / 2, log(K_min / S0), drift, corr, log_epss))
     end
-    return fft_grid_parameters(interpolation_frequency_bound(modulus, scale, ε / 2, ε), b_min, grid.Npow_max, ε)
+    return 2 * log(4 * w * max(F0, K_max * exp(-rT)) / ε)
+end
+
+# The grid of CarrMadanLewisMethod(ε): Simpson's copies at ±b, weight 1/3.
+function fft_grid(grid::FFTTolerance, ::CarrMadanLewisMethod, model, und, zero_rate, opt)
+    setup = lewis_error_setup(model, und, zero_rate, opt, grid.ε)
+    b_min = lewis_aliasing_distance(setup, model, opt, one(setup.FT) / 3)
+    return fft_grid_parameters(interpolation_frequency_bound(setup.modulus, setup.scale, setup.ε / 2, setup.ε), b_min, grid.Npow_max, setup.ε)
 end

@@ -1,26 +1,81 @@
+# The nodes of LewisMethod: given, or chosen at pricing time from a price tolerance (#48).
+struct QuadratureGrid{num <: Number, num_1 <: Integer}
+    A::num
+    N::num_1
+    function QuadratureGrid(A::num, N::num_1) where {num <: Number, num_1 <: Integer}
+        check_lewis(A, N)
+        return new{num, num_1}(A, N)
+    end
+end
+struct QuadratureTolerance{num <: Real, num_1 <: Integer}
+    ε::num
+    N_max::num_1
+    function QuadratureTolerance(ε::num, N_max::num_1) where {num <: Real, num_1 <: Integer}
+        check_quadrature_tolerance(ε, N_max)
+        return new{num, num_1}(ε, N_max)
+    end
+end
+quadrature_grid(grid::QuadratureGrid, method, mcProcess, und, zero_rate, opt) = (grid.A, grid.N)
+
 """
     LewisMethod(A, N; mode = SerialMode())
+    LewisMethod(ε; N_max = 2^20 + 1, mode = SerialMode())
 
 Direct quadrature of the Lewis (2001) formula along the line `Im(u) = 1/2`: the integrand is evaluated
 on `N` equally spaced nodes in `[-A, A]` and summed. No FFT and no interpolation are involved, so every
 strike is priced exactly on its own and dual numbers, hyper-dual numbers, TaylorSeries, ForwardDiff, ReverseDiff, Zygote and Mooncake are supported.
 
+With a tolerance `ε` (a float), `A` and `N` are chosen at pricing time, for the model, the maturity and the strikes,
+so that the price error stays below `ε`; both come from the characteristic exponent:
+- `A` (truncation): the tail beyond `A` of the modulus of the integrand, `|φ(v - i/2)|` times the Lewis weights,
+  integrated numerically at the parameters of the model, gets `ε / 2`. It is an estimate (a quadrature of the modulus
+  on `[1e-3, 1e6]`), not a rigorous bound.
+- the step `2A / (N - 1)` (aliasing): the quadrature adds copies of the price at log-strike distances that are multiples of
+  `L = 2π (N - 1) / (2A)`; for vanilla options they are bounded in closed form (no model), for binaries one side needs a
+  Chernoff bound, i.e. the moment generating function `E[exp(p X_T)]` at real `p`. Each side gets `ε / 4`.
+The choice evaluates the exponent 2048 times, about one and a half prices with the grid it picks (a Black–Scholes smile:
+90 μs against 60 μs); for repeated pricing (a calibration),
+resolve it once with `FinancialFFT.quadrature_grid` and pass `LewisMethod(A, N)`. The bounds do not cover the
+rounding: `ε` must stay above the floor of the formula, about `eps() * max(S0, K)` (#40, #99).
+
 # Arguments
 - `A`: half-width of the frequency integration domain (`A > 0`).
 - `N`: number of quadrature nodes (`N > 2`).
+- `ε`: the price tolerance, an `AbstractFloat` (`ε > 0`): an integer argument is never read as a tolerance.
+- `N_max` (keyword): the largest number of nodes the tolerance may ask for; more throws an `ArgumentError`.
 - `mode` (keyword): the execution mode, `FinancialMonteCarlo.SerialMode()` (default) or `FinancialMonteCarlo.CudaMode()` with CUDA.jl loaded; `FinancialMonteCarlo.with_mode(method, mode)` changes it.
 """
-struct LewisMethod{num <: Number, num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode} <: AbstractIntegralMethod
-    A::num
-    N::num_1
+struct LewisMethod{G <: Union{QuadratureGrid, QuadratureTolerance}, modeType <: FinancialMonteCarlo.AbstractMode} <: AbstractIntegralMethod
+    grid::G
     mode::modeType
-    function LewisMethod(A::num, N::num_1, mode::modeType) where {num <: Number, num_1 <: Integer, modeType <: FinancialMonteCarlo.AbstractMode}
-        check_lewis(A, N)
-        return new{num, num_1, modeType}(A, N, mode)
+    function LewisMethod(grid::G, mode::modeType) where {G <: Union{QuadratureGrid, QuadratureTolerance}, modeType <: FinancialMonteCarlo.AbstractMode}
+        return new{G, modeType}(grid, mode)
     end
 end
-LewisMethod(A::Number, N::Integer; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = LewisMethod(A, N, mode)
+LewisMethod(A::Number, N::Integer, mode::FinancialMonteCarlo.AbstractMode) = LewisMethod(QuadratureGrid(A, N), mode)
+LewisMethod(A::Number, N::Integer; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = LewisMethod(QuadratureGrid(A, N), mode)
+LewisMethod(ε::AbstractFloat; N_max::Integer = 2^20 + 1, mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = LewisMethod(QuadratureTolerance(ε, N_max), mode)
 export LewisMethod;
+
+# quadrature_grid(method.grid, method, model, underlying, zero_rate, payoff): the half-width A and the number of nodes N
+# that method uses for this model and payoff, the given ones or those its tolerance gives; LewisMethod(quadrature_grid(...)...)
+# prices with them without choosing them again.
+function quadrature_grid(grid::QuadratureTolerance, ::LewisMethod, model, und, zero_rate, opt)
+    setup = lewis_error_setup(model, und, zero_rate, opt, grid.ε)
+    A_min = truncation_frequency_bound(setup.modulus, setup.scale, setup.ε / 2, setup.ε)
+    # The rule is trapezoidal (weight 1 on every node), so its copies sit at the multiples of L = 2π / h, h = 2A / (N - 1),
+    # with weight 1, and none at half the period as for Simpson's rule. Weight 2 on the first copy covers the others: for
+    # a vanilla option they decrease geometrically, by exp(-L / 2) < 1/2.
+    L_min = lewis_aliasing_distance(setup, model, opt, 2 * one(setup.FT))
+    # constants for differentiation (ReverseDiff and Mooncake do not honor @ignore_derivatives), before the integer conversion
+    A_min, L_min = ignore_derivatives_mod(A_min), ignore_derivatives_mod(L_min)
+    # h <= 2π / L_min and A >= A_min with an odd N (the node 0 keeps its weight); the spare nodes go to A
+    half = ceil(Int, A_min * L_min / twoπ)
+    N = 2 * half + 1
+    N > grid.N_max && throw(ArgumentError("a tolerance of $(grid.ε) needs $N nodes, more than N_max = $(grid.N_max)"))
+    # not pi * half: an irrational times an integer is a Float64
+    return half * (twoπ / L_min), N
+end
 
 function evaluate_integrand_lewis_v2(v, corr_adj, char_exp_v, ::FinancialMonteCarlo.EuropeanOption)
     corr_h = corr_adj / 2
@@ -166,13 +221,13 @@ function pricer(mcProcess::FinancialMonteCarlo.BaseProcess, und::FinancialMonteC
     mode = FinancialMonteCarlo.execution_mode(method)
     abstractPayoff = FinancialMonteCarlo.to_mode(abstractPayoff_, mode)
     T = abstractPayoff.T
-    N = method.N
+    A_grid, N = ChainRulesCore.@ignore_derivatives quadrature_grid(method.grid, method, mcProcess, und, zero_rate, abstractPayoff)
     S0 = und.S0
     rT = FinancialMonteCarlo.integral(zero_rate.r, T)
     dT = -FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T)
     corr = FinancialFFT.characteristic_exponent_i(1, mcProcess, T)
     FT = float_type(S0, rT, dT, corr)
-    A = to_float_type(FT, method.A)
+    A = to_float_type(FT, A_grid)
     # Quadrature: rectangle rule on [-A, A], every node with weight 1 (the trapezoidal rule but for the half weights of the
     # end nodes ±A, where the integrand is negligible); for an integrand analytic in a strip it converges geometrically in N,
     # until the truncation at ±A.

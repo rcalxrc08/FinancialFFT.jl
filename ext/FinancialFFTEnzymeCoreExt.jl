@@ -20,6 +20,7 @@ EnzymeRules.inactive(::typeof(FinancialFFT.chernoff_optimum), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.compute_chernorff_limits), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.exponential_moment_bound), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.fft_grid), args...) = nothing
+EnzymeRules.inactive(::typeof(FinancialFFT.quadrature_grid), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.carr_madan_damping), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.carr_madan_weights), args...) = nothing
 EnzymeRules.inactive(::typeof(FinancialFFT.density_integration_grid), args...) = nothing

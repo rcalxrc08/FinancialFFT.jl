@@ -10,7 +10,9 @@ the index an agent reads first._ Updated: 2026-11-26
 (FinancialMonteCarlo#72); also #74, #78, #100 and Mooncake on the GPU (#63). VibratoMonteCarlo 0.7 and FinancialCalibrator
 0.3 take it. 0.8.1: the local `[sources]` path committed in 0.8.0 removed (CI), README and docs converted. Open: #101
 (Kou Chernoff range with rare up jumps). #102 done on `master` (2026-11-26): the calibration page's Levenberg–Marquardt
-stops on the gradient and accepts a step within the rounding of the loss that halves the gradient.
+stops on the gradient and accepts a step within the rounding of the loss that halves the gradient. #48 Lewis part on
+branch `issue-48-lewis-tolerance` (2026-11-26): `LewisMethod(ε)`, breaking (`grid` field), for 0.9.0; COS from a
+tolerance next, together with #101. #104: trapezoidal weights for the Carr-Madan methods (measured, not done).
 
 0.7.0 released 2026-11-22 (localregistry, tag `v0.7.0`; #95, #72, #89, #93, #51, #40; breaking #89, #93, `NEWS.md`);
 VibratoMonteCarlo and FinancialCalibrator take it. On `master` since, for the next release (`NEWS.md`, Unreleased): #74,
