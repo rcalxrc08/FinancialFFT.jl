@@ -1,6 +1,6 @@
 # FinancialFFT.jl release notes
 
-## Unreleased
+## 0.9.0 (2026-11-26)
 
 ### Breaking
 
