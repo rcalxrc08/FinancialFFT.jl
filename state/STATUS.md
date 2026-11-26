@@ -12,8 +12,8 @@ the index an agent reads first._ Updated: 2026-11-26
 (Kou Chernoff range with rare up jumps). #102 done on `master` (2026-11-26): the calibration page's Levenberg–Marquardt
 stops on the gradient and accepts a step within the rounding of the loss that halves the gradient. 0.9.0 (2026-11-26,
 breaking, `NEWS.md`): `LewisMethod(ε)` (#48, Lewis part; `grid` field); VibratoMonteCarlo and FinancialCalibrator
-widen their compat. COS from a tolerance next, together with #101. #104 on branch `issue-104-trapezoid` (2026-11-26):
-trapezoidal weights for the Carr-Madan methods, `b_min` halved in the tolerance bounds.
+widen their compat. COS from a tolerance next, together with #101. 0.10.0 (2026-11-26, breaking):
+trapezoidal weights for the Carr-Madan methods (#104), `CosMethod(ε)` (#48, fixes #101). #48 open for the densities.
 
 0.7.0 released 2026-11-22 (localregistry, tag `v0.7.0`; #95, #72, #89, #93, #51, #40; breaking #89, #93, `NEWS.md`);
 VibratoMonteCarlo and FinancialCalibrator take it. On `master` since, for the next release (`NEWS.md`, Unreleased): #74,

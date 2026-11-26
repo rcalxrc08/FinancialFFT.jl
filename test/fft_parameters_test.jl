@@ -1,19 +1,23 @@
 # CarrMadanMethod(ε) and CarrMadanLewisMethod(ε): A and Npow chosen at pricing time from a price tolerance (issue #41);
-# LewisMethod(ε): A and N (#48).
+# LewisMethod(ε): A and N; CosMethod(ε): the number of terms (#48).
 @testset "FFT parameters from a tolerance" begin
     S0, r, d = 100.0, 0.02, 0.01
     und = Underlying(S0, d)
     zero_rate = ZeroRate(r)
     Ks = collect(range(50.0, 200.0, length = 31))
     iscall = [isodd(i) for i in eachindex(Ks)]
-    constructors = ("CarrMadanMethod" => CarrMadanMethod, "CarrMadanLewisMethod" => CarrMadanLewisMethod, "LewisMethod" => LewisMethod)
+    constructors = ("CarrMadanMethod" => CarrMadanMethod, "CarrMadanLewisMethod" => CarrMadanLewisMethod, "LewisMethod" => LewisMethod, "CosMethod" => CosMethod)
     # a node budget too small for ε = 1e-10
-    too_few_nodes = Dict("CarrMadanMethod" => (Npow_max = 8,), "CarrMadanLewisMethod" => (Npow_max = 8,), "LewisMethod" => (N_max = 101,))
+    too_few_nodes = Dict("CarrMadanMethod" => (Npow_max = 8,), "CarrMadanLewisMethod" => (Npow_max = 8,), "LewisMethod" => (N_max = 101,), "CosMethod" => (N_max = 10,))
     smiles(T) = (:vanilla => FinancialMonteCarlo.EuropeanOptionSmile(T, Ks, iscall), :binary => FinancialMonteCarlo.BinaryEuropeanOptionSmile(T, Ks, iscall))
     # the method with the grid that the tolerance gives for this model and payoff
     resolved(method::CarrMadanMethod, model, zr, opt; und) = CarrMadanMethod(FinancialFFT.fft_grid(method.grid, method, model, und, zr, opt)..., method.α)
     resolved(method::CarrMadanLewisMethod, model, zr, opt; und) = CarrMadanLewisMethod(FinancialFFT.fft_grid(method.grid, method, model, und, zr, opt)...)
     resolved(method::LewisMethod, model, zr, opt; und) = LewisMethod(FinancialFFT.quadrature_grid(method.grid, method, model, und, zr, opt)...)
+    # the number of terms; the range is the one of the fixed form unless ε is below its tail probability
+    resolved(method::CosMethod, model, zr, opt; und) = CosMethod(last(FinancialFFT.cos_range_and_terms(method.grid, model, und, zr, opt)))
+    # the float type of the grid, where the method has one (COS has only a number of terms)
+    grid_float_type(method) = hasproperty(method.grid, :A) ? typeof(method.grid.A) : nothing
     @testset "Black Scholes, $name, $payoff, T = $T, ε = $ε" for (name, ctor) in constructors, T in (0.1, 2.0), ε in (1e-5, 1e-9), (payoff, opt) in smiles(T)
         sigma = 0.2
         model = BlackScholesProcess(sigma)
@@ -42,32 +46,48 @@
         method = ctor(1e-9)
         price(method) = x -> pricer(BlackScholesProcess(x[3]), Underlying(x[1], d), ZeroRate(x[2]), method, opt)
         fixed = resolved(method, BlackScholesProcess(0.2), zero_rate, opt; und = Underlying(S0, d))
-        @test fixed.grid.A isa Float64
+        @test grid_float_type(fixed) in (Float64, nothing)
         reference = ForwardDiff.gradient(price(fixed), x)
         @test abs(reference[3] - blsvega(S0, 100.0, r, 1.0, 0.2, d)) < 1e-7
         @test maximum(abs.(ForwardDiff.gradient(price(method), x) .- reference)) < 1e-12
         @test maximum(abs.(ReverseDiff.gradient(price(method), x) .- reference)) < 1e-12
         @test maximum(abs.(only(Zygote.gradient(price(method), x)) .- reference)) < 1e-12
-        @test maximum(abs.(mooncake_gradient(price(method), x) .- reference)) < 1e-12
+        # Mooncake against ForwardDiff on COS: 7.7e-12 on the delta with N = 32 terms, as for the fixed form
+        @test maximum(abs.(mooncake_gradient(price(method), x) .- reference)) < (name == "CosMethod" ? 1e-10 : 1e-12)
     end
     @testset "Float32, $name, $payoff" for (name, ctor) in constructors, payoff in (:vanilla, :binary)
         model = BlackScholesProcess(0.2f0)
         zr = ZeroRate(0.02f0)
         opt = payoff == :vanilla ? FinancialMonteCarlo.EuropeanOptionSmile(1.0f0, Float32.(Ks), iscall) : FinancialMonteCarlo.BinaryEuropeanOptionSmile(1.0f0, Float32.(Ks), iscall)
         method = ctor(1e-3)
-        @test resolved(method, model, zr, opt; und = Underlying(100.0f0, 0.01f0)).grid.A isa Float32
+        @test grid_float_type(resolved(method, model, zr, opt; und = Underlying(100.0f0, 0.01f0))) in (Float32, nothing)
         prices = pricer(model, Underlying(100.0f0, 0.01f0), zr, method, opt)
         @test eltype(prices) == Float32
         exact = payoff == :vanilla ? blsprice.(S0, Ks, r, 1.0, 0.2, d, iscall) : blsbin.(S0, Ks, r, 1.0, 0.2, d, iscall)
         @test maximum(abs.(prices .- exact)) < 1e-3
     end
-    # LewisMethod(ε) is not wasteful: on Black Scholes its error is above ε / 10 (0.4-0.6 ε measured, 2026-11-26), and a
-    # given grid stays the given one.
-    @testset "LewisMethod(ε), error near ε, T = $T, $payoff" for T in (0.1, 2.0), (payoff, opt) in smiles(T)
+    # LewisMethod(ε) and CosMethod(ε) are not wasteful: on Black Scholes the error of Lewis is above ε / 10 (0.4-0.6 ε
+    # measured, 2026-11-26), the one of COS above ε / 100 (its envelope of the payoff coefficients is looser: 0.03-0.19 ε
+    # on six models, and an extra term costs little where the series converges geometrically); a given grid stays the
+    # given one.
+    @testset "$name(ε), error near ε, T = $T, $payoff" for (name, ctor, factor) in (("LewisMethod", LewisMethod, 10), ("CosMethod", CosMethod, 100)), T in (0.1, 2.0), (payoff, opt) in smiles(T)
         sigma, ε = 0.2, 1e-9
         exact = payoff == :vanilla ? blsprice.(S0, Ks, r, T, sigma, d, iscall) : blsbin.(S0, Ks, r, T, sigma, d, iscall)
-        error = maximum(abs.(pricer(BlackScholesProcess(sigma), und, zero_rate, LewisMethod(ε), opt) .- exact))
-        @test ε / 10 < error < ε
+        error = maximum(abs.(pricer(BlackScholesProcess(sigma), und, zero_rate, ctor(ε), opt) .- exact))
+        @test ε / factor < error < ε
+    end
+    @test last(FinancialFFT.cos_range_and_terms(CosMethod(256).grid, BlackScholesProcess(0.2), und, zero_rate, EuropeanOption(1.0, 100.0))) == 256
+    @test CosMethod(1e-8) isa CosMethod{<:FinancialFFT.CosTolerance}
+    @test (@inferred pricer(BlackScholesProcess(0.2), und, zero_rate, CosMethod(1e-8), last(smiles(1.0)[1]))) isa Vector{Float64}
+    @test_throws DomainError CosMethod(-1e-8)
+    # FinancialFFT#101: Kou with rare up jumps (the DAX optimum of a Kou calibration) has a range [-4.2, 32.2] at T = 1/6,
+    # where CosMethod(512) errs by 1e-2; the tolerance asks for more than 1000 terms
+    @testset "Kou with rare up jumps (#101)" begin
+        model = KouProcess(0.117, 1.57, 7e-10, 1.00002, 9.12)
+        opt = FinancialMonteCarlo.EuropeanOptionSmile(1 / 6, collect(70.0:5.0:130.0), collect(70.0:5.0:130.0) .>= 100.0)
+        method = CosMethod(1e-9)
+        @test last(FinancialFFT.cos_range_and_terms(method.grid, model, und, zero_rate, opt)) > 1000
+        @test maximum(abs.(pricer(model, und, zero_rate, method, opt) .- pricer(model, und, zero_rate, LewisMethod(1e-12), opt))) < 1e-9
     end
     @test FinancialFFT.quadrature_grid(LewisMethod(600.0, 20000).grid, LewisMethod(600.0, 20000), BlackScholesProcess(0.2), und, zero_rate, EuropeanOption(1.0, 100.0)) == (600.0, 20000)
     @test LewisMethod(1e-8) isa LewisMethod{<:FinancialFFT.QuadratureTolerance}

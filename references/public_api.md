@@ -8,7 +8,7 @@ _The exported names._ (Layer 3 reference.) Processes, options, rates and modes c
 | `CarrMadanMethod` | `CarrMadanMethod(A, Npow, α = 0.75; mode)`, `CarrMadanMethod(ε; α = 0.75, Npow_max = 23, mode)` | 05 | FFT, trapezoidal rule, quintic interpolation |
 | `CarrMadanLewisMethod` | `CarrMadanLewisMethod(A, Npow; mode)`, `CarrMadanLewisMethod(ε; Npow_max = 23, mode)` | 05 | FFT of the Lewis integrand |
 | `LewisMethod` | `LewisMethod(A, N; mode)`, `LewisMethod(ε::AbstractFloat; N_max = 2^20 + 1, mode)` | 05 | direct quadrature |
-| `CosMethod` | `CosMethod(N; mode)` | 05 | Fang–Oosterlee, Chernoff range |
+| `CosMethod` | `CosMethod(N; mode)`, `CosMethod(ε::AbstractFloat; N_max = 2^20, mode)` | 05 | Fang–Oosterlee, Chernoff range |
 | `density` | `density(process, underlying, zero_rate, method, T)` | 06 | an `AbstractDensity` of `log(S_T / S_0)` |
 | `CosDensityMethod` | `CosDensityMethod(N = 128, M = 2^10; mode)` | 06 | `CosDensity` |
 | `FFTDensityInverter` | `FFTDensityInverter(N = 14, M = 2^10; mode)` | 06 | `FFTDensity` |

@@ -1,7 +1,18 @@
 # FinancialFFT.jl release notes
 
-## Unreleased
+## 0.10.0 (2026-11-26)
 
+### Breaking
+
+- `CosMethod` holds `N` in a `grid` field (see below); prices of `CarrMadanMethod` and `CarrMadanLewisMethod` with
+  given parameters change (trapezoidal weights, #104).
+
+### Changes
+
+- `CosMethod(ε; N_max = 2^20)` (#48, #101): the number of terms chosen at pricing time from a price tolerance, from the
+  decay of the characteristic function and the width of the truncation range. Breaking: `CosMethod` holds `N` in a
+  `grid` field (`method.grid.N`); `CosMethod(N; mode)` is unchanged. At the Kou optimum of #101 it takes 1456 terms at
+  T = 1/6, where `CosMethod(512)` errs by 1e-2.
 - `CarrMadanMethod` and `CarrMadanLewisMethod` integrate with the trapezoidal rule (half weight at `v = 0`) instead of
   Simpson's (#104): the integrand is even and has decayed at `A`, so the rule errs only by aliasing at the period `2b`,
   while Simpson's added copies at half the period. Same accuracy with half the nodes; with a tolerance, `Npow` is one

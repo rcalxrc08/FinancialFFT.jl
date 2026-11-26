@@ -81,7 +81,16 @@ derivative of the Lewis formula: one kernel, with `lewis_denominator` and `carr_
   `LewisMethod(600, 20000)` (2.4 ms), choosing the grid 93 μs (270 μs with the bisection of Carr-Madan, 30 sums of 2048
   terms; the modulus itself 45 μs); the low-variance Heston of #48 gets A = 2278
   (Heston's exponent decays only exponentially in v, slowly with a small variance).
-- Open: #48 for COS (and the densities).
+- `CosMethod(ε; N_max = 2^20)` (#48, #101): `CosTerms(N)` / `CosTolerance(ε, N_max)` in the `grid` field (`cos.jl`),
+  `cos_range_and_terms` resolves the range of log(S_T/S0) and `N` (inactive for Enzyme). Series truncation: the terms are
+  below `|φ(u_k)|` times `cos_payoff_envelope` (vanilla `2[min(1, uL)|1/u - e^h u/(1+u²)| + (e^h+e^a)/(1+u²)]`, binary
+  `2 min(L, 1/u)`), their tail beyond `u_N` estimated with `truncation_frequency_bound` (scale `K_max e^{-rT}`, or
+  `e^{-rT}`), `≤ ε/2`, `N = ceil(u* (b-a)/π)`, at least 8. Range: tail probability `ε / (8 P C)`, `C` the sum of the
+  envelope over the terms, never above the `1e-14` floor (the derivatives, #64). Measured 2026-11-26: errors 0.03-0.19 ε
+  (the envelope is looser than the Lewis modulus) on BS and the five `model_cases`, T ∈ {0.1, 1}, ε ∈ {1e-6, 1e-9},
+  vanilla and binary, N = 46-214 at ε = 1e-9; the Kou DAX optimum of #101 gets N = 1456 at T = 1/6 (error 1.5e-10,
+  where `CosMethod(512)` errs by 1e-2).
+- Open: #48 for the densities.
 
 ## Lewis (`lewis.jl`)
 

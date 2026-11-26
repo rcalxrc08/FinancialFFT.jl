@@ -21,9 +21,9 @@ enzyme_bs_pricer(method, kind::Val, iscall) = x -> first(pricer(BlackScholesProc
             test_within(() -> max_abs_diff(collect(only(Enzyme.gradient(mode, Const(price), args))), reference), toll.enzyme)
         end
     end
-    # LewisMethod(ε): the grid comes from quadrature_grid, inactive for Enzyme (#48)
-    @testset "LewisMethod(ε) $(kind) $mode_name" for kind in (:european, :binary), (mode_name, mode) in ("Forward" => Enzyme.Forward, "Reverse" => Enzyme.Reverse)
-        price = enzyme_bs_pricer(LewisMethod(1e-10), Val(kind), true)
+    # LewisMethod(ε) and CosMethod(ε): the grid comes from quadrature_grid and cos_range_and_terms, inactive for Enzyme (#48)
+    @testset "$(nameof(typeof(method)))(ε) $(kind) $mode_name" for method in (LewisMethod(1e-10), CosMethod(1e-10)), kind in (:european, :binary), (mode_name, mode) in ("Forward" => Enzyme.Forward, "Reverse" => Enzyme.Reverse)
+        price = enzyme_bs_pricer(method, Val(kind), true)
         g = analytic_bs_pricer(kind, true)
         reference = ForwardDiff.gradient(x -> g(x...), args)
         test_within(() -> max_abs_diff(collect(only(Enzyme.gradient(mode, Const(price), args))), reference), 1e-7)
