@@ -1,5 +1,13 @@
 # FinancialFFT.jl release notes
 
+## 0.10.1 (2026-11-27)
+
+### Fixes
+
+- `CosMethod(ε)` under ForwardDiff: when the tail probability of the range falls below its 1e-14 floor (large strikes,
+  DAX at ε = 1e-10, FinancialCalibrator#10), the tail was a dual number and reached the bracketing of the Chernoff
+  optimum (`MethodError: no method matching Float64(::Dual)` in `copysign`). The tail is a constant, as the floor.
+
 ## 0.10.0 (2026-11-26)
 
 ### Breaking

@@ -39,19 +39,22 @@
         @test_throws ArgumentError pricer(model, und, zero_rate, ctor(1e-10; too_few_nodes[name]...), EuropeanOption(1.0, 100.0))
     end
     # The parameters are constants: the gradients are those of the method with the same parameters, given, on every
-    # back-end.
-    @testset "AD, $name" for (name, ctor) in constructors
+    # back-end. At ε = 1e-12 the tail probability of the COS range is below its 1e-14 floor, the branch that a large
+    # strike takes at 1e-10 (DAX, FinancialCalibrator#10): its dual tail reached the Chernoff bracketing.
+    @testset "AD, $name, ε = $ε" for (name, ctor) in constructors, ε in (1e-9, 1e-12)
         opt = EuropeanOption(1.0, 100.0)
         x = [S0, r, 0.2]
-        method = ctor(1e-9)
+        method = ctor(ε)
         price(method) = x -> pricer(BlackScholesProcess(x[3]), Underlying(x[1], d), ZeroRate(x[2]), method, opt)
         fixed = resolved(method, BlackScholesProcess(0.2), zero_rate, opt; und = Underlying(S0, d))
         @test grid_float_type(fixed) in (Float64, nothing)
         reference = ForwardDiff.gradient(price(fixed), x)
         @test abs(reference[3] - blsvega(S0, 100.0, r, 1.0, 0.2, d)) < 1e-7
-        @test maximum(abs.(ForwardDiff.gradient(price(method), x) .- reference)) < 1e-12
-        @test maximum(abs.(ReverseDiff.gradient(price(method), x) .- reference)) < 1e-12
-        @test maximum(abs.(only(Zygote.gradient(price(method), x)) .- reference)) < 1e-12
+        # below the floor the range is wider than the one of the fixed form with the same N: 6e-12 apart
+        tol = name == "CosMethod" && ε < 1e-10 ? 1e-10 : 1e-12
+        @test maximum(abs.(ForwardDiff.gradient(price(method), x) .- reference)) < tol
+        @test maximum(abs.(ReverseDiff.gradient(price(method), x) .- reference)) < tol
+        @test maximum(abs.(only(Zygote.gradient(price(method), x)) .- reference)) < tol
         # Mooncake against ForwardDiff on COS: 7.7e-12 on the delta with N = 32 terms, as for the fixed form
         @test maximum(abs.(mooncake_gradient(price(method), x) .- reference)) < (name == "CosMethod" ? 1e-10 : 1e-12)
     end

@@ -141,7 +141,8 @@ function cos_range_and_terms(grid::CosTolerance, model, und, zero_rate, opt)
     floor_tail = scaled_tolerance(FT, 1e-14)
     lims, bma, envelope = cos_range_on_strikes(model, T, floor_tail, drift, S0, K_min, K_max, opt)
     C = (envelope.h - envelope.a) / bma + sum(last(frequency_error_terms(envelope, one(FT))))
-    tail = ε / (8 * P * C)
+    # a constant, as the floor: a dual tail reaches the bracketing of the Chernoff optimum (ForwardDiff, large strikes)
+    tail = ignore_derivatives_mod(ε / (8 * P * C))
     if tail < floor_tail
         lims, bma, envelope = cos_range_on_strikes(model, T, tail, drift, S0, K_min, K_max, opt)
     end

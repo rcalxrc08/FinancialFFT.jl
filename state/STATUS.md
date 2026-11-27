@@ -1,7 +1,7 @@
 # Status
 
 _What is in flight. Layer 4: volatile, rewritten freely; GitHub issues are the source of truth for tasks, this file is
-the index an agent reads first._ Updated: 2026-11-26
+the index an agent reads first._ Updated: 2026-11-27
 
 ## Current focus
 
@@ -13,7 +13,7 @@ the index an agent reads first._ Updated: 2026-11-26
 stops on the gradient and accepts a step within the rounding of the loss that halves the gradient. 0.9.0 (2026-11-26,
 breaking, `NEWS.md`): `LewisMethod(ε)` (#48, Lewis part; `grid` field); VibratoMonteCarlo and FinancialCalibrator
 widen their compat. COS from a tolerance next, together with #101. 0.10.0 (2026-11-26, breaking):
-trapezoidal weights for the Carr-Madan methods (#104), `CosMethod(ε)` (#48, fixes #101). #48 open for the densities.
+trapezoidal weights for the Carr-Madan methods (#104), `CosMethod(ε)` (#48, fixes #101). #48 open for the densities. 0.10.1 (2026-11-27): `CosMethod(ε)` under ForwardDiff below the tail floor (found by FinancialCalibrator#10).
 
 0.7.0 released 2026-11-22 (localregistry, tag `v0.7.0`; #95, #72, #89, #93, #51, #40; breaking #89, #93, `NEWS.md`);
 VibratoMonteCarlo and FinancialCalibrator take it. On `master` since, for the next release (`NEWS.md`, Unreleased): #74,
